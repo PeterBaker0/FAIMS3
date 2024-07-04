@@ -1,28 +1,29 @@
 {
-  "name": "faims3",
-  "version": "1.0.0",
-  "main": "index.js",
-  "workspaces": [
-    "api",
-    "app",
-    "designer",
-    "library",
-    "tests"
-  ],
-  "scripts": {
-    "build": "npm run build --workspace=app",
-    "test": "npm test --workspace=app",
-    "serve": "npm run serve --workspace=app",
-    "start": "npm start --workspace=api --workspace=app",
-    "watch": "npm run watch --workspace=api",
-    "initdb": "npm run initdb --workspace=api",
-    "load-notebooks": "npm run load-notebooks --workspace=api"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
-  "devDependencies": {
-    "turbo": "^2.0.6"
-  }
+    "name": "faims3",
+    "version": "1.0.0",
+    "main": "index.js",
+    "workspaces": [
+        "api",
+        "app",
+        "designer",
+        "library",
+        "tests"
+    ],
+    "scripts": {
+        "build": "npm run build --workspace=app",
+        "test": "npm test --workspace=app",
+        "serve": "npm run serve --workspace=app",
+        "start": "npm start --workspace=api --workspace=app",
+        "watch": "npm run watch --workspace=api",
+        "initdb": "npm run initdb --workspace=api",
+        "load-notebooks": "npm run load-notebooks --workspace=api"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "description": "",
+    "devDependencies": {
+        "turbo": "^2.0.6"
+    },
+    "packageManager": "npm@10.2.4"
 }
