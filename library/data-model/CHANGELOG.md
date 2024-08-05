@@ -1,5 +1,12 @@
 
 
+## 1.3.0 (2024-08-05)
+
+
+### Features
+
+* **config-release-it:** released version v0.0.2 [no ci] ([449ae4a](https://github.com/PeterBaker0/FAIMS3/commit/449ae4acc7864ff1c5c8b391296ffc3020418514))
+
 ## 1.2.0 (2024-08-05)
 
 
