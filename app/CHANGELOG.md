@@ -1,5 +1,12 @@
 
 
+## [0.7.0](https://github.com/PeterBaker0/FAIMS3/compare/@faims3/app-v0.6.0...@faims3/app-v0.7.0) (2024-08-05)
+
+
+### Features
+
+* **data-model:** released version v1.7.0 [no ci] ([6419578](https://github.com/PeterBaker0/FAIMS3/commit/6419578dd966996f40c04cdd7e2e7319f735d239))
+
 ## 0.6.0 (2024-08-05)
 
 
