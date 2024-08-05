@@ -29,3 +29,5 @@ jobs:
             echo "::error::Changes detected in git after running 'npm install --package-lock-only'. Please run 'npm install' and commit and push the changes."
             git status
             exit 1
+          fi
+          echo "No changes in package-lock detected."
