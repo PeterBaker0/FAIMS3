@@ -1,5 +1,17 @@
 
 
+## [0.8.0](https://github.com/PeterBaker0/FAIMS3/compare/@faims3/api-v0.6.0...@faims3/api-v0.8.0) (2024-08-05)
+
+
+### Features
+
+* package lock check in PR ([#9](https://github.com/PeterBaker0/FAIMS3/issues/9)) ([1781fdc](https://github.com/PeterBaker0/FAIMS3/commit/1781fdc9f8ab3c88e9e3020fbf668a96758a0b1d))
+
+
+### Bug Fixes
+
+* Package lock check workflow, adding fi, changing PAT ([#10](https://github.com/PeterBaker0/FAIMS3/issues/10)) ([3d4666f](https://github.com/PeterBaker0/FAIMS3/commit/3d4666f0a1f6b3599780a1632971595ca7342759))
+
 ## 0.6.0 (2024-08-05)
 
 
