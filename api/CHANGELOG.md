@@ -1,5 +1,7 @@
 
 
+## [0.1.1](https://github.com/PeterBaker0/FAIMS3/compare/@faims3/api-v0.1.0...@faims3/api-v0.1.1) (2024-08-05)
+
 ## 0.1.0 (2024-08-05)
 
 
