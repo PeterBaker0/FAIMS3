@@ -30,7 +30,6 @@ import {
 } from '../types';
 
 export const HRID_STRING = 'hrid';
-
 export const DEFAULT_RELATION_LINK_VOCABULARY = 'is related to';
 
 export function resolve_project_id(
