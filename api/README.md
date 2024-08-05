@@ -2,7 +2,7 @@
 
 [![codecov](https://codecov.io/gh/FAIMS/FAIMS3-conductor/branch/main/graph/badge.svg?token=CJ4U0H7AKA)](https://codecov.io/gh/FAIMS/FAIMS3-conductor)
 
-The server-side of FAIMS3 handling authentication and authorization
+The server-side API of FAIMS3 handling authentication and authorization
 
 To get started, first set up the `.env` file as specified in Configuration, and
 then set up keys as specified in Running.
