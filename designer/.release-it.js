@@ -1,1 +1,1 @@
-module.exports = require('@faims3/config-release-it');
+module.exports = import('@faims3/config-release-it');
