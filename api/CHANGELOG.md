@@ -1,5 +1,12 @@
 
 
+## [0.9.0](https://github.com/PeterBaker0/FAIMS3/compare/@faims3/api-v0.8.0...@faims3/api-v0.9.0) (2024-08-05)
+
+
+### Features
+
+* **data-model:** released version v1.7.0 [no ci] ([6419578](https://github.com/PeterBaker0/FAIMS3/commit/6419578dd966996f40c04cdd7e2e7319f735d239))
+
 ## [0.8.0](https://github.com/PeterBaker0/FAIMS3/compare/@faims3/api-v0.6.0...@faims3/api-v0.8.0) (2024-08-05)
 
 
