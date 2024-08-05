@@ -1,5 +1,12 @@
 
 
+## [1.7.0](https://github.com/PeterBaker0/FAIMS3/compare/@faims3/data-model-v1.6.0...@faims3/data-model-v1.7.0) (2024-08-05)
+
+
+### Features
+
+* fake data model feature ([#11](https://github.com/PeterBaker0/FAIMS3/issues/11)) ([e0b22d6](https://github.com/PeterBaker0/FAIMS3/commit/e0b22d66eeb9a27b8ee1dd2e1db3d152b315edf5))
+
 ## 1.6.0 (2024-08-05)
 
 
