@@ -282,9 +282,7 @@ export const FormSettingsPanel = ({viewSetId}: {viewSetId: string}) => {
               getOptionLabel={option => option.label}
               renderInput={params => (
                 <DebouncedTextField
-                  onChange={function (): void {
-                    throw new Error('Function not implemented.');
-                  }}
+                  onChange={() => {}}
                   {...params}
                   InputProps={{
                     ...params.InputProps,
