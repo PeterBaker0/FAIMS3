@@ -895,14 +895,14 @@ export const toCanonicalProjectMetadata = (
     forms: flat.forms,
     sections:
       flat.sections && typeof flat.sections === 'object'
-        ? (flat.sections as Record<string, unknown>)
+        ? (flat.sections as {[key: string]: unknown})
         : undefined,
     filenames: flat.filenames instanceof Array ? flat.filenames : undefined,
     ispublic: toBooleanOrUndefined(flat.ispublic, 'ispublic', report),
     isrequest: toBooleanOrUndefined(flat.isrequest, 'isrequest', report),
     meta:
       flat.meta && typeof flat.meta === 'object'
-        ? (flat.meta as Record<string, unknown>)
+        ? (flat.meta as {[key: string]: unknown})
         : undefined,
     behaviours: flat.behaviours,
   };
