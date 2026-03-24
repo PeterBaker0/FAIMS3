@@ -200,6 +200,7 @@ export const consolidateLegacyMetadataDbs = async ({
     const metadataDbUrl = `${COUCHDB_INTERNAL_URL}/${metadataDbName}`;
     const metadataDb = new PouchDB(metadataDbUrl, {
       skip_setup: true,
+      ...(process.env.NODE_ENV === 'test' ? {adapter: 'memory'} : {}),
       ...(LOCAL_COUCHDB_AUTH ? {auth: LOCAL_COUCHDB_AUTH} : {}),
     }) as unknown as DatabaseInterface;
 
