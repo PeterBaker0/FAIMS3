@@ -125,7 +125,7 @@ export interface ProjectUIModelDetails {
 
 // Type for the external format of Notebooks
 export interface EncodedNotebook {
-  metadata: {[key: string]: any};
+  metadata: LegacyFlatProjectMetadata;
   'ui-specification': EncodedProjectUIModel;
 }
 
@@ -137,13 +137,6 @@ export interface EncodedProjectUIModel {
 }
 export type CouchProjectUIModel =
   PouchDB.Core.ExistingDocument<EncodedProjectUIModel>;
-
-export type EncodedProjectMetadata = PouchDB.Core.Document<{
-  _attachments?: PouchDB.Core.Attachments;
-  is_attachment: boolean;
-  metadata: any;
-  single_attachment?: boolean;
-}>;
 
 // This is used within the pouch/sync subsystem, do not use with form/ui
 export type EncodedRecord = PouchDB.Core.Document<{
@@ -224,15 +217,6 @@ export interface FAIMSAttachment {
   created: string;
   created_by: string;
 }
-
-/*
- * Elements of a Project's metadataDB can be any one of these,
- * discriminated by the prefix of the object's id
- */
-export type ProjectMetaObject =
-  | ProjectSchema
-  | EncodedProjectUIModel
-  | EncodedProjectMetadata;
 
 /*
  * Elements of a Project's dataDB can be any one of these,
@@ -736,8 +720,278 @@ export type CouchDocumentFields = z.infer<typeof CouchDocumentFieldsSchema>;
 // ========================
 // UI SCHEMA AND METADATA
 // ========================
-// TODO use zod more effectively here to enhance validation
-export type ProjectMetadata = {[key: string]: any};
+
+// Legacy flat metadata format used by notebook/template JSONs and backward
+// compatible API paths.
+export const LegacyFlatProjectMetadataSchema = z.record(z.unknown());
+export type LegacyFlatProjectMetadata = z.infer<
+  typeof LegacyFlatProjectMetadataSchema
+>;
+
+export const ProjectMetadataInfoSchema = z.object({
+  name: z.string().trim().min(1).optional(),
+  description: z.string().optional(),
+  leadInstitution: z.string().optional(),
+  projectLead: z.string().optional(),
+});
+export type ProjectMetadataInfo = z.infer<typeof ProjectMetadataInfoSchema>;
+
+export const ProjectMetadataSettingsSchema = z.object({
+  showQRCodeButton: z.boolean().optional(),
+  projectStatus: z.string().optional(),
+  notebookVersion: z.string().optional(),
+  schemaVersion: z.string().optional(),
+
+  // Legacy/common optional settings preserved for compatibility.
+  access: z.unknown().optional(),
+  accesses: z.array(z.string()).optional(),
+  forms: z.unknown().optional(),
+  sections: z.record(z.unknown()).optional(),
+  filenames: z.array(z.unknown()).optional(),
+  ispublic: z.boolean().optional(),
+  isrequest: z.boolean().optional(),
+  meta: z.record(z.unknown()).optional(),
+  behaviours: z.unknown().optional(),
+});
+export type ProjectMetadataSettings = z.infer<
+  typeof ProjectMetadataSettingsSchema
+>;
+
+export const ProjectMetadataSchema = z.object({
+  info: ProjectMetadataInfoSchema.default({}),
+  settings: ProjectMetadataSettingsSchema.default({}),
+  userMetadata: z.record(z.unknown()).default({}),
+});
+export type ProjectMetadata = z.infer<typeof ProjectMetadataSchema>;
+
+export type ProjectMetadataConversionReport = {
+  droppedKeys: string[];
+  coercedKeys: string[];
+  parseIssues: string[];
+};
+
+const LEGACY_INFO_KEYS = new Set([
+  'name',
+  'description',
+  'pre_description',
+  'lead_institution',
+  'project_lead',
+]);
+
+const LEGACY_SETTINGS_KEYS = new Set([
+  'showQRCodeButton',
+  'project_status',
+  'notebook_version',
+  'schema_version',
+  'access',
+  'accesses',
+  'forms',
+  'sections',
+  'filenames',
+  'ispublic',
+  'isrequest',
+  'meta',
+  'behaviours',
+]);
+
+const toBooleanOrUndefined = (
+  value: unknown,
+  key: string,
+  report: ProjectMetadataConversionReport
+): boolean | undefined => {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    if (value === 'true') {
+      report.coercedKeys.push(key);
+      return true;
+    }
+    if (value === 'false') {
+      report.coercedKeys.push(key);
+      return false;
+    }
+  }
+  if (typeof value === 'number') {
+    if (value === 1) {
+      report.coercedKeys.push(key);
+      return true;
+    }
+    if (value === 0) {
+      report.coercedKeys.push(key);
+      return false;
+    }
+  }
+  report.parseIssues.push(
+    `Could not coerce ${key} to boolean. Value: ${JSON.stringify(value)}`
+  );
+  return undefined;
+};
+
+/**
+ * Converts either canonical or legacy flat metadata into canonical metadata.
+ * Unknown legacy keys are preserved in userMetadata.
+ */
+export const toCanonicalProjectMetadata = (
+  input: unknown
+): {metadata: ProjectMetadata; report: ProjectMetadataConversionReport} => {
+  const report: ProjectMetadataConversionReport = {
+    droppedKeys: [],
+    coercedKeys: [],
+    parseIssues: [],
+  };
+
+  // If already canonical, accept directly.
+  const canonicalParsed = ProjectMetadataSchema.safeParse(input);
+  if (canonicalParsed.success) {
+    return {metadata: canonicalParsed.data, report};
+  }
+
+  // Otherwise treat as legacy flat metadata.
+  const parsedFlat = LegacyFlatProjectMetadataSchema.safeParse(input);
+  if (!parsedFlat.success) {
+    report.parseIssues.push(
+      ...parsedFlat.error.issues.map(i => `${i.path.join('.')}: ${i.message}`)
+    );
+    return {metadata: ProjectMetadataSchema.parse({}), report};
+  }
+
+  const flat = parsedFlat.data;
+
+  const info: ProjectMetadataInfo = {
+    name: typeof flat.name === 'string' ? flat.name : undefined,
+    description:
+      typeof flat.pre_description === 'string'
+        ? flat.pre_description
+        : typeof flat.description === 'string'
+          ? flat.description
+          : undefined,
+    leadInstitution:
+      typeof flat.lead_institution === 'string'
+        ? flat.lead_institution
+        : undefined,
+    projectLead:
+      typeof flat.project_lead === 'string' ? flat.project_lead : undefined,
+  };
+
+  const settings: ProjectMetadataSettings = {
+    showQRCodeButton: toBooleanOrUndefined(
+      flat.showQRCodeButton,
+      'showQRCodeButton',
+      report
+    ),
+    projectStatus:
+      typeof flat.project_status === 'string' ? flat.project_status : undefined,
+    notebookVersion:
+      typeof flat.notebook_version === 'string'
+        ? flat.notebook_version
+        : undefined,
+    schemaVersion:
+      typeof flat.schema_version === 'string' ? flat.schema_version : undefined,
+    access: flat.access,
+    accesses:
+      flat.accesses instanceof Array
+        ? flat.accesses.filter(v => typeof v === 'string')
+        : undefined,
+    forms: flat.forms,
+    sections:
+      flat.sections && typeof flat.sections === 'object'
+        ? (flat.sections as Record<string, unknown>)
+        : undefined,
+    filenames: flat.filenames instanceof Array ? flat.filenames : undefined,
+    ispublic: toBooleanOrUndefined(flat.ispublic, 'ispublic', report),
+    isrequest: toBooleanOrUndefined(flat.isrequest, 'isrequest', report),
+    meta:
+      flat.meta && typeof flat.meta === 'object'
+        ? (flat.meta as Record<string, unknown>)
+        : undefined,
+    behaviours: flat.behaviours,
+  };
+
+  const userMetadata = Object.fromEntries(
+    Object.entries(flat).filter(([key]) => {
+      return !LEGACY_INFO_KEYS.has(key) && !LEGACY_SETTINGS_KEYS.has(key);
+    })
+  );
+
+  const canonical = ProjectMetadataSchema.safeParse({
+    info,
+    settings,
+    userMetadata,
+  });
+
+  if (!canonical.success) {
+    report.parseIssues.push(
+      ...canonical.error.issues.map(i => `${i.path.join('.')}: ${i.message}`)
+    );
+    return {metadata: ProjectMetadataSchema.parse({}), report};
+  }
+
+  return {metadata: canonical.data, report};
+};
+
+/**
+ * Flattens canonical metadata into the legacy notebook/template JSON shape.
+ */
+export const toLegacyFlatMetadata = (
+  metadata: ProjectMetadata
+): LegacyFlatProjectMetadata => {
+  const out: LegacyFlatProjectMetadata = {
+    ...metadata.userMetadata,
+  };
+
+  if (metadata.info.name !== undefined) out.name = metadata.info.name;
+  if (metadata.info.description !== undefined) {
+    out.pre_description = metadata.info.description;
+  }
+  if (metadata.info.leadInstitution !== undefined) {
+    out.lead_institution = metadata.info.leadInstitution;
+  }
+  if (metadata.info.projectLead !== undefined) {
+    out.project_lead = metadata.info.projectLead;
+  }
+
+  if (metadata.settings.showQRCodeButton !== undefined) {
+    out.showQRCodeButton = metadata.settings.showQRCodeButton;
+  }
+  if (metadata.settings.projectStatus !== undefined) {
+    out.project_status = metadata.settings.projectStatus;
+  }
+  if (metadata.settings.notebookVersion !== undefined) {
+    out.notebook_version = metadata.settings.notebookVersion;
+  }
+  if (metadata.settings.schemaVersion !== undefined) {
+    out.schema_version = metadata.settings.schemaVersion;
+  }
+  if (metadata.settings.access !== undefined) {
+    out.access = metadata.settings.access;
+  }
+  if (metadata.settings.accesses !== undefined) {
+    out.accesses = metadata.settings.accesses;
+  }
+  if (metadata.settings.forms !== undefined) {
+    out.forms = metadata.settings.forms;
+  }
+  if (metadata.settings.sections !== undefined) {
+    out.sections = metadata.settings.sections;
+  }
+  if (metadata.settings.filenames !== undefined) {
+    out.filenames = metadata.settings.filenames;
+  }
+  if (metadata.settings.ispublic !== undefined) {
+    out.ispublic = metadata.settings.ispublic;
+  }
+  if (metadata.settings.isrequest !== undefined) {
+    out.isrequest = metadata.settings.isrequest;
+  }
+  if (metadata.settings.meta !== undefined) {
+    out.meta = metadata.settings.meta;
+  }
+  if (metadata.settings.behaviours !== undefined) {
+    out.behaviours = metadata.settings.behaviours;
+  }
+
+  return out;
+};
 
 // The UI specification
 // TODO use Zod for existing UI schema models to validate. Note that this is a
@@ -755,7 +1009,6 @@ export const UISpecificationSchema = z
   .refine(val => !!val);
 export type UISpecification = z.infer<typeof UISpecificationSchema>;
 
-// Metadata schema
-// TODO use Zod for existing UI schema models to validate
-export const NotebookMetadataSchema = z.record(z.any());
+// Metadata schema used by notebook payloads (legacy flat shape).
+export const NotebookMetadataSchema = LegacyFlatProjectMetadataSchema;
 export type NotebookMetadata = z.infer<typeof NotebookMetadataSchema>;
