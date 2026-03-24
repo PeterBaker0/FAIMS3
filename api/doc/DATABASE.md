@@ -43,18 +43,36 @@ projects stored on this couchdb instance.
 Document `_design/permissions` is added to implement a permissions check that
 restricts access to users with the `_admin` role.
 
-Every notebook has it's own document with the notebook name as the `id` containing eg:
+Every notebook has its own document with the notebook id as the `_id`, containing:
 
 ```json
 {
   "_id": "blue_mountains_survey",
   "_rev": "1-d3aa99ada9503360b611b060bee1a72b",
   "name": "Blue-Mountains-Survey",
-  "metadataDb": {
-    "db_name": "metadata-blue_mountains_survey"
-  },
   "dataDb": {
     "db_name": "data-blue_mountains_survey"
+  },
+  "metadata": {
+    "info": {
+      "name": "Blue Mountains Survey",
+      "description": "Example notebook description",
+      "leadInstitution": "Example Institution",
+      "projectLead": "Example Lead"
+    },
+    "settings": {
+      "projectStatus": "active",
+      "showQRCodeButton": true,
+      "notebookVersion": "1.0",
+      "schemaVersion": "2.0"
+    },
+    "userMetadata": {}
+  },
+  "ui-specification": {
+    "fields": {},
+    "fviews": {},
+    "viewsets": {},
+    "visible_types": []
   },
   "auth_mechanisms": {
     "demo": {
@@ -66,44 +84,18 @@ Every notebook has it's own document with the notebook name as the `id` containi
 }
 ```
 
-This names two databases that are used to store the metadata and data records for the
-notebook instance. By convention these are called `data-{project name}` and
-`metadata-{project name}` (via constants defined in the FAIMS3 project) but
-these names are not relied on by the code and the entries
-here are used to locate the databases.
+This names the project data database (`dataDb`) and embeds the notebook metadata
+and `ui-specification` directly into the project document. Metadata is no longer
+stored in a per-project `metadata-*` database.
 
 `auth_mechanisms` is repeated here from the projects database. It doesn't seem to be
 used anywhere at all.
 
 ## Individual project databases
 
-Two databases hold the data for a notebook: `data-{project name}` and `metadata-{project name}`.
-
-### `metadata-{project name}`
-
-This database contains the notebook metadata including the form definition with the id `ui_specification` (defined in [src/datamodel/database.ts] and equivalently in the FAIMS3 app as `UI_SPECIFICATION_NAME`).
-This holds all of the field definitions etc for the notebook.
-
-The value of `local_autoincrementers` in the metadata database will contain an incrementing value in the front end app unique to each user.
-
-Remaining documents in this database have ids like `project-metadata-{fieldname}` and hold values for various metadata fields:
-
-- `access`
-- `accesses`
-- `behavious` - typo, not referenced anywhere
-- `filenames`
-- `forms`
-- `ispublic`
-- `isrequest`
-- `lead_institution`
-- `meta`
-- `pre_description`
-- `project_lead`
-- `project_status`
-- `projectvalue`
-- `sections`
-
-(defined in `src/gui/components/project/CreateProjectCard.tsx` in FAIMS3)
+Each notebook has one project-specific data database: `data-{project id}`.
+Notebook metadata and `ui-specification` are persisted on the project document
+in the `projects` database.
 
 ### `data-{project name}`
 
