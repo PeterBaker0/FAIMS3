@@ -214,6 +214,21 @@ export const consolidateLegacyMetadataDbs = async ({
 
     try {
       const legacyMetadataDocs = await readLegacyMetadataDocuments({metadataDb});
+      const extracted = extractLegacyMetadataFromDocuments(legacyMetadataDocs);
+      const hasLegacyMetadata =
+        extracted.uiSpec !== undefined ||
+        Object.keys(extracted.flatMetadata).length > 0;
+
+      if (!hasLegacyMetadata) {
+        report.status = 'skipped-not-found';
+        if (!dryRun && cleanup) {
+          await metadataDb.destroy();
+          report.cleanedUp = true;
+        }
+        reports.push(report);
+        continue;
+      }
+
       const {nextProject, conversion} = buildConsolidatedProjectDoc({
         project,
         legacyMetadataDocs,
