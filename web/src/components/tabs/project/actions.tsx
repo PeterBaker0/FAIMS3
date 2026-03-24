@@ -24,6 +24,7 @@ import {generateTestRecordsForProject} from '@/hooks/project-hooks';
 import {Input} from '@mui/material';
 import {AddProjectToTeamDialog} from '@/components/dialogs/add-project-to-team-dialog';
 import {CreateTemplateFromProjectDialog} from '@/components/dialogs/create-tempalate-from-project-dialog';
+import {toDesignerLegacyFlatMetadata} from '@/utils/projectMetadata';
 
 /**
  * ProjectActions component renders action cards for editing and closing a project.
@@ -207,7 +208,9 @@ const ProjectActions = (): JSX.Element => {
                   href={`data:text/json;charset=utf-8,${encodeURIComponent(
                     JSON.stringify({
                       'ui-specification': data?.['ui-specification'],
-                      metadata: data?.metadata,
+                      metadata: data?.metadata
+                        ? toDesignerLegacyFlatMetadata(data.metadata)
+                        : undefined,
                     })
                   )}`}
                   download={`${projectId}.json`}

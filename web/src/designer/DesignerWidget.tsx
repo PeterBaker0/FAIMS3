@@ -36,11 +36,15 @@ import {
   RouteObject,
   Navigate,
 } from 'react-router-dom';
-import {migrateNotebook} from '@faims3/data-model';
+import {
+  migrateNotebook,
+  toCanonicalProjectMetadata,
+  toLegacyFlatMetadata,
+} from '@faims3/data-model';
 
 import {createDesignerStore} from './createDesignerStore';
 import globalTheme from './theme';
-import type {Notebook, NotebookWithHistory} from './state/initial';
+import type {Notebook, NotebookUISpec, NotebookWithHistory} from './state/initial';
 
 import {NotebookEditor} from './components/notebook-editor';
 import {InfoPanel} from './components/info-panel';
@@ -86,7 +90,9 @@ export function DesignerWidget({
     if (!notebook?.metadata) return undefined;
 
     const flat: Notebook = {
-      metadata: notebook.metadata,
+      metadata: toLegacyFlatMetadata(
+        toCanonicalProjectMetadata(notebook.metadata).metadata
+      ),
       'ui-specification': notebook['ui-specification'].present,
     };
     // migrate the notebook - update any out of date fields or structures
@@ -100,9 +106,11 @@ export function DesignerWidget({
     });
 
     return {
-      metadata: migrated.metadata,
+      metadata: toLegacyFlatMetadata(
+        toCanonicalProjectMetadata(migrated.metadata).metadata
+      ),
       'ui-specification': {
-        present: migrated['ui-specification'],
+        present: migrated['ui-specification'] as unknown as NotebookUISpec,
         past: [],
         future: [],
       },
@@ -167,7 +175,9 @@ export function DesignerWidget({
       store.getState().notebook;
 
     const actualNotebook: Notebook = {
-      metadata,
+      metadata: toLegacyFlatMetadata(
+        toCanonicalProjectMetadata(metadata).metadata
+      ),
       'ui-specification': historyState.present,
     };
 

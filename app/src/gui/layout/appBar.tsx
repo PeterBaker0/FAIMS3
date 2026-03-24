@@ -64,6 +64,7 @@ import SystemAlert from '../components/alert';
 import {AppBarHeading} from '../components/app-bar/app-bar-heading';
 import AppBarAuth from '../components/authentication/appbarAuth';
 import SyncStatus from '../../sync/sync-state';
+import {getProjectDisplayName} from '../../utils/projectMetadata';
 
 const drawerWidth = 240;
 
@@ -105,7 +106,7 @@ function getNestedProjects(pouchProjectList: Project[]) {
       return;
     }
     projectListItems.push({
-      title: project_info.name ?? project_info.metadata.name,
+      title: getProjectDisplayName(project_info),
       icon: <DescriptionIcon />,
       to:
         ROUTES.INDIVIDUAL_NOTEBOOK_ROUTE +

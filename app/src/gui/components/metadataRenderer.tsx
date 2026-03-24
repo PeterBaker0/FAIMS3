@@ -23,13 +23,18 @@ import {Chip} from '@mui/material';
 import {selectProjectById} from '../../context/slices/projectSlice';
 import {useAppSelector} from '../../context/store';
 import {RichTextContent} from '@faims3/forms';
+import {
+  getProjectMetadataValueByLegacyKey,
+  LEGACY_METADATA_KEYS,
+  type LegacyMetadataKey,
+} from '../../utils/projectMetadata';
 
 type MetadataProps = {
   project_id: ProjectID;
   // You can force through an explicit value
   explicitValue?: string;
   // OR you can ask for a value by key from the metadata
-  metadata_key?: string;
+  metadata_key?: LegacyMetadataKey;
   metadata_label?: string;
   chips?: boolean;
 };
@@ -48,12 +53,14 @@ export default function MetadataRenderer(props: MetadataProps) {
   const possibleValue = explicitValue
     ? explicitValue
     : metadata_key
-      ? metadata?.[metadata_key]
+      ? metadata
+        ? getProjectMetadataValueByLegacyKey(metadata, metadata_key)
+        : undefined
       : 'Error';
-  const value = possibleValue ? (possibleValue as string) : '';
+  const value = possibleValue ? String(possibleValue) : '';
 
   // Use RichTextField for 'pre_description' field
-  if (metadata_key === 'pre_description' && value !== '') {
+  if (metadata_key === LEGACY_METADATA_KEYS.preDescription && value !== '') {
     return <RichTextContent content={value} />;
   }
 

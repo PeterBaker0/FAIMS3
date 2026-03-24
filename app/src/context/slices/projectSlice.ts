@@ -1,6 +1,7 @@
 import {
   couchInitialiser,
   initDataDB,
+  ProjectMetadata,
   ProjectDataObject,
   ProjectDocument,
   ProjectStatus,
@@ -92,17 +93,6 @@ export interface DatabaseConnection {
   // have a remoteDb even if sync is not active)
   remote: RemoteCouchConnection;
 }
-
-// This is metadata which is defined as part of the design file
-export interface KnownProjectMetadata {
-  // The survey name
-  name: string;
-  // The description
-  description?: string;
-}
-
-// This represents the true metadata which is a combination of mandatory + user added
-export type ProjectMetadata = KnownProjectMetadata & {[key: string]: any};
 
 // Maps a project ID -> project
 export type ProjectIdToProjectMap = {[projectId: string]: Project};

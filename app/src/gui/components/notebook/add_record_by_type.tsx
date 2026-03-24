@@ -18,6 +18,7 @@ import {compiledSpecService} from '../../../context/slices/helpers/compiledSpecS
 import {Project} from '../../../context/slices/projectSlice';
 import {useAppSelector} from '../../../context/store';
 import {localGetDataDb} from '../../../utils/database';
+import {getProjectSettingBool} from '../../../utils/projectMetadata';
 import {QRCodeButton} from '@faims3/forms';
 
 type AddRecordButtonsProps = {
@@ -39,7 +40,10 @@ export default function AddRecordButtons({
   const [selectedRecord, setSelectedRecord] = useState<
     RecordMetadata | undefined
   >(undefined);
-  const showQRButton = !!metadata['showQRCodeButton'];
+  const showQRButton = getProjectSettingBool({
+    metadata,
+    key: 'showQRCodeButton',
+  });
   const uiSpec = compiledSpecService.getSpec(uiSpecificationId);
 
   if (uiSpec === undefined) {

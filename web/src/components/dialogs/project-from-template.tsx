@@ -20,6 +20,7 @@ import {
   TooltipTrigger,
 } from '../ui/tooltip';
 import {Plus} from 'lucide-react';
+import {getTemplateProjectStatus} from '@/utils/projectMetadata';
 
 /**
  * Component for rendering a dialog to create a new project from a template.
@@ -30,7 +31,7 @@ export const ProjectFromTemplateDialog = () => {
   const {templateId} = Route.useParams();
   const {data} = useGetTemplate({user, templateId});
   const [open, setOpen] = useState(false);
-  const archived = data?.metadata.project_status === 'archived';
+  const archived = getTemplateProjectStatus(data?.metadata) === 'archived';
 
   return archived ? (
     <TooltipProvider>

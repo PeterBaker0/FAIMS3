@@ -14,6 +14,7 @@
 
 import {AppState, NotebookWithHistory} from './initial';
 import {slugify} from './helpers/uiSpec-helpers';
+import {legacyMetadataName} from '../utils/projectMetadata';
 
 // The following functions are inspired by Dan Abramov's lesson on persisting redux state to localStorage,
 // see https://egghead.io/lessons/javascript-redux-persisting-the-state-to-the-local-storage.
@@ -47,7 +48,7 @@ export const downloadNotebook = (notebook: NotebookWithHistory) => {
     type: 'application/json',
   });
   element.href = URL.createObjectURL(file);
-  const name = slugify(actualNotebook.metadata.name as string);
+  const name = slugify(legacyMetadataName(actualNotebook.metadata) ?? 'notebook');
   element.download = `${name}.json`;
   document.body.appendChild(element);
   element.click();

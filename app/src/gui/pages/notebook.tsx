@@ -33,6 +33,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import {useParams} from 'react-router-dom';
 import * as ROUTES from '../../constants/routes';
 import {useAppSelector} from '../../context/store';
+import {getProjectDisplayName} from '../../utils/projectMetadata';
 import NotebookComponent from '../components/notebook';
 import BackButton from '../components/ui/BackButton';
 import NotFound404 from './404';
@@ -69,7 +70,7 @@ export default function Notebook() {
             textOverflow: 'ellipsis',
           }}
         >
-          {project.name ?? project.metadata.name}
+          {getProjectDisplayName(project)}
         </Typography>
       </Stack>
 

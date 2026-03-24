@@ -19,6 +19,7 @@ import {
   TooltipTrigger,
 } from '../ui/tooltip';
 import {Pencil} from 'lucide-react';
+import {getProjectStatus} from '@/utils/projectMetadata';
 
 /**
  * EditTemplateDialog component renders a dialog for editing a template.
@@ -32,9 +33,11 @@ export const EditTemplateDialog = ({onSuccess}: {onSuccess: () => void}) => {
   const {data} = useGetTemplate({user, templateId});
   const [open, setOpen] = useState(false);
 
+  const archived = getProjectStatus(data?.metadata) === 'archived';
+
   return (
     <div>
-      {data?.metadata.project_status === 'archived' ? (
+      {archived ? (
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger className="w-fit">

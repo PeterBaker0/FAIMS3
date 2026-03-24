@@ -6,6 +6,11 @@ import {Card} from '@/components/ui/card';
 import {useGetProject} from '@/hooks/queries';
 import {TeamCellComponent} from '@/components/tables/cells/team-cell';
 import {ProjectStatus} from '@faims3/data-model';
+import {
+  getProjectDescription,
+  getProjectLead,
+  getProjectMetadataValue,
+} from '@/utils/projectMetadata';
 
 const detailsFields = [
   {field: 'name', label: 'Name', isMetadata: false},
@@ -73,8 +78,16 @@ const ProjectDetails = ({projectId}: {projectId: string}) => {
       <List>
         {detailsFields.map(({field, label, render, isMetadata = true}) => {
           const cellData = isMetadata
-            ? data?.metadata[field]
+            ? getProjectMetadataValue(data?.metadata, field)
             : (data as any | undefined)?.[field];
+          const normalisedCellData =
+            isMetadata && data?.metadata
+              ? field === 'pre_description'
+                ? getProjectDescription(data.metadata)
+                : field === 'project_lead'
+                  ? getProjectLead(data.metadata)
+                  : cellData
+              : cellData;
           return (
             <ListItem key={field}>
               <ListLabel>{label}</ListLabel>
@@ -82,7 +95,9 @@ const ProjectDetails = ({projectId}: {projectId: string}) => {
                 <Skeleton />
               ) : (
                 <ListDescription>
-                  {render ? render(cellData) : cellData}
+                  {render
+                    ? render(normalisedCellData)
+                    : normalisedCellData}
                 </ListDescription>
               )}
             </ListItem>

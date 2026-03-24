@@ -4,6 +4,10 @@ import {ColumnDef} from '@tanstack/react-table';
 import {DataTableColumnHeader} from '../data-table/column-header';
 import {TeamCellComponent} from './cells/team-cell';
 import {TemplateCellComponent} from './cells/template-cell';
+import {
+  getProjectLead,
+  getProjectDescription,
+} from '@/utils/projectMetadata';
 
 export const columns: ColumnDef<GetNotebookListResponse[number]>[] = [
   {
@@ -45,7 +49,8 @@ export const columns: ColumnDef<GetNotebookListResponse[number]>[] = [
     },
   },
   {
-    accessorKey: 'metadata.project_lead',
+    id: 'projectLead',
+    accessorFn: row => getProjectLead(row.metadata),
     header: ({column}) => (
       <DataTableColumnHeader
         column={column}
@@ -54,7 +59,8 @@ export const columns: ColumnDef<GetNotebookListResponse[number]>[] = [
     ),
   },
   {
-    accessorKey: 'metadata.pre_description',
+    id: 'description',
+    accessorFn: row => getProjectDescription(row.metadata),
     header: ({column}) => (
       <DataTableColumnHeader column={column} title="Description" />
     ),
