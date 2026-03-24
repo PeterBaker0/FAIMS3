@@ -28,7 +28,6 @@ import {
   Action,
   APINotebookList,
   CouchProjectUIModel,
-  DatabaseInterface,
   decodeUiSpec,
   EncodedProjectUIModel,
   ExistingProjectDocument,
@@ -36,28 +35,26 @@ import {
   file_data_to_attachments,
   getDataDB,
   GetNotebookListResponse,
+  LegacyFlatProjectMetadata,
   logError,
-  PROJECT_METADATA_PREFIX,
   ProjectDBFields,
   ProjectDocument,
   ProjectID,
-  ProjectMetadata,
   PROJECTS_BY_TEAM_ID,
   ProjectStatus,
   Resource,
   resourceRoles,
   Role,
-  safeWriteDocument,
   setAttachmentDumperForType,
   setAttachmentLoaderForType,
   slugify,
+  toCanonicalProjectMetadata,
+  toLegacyFlatMetadata,
   userHasProjectRole,
   migrateNotebook,
 } from '@faims3/data-model';
 import {
-  getMetadataDb,
   initialiseDataDb,
-  initialiseMetadataDb,
   localGetProjectsDb,
   verifyCouchDBConnection,
 } from '.';
@@ -143,7 +140,6 @@ export const getAllProjectsDirectory = async (): Promise<ProjectDocument[]> => {
       // delete rev so that we don't include in the result
       delete project._rev;
       // add database connection details
-      if (project.metadataDb) project.metadataDb.base_url = COUCHDB_PUBLIC_URL;
       if (project.dataDb) project.dataDb.base_url = COUCHDB_PUBLIC_URL;
       projects.push(project);
     }
@@ -265,7 +261,7 @@ export const validateDatabases = async () => {
       const metadata = await getNotebookMetadata(projectId);
       if (!metadata) {
         throw new Exceptions.InternalSystemError(
-          'No metadata DB setup for project with ID ' + projectId
+          'No project metadata found for project with ID ' + projectId
         );
       }
       if (MIGRATE_NOTEBOOKS_ON_STARTUP) {
@@ -337,18 +333,19 @@ export const createNotebook = async (
   teamId: string | undefined = undefined
 ) => {
   const projectId = generateProjectID(projectName);
-  const metaDBName = `metadata-${projectId}`;
   const dataDBName = `data-${projectId}`;
+  const canonicalMetadata = toCanonicalProjectMetadata(metadata).metadata;
+  canonicalMetadata.info.name = projectName.trim();
+
   const projectDoc = {
     _id: projectId,
     name: projectName.trim(),
     templateId: template_id,
-    metadataDb: {
-      db_name: metaDBName,
-    },
     dataDb: {
       db_name: dataDBName,
     },
+    metadata: canonicalMetadata,
+    'ui-specification': uispec,
     // Default status is open
     status: ProjectStatus.OPEN,
     ownedByTeamId: teamId,
@@ -363,22 +360,6 @@ export const createNotebook = async (
     console.log('Error creating project entry in projects database:', error);
     return undefined;
   }
-
-  // Initialise the metadata DB
-  const metaDB = await initialiseMetadataDb({
-    projectId,
-    force: true,
-  });
-
-  const payload = {_id: 'ui-specification', ...uispec};
-  await safeWriteDocument({
-    db: metaDB,
-    data: payload satisfies EncodedProjectUIModel,
-  });
-
-  // ensure that the name is in the metadata
-  metadata.name = projectName.trim();
-  await writeProjectMetadata(metaDB, metadata);
 
   // data database
   await initialiseDataDb({
@@ -401,56 +382,32 @@ export const updateNotebook = async (
   uispec: EncodedProjectUIModel,
   metadata: any
 ) => {
-  // Re-initialise metadata/data dbs (includes security update)
-  const metaDB = await initialiseMetadataDb({
-    projectId,
-    force: true,
-  });
-  await initialiseMetadataDb({
+  // Re-initialise data db (includes security update)
+  await initialiseDataDb({
     projectId,
     force: true,
   });
 
-  // update the existing uispec document
-  // need the revision id of the existing one to do this...
-  const existingUISpec = await metaDB.get('ui-specification');
-  // set the id and rev
-  const payload = {
-    _id: 'ui-specification',
-    _rev: existingUISpec['_rev'],
-    ...uispec,
+  // get existing project and update canonical notebook payload
+  const existingProject = await getProjectById(projectId);
+  const canonicalMetadata = toCanonicalProjectMetadata(metadata).metadata;
+  const preferredName = canonicalMetadata.info.name?.trim();
+  const nextName = preferredName && preferredName.length > 0
+    ? preferredName
+    : existingProject.name;
+  canonicalMetadata.info.name = nextName;
+
+  const updatedProject: ProjectDocument = {
+    ...existingProject,
+    _id: projectId,
+    name: nextName,
+    metadata: canonicalMetadata,
+    'ui-specification': uispec,
   };
-  // now store it to update the spec
-  await safeWriteDocument({db: metaDB, data: payload});
-  await writeProjectMetadata(metaDB, metadata);
 
-  // update the name if required
-  await changeNotebookName({projectId, name: metadata.name});
+  await putProjectDoc(updatedProject);
 
-  // no need to write design docs for existing projects
   return projectId;
-};
-
-/**
- * Updates the notebook status to the targeted value
- */
-export const changeNotebookName = async ({
-  projectId,
-  name,
-}: {
-  projectId: string;
-  name: string;
-}) => {
-  // get existing project record
-  const project = await getProjectById(projectId);
-
-  if (project.name !== name) {
-    // update name
-    const updated = {...project, name};
-
-    // write it back
-    await putProjectDoc(updated);
-  }
 };
 
 /**
@@ -517,49 +474,13 @@ export const deleteNotebook = async (project_id: string) => {
     );
   }
 
-  // This gets the metadata DB
-  const metaDB = await getMetadataDb(project_id);
   // This gets the data DB
   const dataDB = await getDataDB(project_id);
 
-  await metaDB.destroy();
   await dataDB.destroy();
 
   // remove the project from the projectsDB
   await projectsDB.remove(projectDoc);
-};
-
-export const writeProjectMetadata = async (
-  metaDB: DatabaseInterface,
-  metadata: any
-) => {
-  // add metadata, one document per attribute value pair
-  for (const field in metadata) {
-    const doc: any = {
-      _id: PROJECT_METADATA_PREFIX + '-' + field,
-      is_attachment: false, // TODO: well it might not be false! Deal with attachments
-      metadata: metadata[field],
-    };
-    // is there already a version of this document?
-    try {
-      const existingDoc = await metaDB.get(doc._id);
-      doc['_rev'] = existingDoc['_rev'];
-    } catch {
-      // no existing document, so don't set the rev
-    }
-
-    await safeWriteDocument({db: metaDB, data: doc});
-  }
-  // also add the whole metadata as 'projectvalue'
-  metadata._id = PROJECT_METADATA_PREFIX + '-projectvalue';
-  try {
-    const existingDoc = await metaDB.get(metadata._id);
-    metadata['_rev'] = existingDoc['_rev'];
-  } catch {
-    // no existing document, so don't set the rev
-  }
-  await safeWriteDocument({db: metaDB, data: metadata});
-  return metadata;
 };
 
 /**
@@ -569,28 +490,19 @@ export const writeProjectMetadata = async (
  */
 export const getNotebookMetadata = async (
   project_id: string
-): Promise<ProjectMetadata | null> => {
-  const result: ProjectMetadata = {};
+): Promise<LegacyFlatProjectMetadata | null> => {
   const isValid = await validateNotebookID(project_id);
   if (isValid) {
     try {
-      // get the metadata from the db
-      const projectDB = await getMetadataDb(project_id);
-      if (projectDB) {
-        const metaDocs = await projectDB.allDocs({include_docs: true});
-        metaDocs.rows.forEach((doc: any) => {
-          const id: string = doc['id'];
-          if (id && id.startsWith(PROJECT_METADATA_PREFIX)) {
-            const key: string = id.substring(
-              PROJECT_METADATA_PREFIX.length + 1
-            );
-            result[key] = doc.doc.metadata;
-          }
-        });
+      const project = await getProjectById(project_id);
+      if (project.metadata) {
+        const canonical = toCanonicalProjectMetadata(project.metadata).metadata;
+        const result = toLegacyFlatMetadata(canonical);
         result.project_id = project_id;
+        if (!result.name) {
+          result.name = project.name;
+        }
         return result;
-      } else {
-        console.error('no metadata database found for', project_id);
       }
     } catch (error) {
       console.error('error reading project metadata', project_id, error);
@@ -610,18 +522,13 @@ export const getEncodedNotebookUISpec = async (
   projectId: string
 ): Promise<CouchProjectUIModel | null> => {
   try {
-    // get the metadata from the db
-    const projectDB = await getMetadataDb(projectId);
-    if (projectDB) {
-      const uiSpec = (await projectDB.get('ui-specification')) as any;
-      delete uiSpec._id;
-      delete uiSpec._rev;
-      return uiSpec;
-    } else {
-      console.error('no metadata database found for', projectId);
+    // get the ui-specification from the project doc
+    const project = await getProjectById(projectId);
+    if (project['ui-specification']) {
+      return project['ui-specification'] as CouchProjectUIModel;
     }
   } catch (error) {
-    console.error('error reading metadata db for project', projectId, error);
+    console.error('error reading project ui-specification', projectId, error);
   }
   return null;
 };
@@ -629,7 +536,7 @@ export const getEncodedNotebookUISpec = async (
 /**
  * Gets the ready to use representation of the UI spec for a given project.
  *
- * Does this by fetching from the metadata DB and decoding.
+ * Does this by fetching from the project doc and decoding.
  *
  * @param projectId
  * @returns The decoded project UI model (not compiled)
@@ -665,9 +572,7 @@ export const validateNotebookID = async (
 };
 
 /**
- * Fetches the roles configured for a notebook from the notebook metadata DB.
- * @param project_id The project ID to lookup
- * @param metadata If the project metadata is known, no need to fetch it again
+ * Fetches the roles configured for a notebook.
  * @returns A list of roles for this notebook including at least admin and user
  */
 export const getRolesForNotebook = () => {

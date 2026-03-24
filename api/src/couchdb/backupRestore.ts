@@ -17,9 +17,17 @@
  * Description:
  *    Functions to backup and restore databases
  */
-import {batchWriteDocuments} from '@faims3/data-model';
+import {
+  batchWriteDocuments,
+  ExistingProjectDocument,
+  toCanonicalProjectMetadata,
+} from '@faims3/data-model';
 import {open} from 'node:fs/promises';
-import {initialiseDataDb, initialiseMetadataDb, localGetProjectsDb} from '.';
+import {initialiseDataDb, localGetProjectsDb} from '.';
+import {
+  buildConsolidatedProjectDoc,
+  LegacyMetadataDocument,
+} from './metadataConsolidation';
 
 /**
  * restoreFromBackup - restore databases from a JSONL backup file
@@ -48,6 +56,10 @@ export const restoreFromBackup = async ({
   const BATCH_SIZE = 500; // Smaller batches
   let batch: any[] = [];
   let skipping = false;
+  const projectIdsSeen = new Set<string>();
+  const metadataDocsByProjectId: Record<string, LegacyMetadataDocument[]> = {};
+  let currentDatabaseType: 'projects' | 'data' | 'metadata' | 'other' = 'other';
+  let currentMetadataProjectId: string | undefined = undefined;
 
   try {
     for await (const line of file.readLines()) {
@@ -99,28 +111,55 @@ export const restoreFromBackup = async ({
             console.log(`Processing database ${dbName}`);
           }
           if (dbName.startsWith('projects')) {
+            currentDatabaseType = 'projects';
+            currentMetadataProjectId = undefined;
             // name will be eg. 'projects_default', where 'default' is the
             // conductor instance id
             // we'll put all projects into our projectsDB
             db = localGetProjectsDb();
           } else if (!skipping && dbName.startsWith('metadata')) {
-            const projectName = dbName.split('||')[1];
-            // TODO: set up permissions for the databases
-            db = await initialiseMetadataDb({
-              projectId: projectName,
-              force: true,
-            });
+            currentDatabaseType = 'metadata';
+            const projectId = dbName.split('||')[1];
+            if (projectId) {
+              currentMetadataProjectId = projectId;
+              if (!metadataDocsByProjectId[projectId]) {
+                metadataDocsByProjectId[projectId] = [];
+              }
+            } else {
+              currentMetadataProjectId = undefined;
+            }
+            // Metadata DB content is consolidated after restore into projects DB.
+            db = undefined;
           } else if (!skipping && dbName.startsWith('data')) {
+            currentDatabaseType = 'data';
+            currentMetadataProjectId = undefined;
             const projectName = dbName.split('||')[1];
             // TODO: set up permissions for the databases
             db = await initialiseDataDb({
               projectId: projectName,
               force: true,
             });
+            projectIdsSeen.add(projectName);
           } else {
+            currentDatabaseType = 'other';
+            currentMetadataProjectId = undefined;
             // don't try to restore anything we don't know about
             db = undefined;
           }
+        } else if (
+          !skipping &&
+          !doc.id.startsWith('_design') &&
+          currentDatabaseType === 'metadata' &&
+          currentMetadataProjectId
+        ) {
+          const metadataDoc = {
+            _id: doc.doc._id,
+            ...doc.doc,
+          };
+          delete metadataDoc._rev;
+          metadataDocsByProjectId[currentMetadataProjectId].push(
+            metadataDoc as LegacyMetadataDocument
+          );
         } else if (!skipping && !doc.id.startsWith('_design') && db) {
           // don't try to restore design documents as these will have been
           // created on the database initialisation
@@ -163,6 +202,55 @@ export const restoreFromBackup = async ({
     if (batch.length > 0 && db) {
       await batchWriteDocuments({db, documents: batch, writeOnClash: force});
       batch = [];
+    }
+
+    // If projects were restored in legacy schema, canonicalise the metadata
+    // shape before consolidation.
+    const projectsDb = localGetProjectsDb();
+    const projectsDocs = await projectsDb.allDocs<ExistingProjectDocument>({
+      include_docs: true,
+    });
+    for (const row of projectsDocs.rows) {
+      const doc = row.doc;
+      if (!doc || row.id.startsWith('_')) {
+        continue;
+      }
+      const canonical = toCanonicalProjectMetadata((doc as any).metadata);
+      const nameFromDoc = (doc as any).name;
+      if (!canonical.metadata.info.name && typeof nameFromDoc === 'string') {
+        canonical.metadata.info.name = nameFromDoc;
+      }
+
+      const needsUiSpec = !(doc as any)['ui-specification'];
+      const needsMetadata = !(doc as any).metadata;
+      if (!needsUiSpec && !needsMetadata) {
+        continue;
+      }
+
+      await projectsDb.put({
+        ...doc,
+        metadata: canonical.metadata,
+        'ui-specification':
+          (doc as any)['ui-specification'] ?? {
+            fields: {},
+            fviews: {},
+            viewsets: {},
+            visible_types: [],
+          },
+      });
+    }
+
+    // Consolidate restored legacy metadata DB documents into projects DB docs.
+    for (const projectId of Object.keys(metadataDocsByProjectId)) {
+      const project = await projectsDb.get(projectId).catch(() => undefined);
+      if (!project) {
+        continue;
+      }
+      const {nextProject} = buildConsolidatedProjectDoc({
+        project: project as ExistingProjectDocument,
+        legacyMetadataDocs: metadataDocsByProjectId[projectId],
+      });
+      await projectsDb.put(nextProject);
     }
   } finally {
     await file.close();

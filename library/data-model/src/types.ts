@@ -792,6 +792,7 @@ const LEGACY_SETTINGS_KEYS = new Set([
   'isrequest',
   'meta',
   'behaviours',
+  'behavious',
 ]);
 
 const toBooleanOrUndefined = (
@@ -840,9 +841,14 @@ export const toCanonicalProjectMetadata = (
     parseIssues: [],
   };
 
+  const looksCanonical =
+    typeof input === 'object' &&
+    input !== null &&
+    ('info' in input || 'settings' in input || 'userMetadata' in input);
+
   // If already canonical, accept directly.
   const canonicalParsed = ProjectMetadataSchema.safeParse(input);
-  if (canonicalParsed.success) {
+  if (looksCanonical && canonicalParsed.success) {
     return {metadata: canonicalParsed.data, report};
   }
 
@@ -904,7 +910,7 @@ export const toCanonicalProjectMetadata = (
       flat.meta && typeof flat.meta === 'object'
         ? (flat.meta as {[key: string]: unknown})
         : undefined,
-    behaviours: flat.behaviours,
+    behaviours: flat.behaviours ?? flat.behavious,
   };
 
   const userMetadata = Object.fromEntries(
@@ -988,6 +994,8 @@ export const toLegacyFlatMetadata = (
   }
   if (metadata.settings.behaviours !== undefined) {
     out.behaviours = metadata.settings.behaviours;
+    // Maintain legacy typo compatibility for consumers that still expect it.
+    out.behavious = metadata.settings.behaviours;
   }
 
   return out;

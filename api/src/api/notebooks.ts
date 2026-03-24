@@ -898,7 +898,7 @@ api.post(
       });
     } else {
       // Remove project role from the user
-      removeProjectRole({user, projectId: notebookMetadata.project_id, role});
+      removeProjectRole({user, projectId: req.params.id, role});
     }
 
     // save the user after modifications have been made
