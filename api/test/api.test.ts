@@ -134,9 +134,13 @@ describe('API tests', () => {
     return request(app)
       .post('/api/notebooks')
       .send({
-        'ui-specification': uiSpec,
-        metadata: metadata,
-        name: 'test notebook',
+        project: {
+          name: 'test notebook',
+        },
+        notebook: {
+          'ui-specification': uiSpec,
+          metadata: metadata,
+        },
       })
       .set('Authorization', `Bearer ${adminToken}`)
       .set('Content-Type', 'application/json')
@@ -154,9 +158,13 @@ describe('API tests', () => {
     return request(app)
       .post('/api/notebooks')
       .send({
-        'ui-specification': uiSpec,
-        metadata: metadata,
-        name: 'test notebook',
+        project: {
+          name: 'test notebook',
+        },
+        notebook: {
+          'ui-specification': uiSpec,
+          metadata: metadata,
+        },
       })
       .set('Authorization', `Bearer ${localUserToken}`)
       .set('Content-Type', 'application/json')
@@ -170,9 +178,13 @@ describe('API tests', () => {
     const response = await request(app)
       .post('/api/notebooks')
       .send({
-        'ui-specification': uiSpec,
-        metadata: metadata,
-        name: 'test notebook',
+        project: {
+          name: 'test notebook',
+        },
+        notebook: {
+          'ui-specification': uiSpec,
+          metadata: metadata,
+        },
       })
       .set('Authorization', `Bearer ${notebookUserToken}`)
       .set('Content-Type', 'application/json')
@@ -208,9 +220,13 @@ describe('API tests', () => {
     const response = await request(app)
       .post('/api/notebooks')
       .send({
-        'ui-specification': uiSpec,
-        metadata: metadata,
-        name: 'test notebook',
+        project: {
+          name: 'test notebook',
+        },
+        notebook: {
+          'ui-specification': uiSpec,
+          metadata: metadata,
+        },
       })
       .set('Authorization', `Bearer ${adminToken}`)
       .set('Content-Type', 'application/json')
@@ -254,9 +270,13 @@ describe('API tests', () => {
     const newResponse = await request(app)
       .put(`/api/notebooks/${projectID}`)
       .send({
-        'ui-specification': uiSpec,
-        metadata: metadata,
-        name: 'test notebook',
+        project: {
+          name: 'Updated Test Notebook',
+        },
+        notebook: {
+          'ui-specification': uiSpec,
+          metadata: metadata,
+        },
       })
       .set('Authorization', `Bearer ${adminToken}`)
       .set('Content-Type', 'application/json')
@@ -265,7 +285,7 @@ describe('API tests', () => {
     expect(newResponse.body.notebook).to.include('-test-notebook');
     const newNotebook = await getNotebookMetadata(projectID);
     if (newNotebook) {
-      expect(newNotebook.name).to.equal('Updated Test Notebook');
+      expect(newNotebook.info.name).to.equal('Updated Test Notebook');
     } else {
       expect(newNotebook).not.to.be.null;
     }
@@ -280,9 +300,13 @@ describe('API tests', () => {
     let response = await request(app)
       .post('/api/notebooks')
       .send({
-        'ui-specification': uiSpec,
-        metadata: metadata,
-        name: 'test notebook',
+        project: {
+          name: 'test notebook',
+        },
+        notebook: {
+          'ui-specification': uiSpec,
+          metadata: metadata,
+        },
       })
       .set('Authorization', `Bearer ${adminToken}`)
       .set('Content-Type', 'application/json')
@@ -372,7 +396,7 @@ describe('API tests', () => {
       .set('Content-Type', 'application/json')
       .expect(200)
       .expect(response => {
-        expect(response.body.metadata.name).to.equal('test-notebook');
+        expect(response.body.metadata.info.name).to.equal('test-notebook');
       });
   });
 

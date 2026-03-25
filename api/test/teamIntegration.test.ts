@@ -51,7 +51,6 @@ import {KEY_SERVICE} from '../src/buildconfig';
 import {getDataDb, localGetProjectsDb} from '../src/couchdb';
 import {
   createNotebook,
-  getNotebookMetadata,
   getProjectIdsByTeamId,
 } from '../src/couchdb/notebooks';
 import {createTeamDocument} from '../src/couchdb/teams';
@@ -80,6 +79,27 @@ const uispec: EncodedProjectUIModel = {
   viewsets: {},
   visible_types: [],
 };
+
+const notebookCreatePayload = ({
+  name,
+  uiSpec,
+  metadata,
+  teamId,
+}: {
+  name: string;
+  uiSpec: EncodedProjectUIModel;
+  metadata: Record<string, unknown>;
+  teamId?: string;
+}) => ({
+  project: {
+    name,
+    ...(teamId ? {teamId} : {}),
+  },
+  notebook: {
+    'ui-specification': uiSpec,
+    metadata,
+  },
+});
 
 /**
  * Loads example notebook from file system and parses into appropriate format
@@ -183,12 +203,13 @@ describe('Team integration with templates and projects', () => {
     const projectWithoutTeam = await requestAuthAndType(
       request(app)
         .post(`${NOTEBOOKS_API_BASE}`)
-        .send({
-          name: 'Project without team',
-          'ui-specification': uispec,
-          metadata: {test_key: 'test_value'},
-          // No teamId
-        }),
+        .send(
+          notebookCreatePayload({
+            name: 'Project without team',
+            uiSpec: uispec,
+            metadata: {test_key: 'test_value'},
+          })
+        ),
       adminToken
     )
       .expect(200)
@@ -198,12 +219,14 @@ describe('Team integration with templates and projects', () => {
     const projectWithTeam = await requestAuthAndType(
       request(app)
         .post(`${NOTEBOOKS_API_BASE}`)
-        .send({
-          name: 'Project with team',
-          'ui-specification': uispec,
-          metadata: {test_key: 'test_value'},
-          teamId: team._id,
-        }),
+        .send(
+          notebookCreatePayload({
+            name: 'Project with team',
+            uiSpec: uispec,
+            metadata: {test_key: 'test_value'},
+            teamId: team._id,
+          })
+        ),
       adminToken
     )
       .expect(200)
@@ -212,10 +235,6 @@ describe('Team integration with templates and projects', () => {
     // Verify the projects were created
     expect(projectWithoutTeam.notebook).to.not.be.undefined;
     expect(projectWithTeam.notebook).to.not.be.undefined;
-
-    // Get the project metadata
-    await getNotebookMetadata(projectWithTeam.notebook);
-    await getNotebookMetadata(projectWithoutTeam.notebook);
 
     // Get the projects directory document which contains the ownedByTeamId
     await getDataDb(projectWithTeam.notebook);
@@ -228,8 +247,8 @@ describe('Team integration with templates and projects', () => {
       projectWithoutTeam.notebook
     );
 
-    expect(projectDocWithTeam.ownedByTeamId).to.equal(team._id);
-    expect(projectDocWithoutTeam.ownedByTeamId).to.be.undefined;
+    expect(projectDocWithTeam.project.teamId).to.equal(team._id);
+    expect(projectDocWithoutTeam.project.teamId).to.be.undefined;
   });
 
   it('allows team members to create resources in their team', async () => {
@@ -287,12 +306,14 @@ describe('Team integration with templates and projects', () => {
     await requestAuthAndType(
       request(app)
         .post(`${NOTEBOOKS_API_BASE}`)
-        .send({
-          name: 'Member team project attempt',
-          'ui-specification': uispec,
-          metadata: {test_key: 'test_value'},
-          teamId: team._id,
-        }),
+        .send(
+          notebookCreatePayload({
+            name: 'Member team project attempt',
+            uiSpec: uispec,
+            metadata: {test_key: 'test_value'},
+            teamId: team._id,
+          })
+        ),
       memberToken
     ).expect(401);
 
@@ -337,12 +358,14 @@ describe('Team integration with templates and projects', () => {
     await requestAuthAndType(
       request(app)
         .post(`${NOTEBOOKS_API_BASE}`)
-        .send({
-          name: 'Team project via API',
-          'ui-specification': uispec,
-          metadata: {test_key: 'test_value'},
-          teamId: team._id,
-        }),
+        .send(
+          notebookCreatePayload({
+            name: 'Team project via API',
+            uiSpec: uispec,
+            metadata: {test_key: 'test_value'},
+            teamId: team._id,
+          })
+        ),
       managerToken
     ).expect(200);
     // Try to create a template in the team using the API
@@ -416,12 +439,14 @@ describe('Team integration with templates and projects', () => {
     await requestAuthAndType(
       request(app)
         .post(`${NOTEBOOKS_API_BASE}`)
-        .send({
-          name: 'Unauthorized team project',
-          'ui-specification': uispec,
-          metadata: {test_key: 'test_value'},
-          teamId: team._id,
-        }),
+        .send(
+          notebookCreatePayload({
+            name: 'Unauthorized team project',
+            uiSpec: uispec,
+            metadata: {test_key: 'test_value'},
+            teamId: team._id,
+          })
+        ),
       userToken
     ).expect(401);
 
@@ -449,12 +474,14 @@ describe('Team integration with templates and projects', () => {
     await requestAuthAndType(
       request(app)
         .post(`${NOTEBOOKS_API_BASE}`)
-        .send({
-          name: 'Admin team project',
-          'ui-specification': uispec,
-          metadata: {test_key: 'test_value'},
-          teamId: team._id,
-        }),
+        .send(
+          notebookCreatePayload({
+            name: 'Admin team project',
+            uiSpec: uispec,
+            metadata: {test_key: 'test_value'},
+            teamId: team._id,
+          })
+        ),
       adminToken
     ).expect(200);
 
@@ -779,12 +806,14 @@ describe('Team integration with templates and projects', () => {
     const project = await requestAuthAndType(
       request(app)
         .post(`${NOTEBOOKS_API_BASE}`)
-        .send({
-          name: 'Update Team Project',
-          'ui-specification': uispec,
-          metadata: {test_key: 'test_value'},
-          teamId: team1._id,
-        }),
+        .send(
+          notebookCreatePayload({
+            name: 'Update Team Project',
+            uiSpec: uispec,
+            metadata: {test_key: 'test_value'},
+            teamId: team1._id,
+          })
+        ),
       adminToken
     )
       .expect(200)
@@ -815,9 +844,11 @@ describe('Team integration with templates and projects', () => {
       request(app)
         .put(`${NOTEBOOKS_API_BASE}/${project.notebook}`)
         .send({
-          'ui-specification': uispec,
-          metadata: {
-            test_key: 'updated-value',
+          notebook: {
+            'ui-specification': uispec,
+            metadata: {
+              test_key: 'updated-value',
+            },
           },
         }),
       adminToken
@@ -827,7 +858,7 @@ describe('Team integration with templates and projects', () => {
     const projectsDb = await require('../src/couchdb').localGetProjectsDb();
     const updatedProjectDoc = await projectsDb.get(project.notebook);
 
-    expect(updatedProjectDoc.ownedByTeamId).to.equal(team1._id);
+    expect(updatedProjectDoc.project.teamId).to.equal(team1._id);
   });
 
   it('can assign a project to a team after creation', async () => {
@@ -841,11 +872,13 @@ describe('Team integration with templates and projects', () => {
     const project = await requestAuthAndType(
       request(app)
         .post(`${NOTEBOOKS_API_BASE}`)
-        .send({
-          name: 'Project to Assign',
-          'ui-specification': uispec,
-          metadata: {test_key: 'test_value'},
-        }),
+        .send(
+          notebookCreatePayload({
+            name: 'Project to Assign',
+            uiSpec: uispec,
+            metadata: {test_key: 'test_value'},
+          })
+        ),
       adminToken
     )
       .expect(200)
@@ -854,7 +887,7 @@ describe('Team integration with templates and projects', () => {
     // Verify project is created without teamId
     const projectsDb = localGetProjectsDb();
     const projectDoc = await projectsDb.get(project.notebook);
-    expect(projectDoc.ownedByTeamId).to.be.undefined;
+    expect(projectDoc.project.teamId).to.be.undefined;
 
     // Assign the project to the team
     await requestAuthAndType(
@@ -866,7 +899,7 @@ describe('Team integration with templates and projects', () => {
 
     // Verify the project now has the teamId assigned
     const updatedProjectDoc = await projectsDb.get(project.notebook);
-    expect(updatedProjectDoc.ownedByTeamId).to.equal(team._id);
+    expect(updatedProjectDoc.project.teamId).to.equal(team._id);
   });
 
   it('getRelevantUserAssociations with no teams returns empty array', async () => {

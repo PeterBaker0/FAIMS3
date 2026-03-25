@@ -453,8 +453,10 @@ describe('template API tests', () => {
       request(app)
         .post(`${NOTEBOOKS_API_BASE}`)
         .send({
-          name: 'test project name',
           template_id: template._id,
+          project: {
+            name: 'test project name',
+          },
         } satisfies CreateNotebookFromTemplate)
     )
       .expect(200)
@@ -473,12 +475,12 @@ describe('template API tests', () => {
         // Parse response as the get model
 
         // due to "test_key": "test_value",
-        expect(response.body.metadata.test_key).to.equal(
+        expect(response.body.metadata.userMetadata.test_key).to.equal(
           notebook.metadata.test_key
         );
 
         // check template ID is processed properly
-        expect(response.body.metadata.template_id).to.equal(template._id);
+        expect(response.body.project.templateId).to.equal(template._id);
       });
   });
 
@@ -561,8 +563,10 @@ describe('template API tests', () => {
       request(app)
         .post(`${NOTEBOOKS_API_BASE}`)
         .send({
-          name: 'test project name',
           template_id: template._id + 'jdkfljs',
+          project: {
+            name: 'test project name',
+          },
         } satisfies CreateNotebookFromTemplate)
     ).expect(404);
   });
@@ -659,8 +663,10 @@ describe('template API tests', () => {
     return await request(app)
       .post(`${NOTEBOOKS_API_BASE}`)
       .send({
-        name: '12345',
         template_id: '12345',
+        project: {
+          name: '12345',
+        },
       } satisfies CreateNotebookFromTemplate)
       .set('Content-Type', 'application/json')
       .expect(401);
@@ -702,7 +708,9 @@ describe('template API tests', () => {
         .post(`${NOTEBOOKS_API_BASE}`)
         .send({
           template_id: '12345',
-          name: '12345',
+          project: {
+            name: '12345',
+          },
         } satisfies CreateNotebookFromTemplate),
       localUserToken
     ).expect(401);

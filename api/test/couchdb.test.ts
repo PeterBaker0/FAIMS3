@@ -279,10 +279,10 @@ describe('notebook api', () => {
 
       expect(retrievedMetadata).not.to.be.null;
       if (retrievedMetadata) {
-        expect(retrievedMetadata['lead_institution']).to.equal(
+        expect(retrievedMetadata.info.leadInstitution).to.equal(
           metadata['lead_institution']
         );
-        expect(retrievedMetadata['name']).to.equal(name);
+        expect(retrievedMetadata.info.name).to.equal(name);
       }
     }
   });
@@ -419,8 +419,8 @@ describe('notebook api', () => {
       }
       const newMetadata = await getNotebookMetadata(projectID);
       if (newMetadata) {
-        expect(newMetadata['name']).to.equal('Updated Test Notebook');
-        expect(newMetadata['project_lead']).to.equal('Bob Bobalooba');
+        expect(newMetadata.info.name).to.equal('Updated Test Notebook');
+        expect(newMetadata.info.projectLead).to.equal('Bob Bobalooba');
       }
     }
   });

@@ -13,9 +13,18 @@ const loadProject = async (filename: string) => {
   try {
     const jsonText = readFileSync(filename, 'utf-8');
     const {metadata, 'ui-specification': uiSpec} = JSON.parse(jsonText);
-    const projectName = metadata.name;
+    const projectName =
+      typeof metadata?.name === 'string' && metadata.name.trim().length > 0
+        ? metadata.name.trim()
+        : 'imported-project';
 
-    const projectID = await createNotebook(projectName, uiSpec, metadata);
+    const projectID = await createNotebook({
+      project: {name: projectName},
+      notebook: {
+        metadata,
+        'ui-specification': uiSpec,
+      },
+    });
     console.log('created project', projectID);
     process.exit(0);
   } catch (error) {
