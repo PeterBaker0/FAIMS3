@@ -717,6 +717,24 @@ export const CouchDocumentFieldsSchema = z.object({
 });
 export type CouchDocumentFields = z.infer<typeof CouchDocumentFieldsSchema>;
 
+/**
+ * High-level project information, intentionally separated from notebook
+ * specification payload (`metadata` + `ui-specification`).
+ */
+export const ProjectInfoStatusSchema = z.enum(['OPEN', 'CLOSED']);
+export type ProjectInfoStatus = z.infer<typeof ProjectInfoStatusSchema>;
+
+export const ProjectInfoSchema = z.object({
+  name: z.string().trim().min(1),
+  description: z.string().optional(),
+  teamId: z.string().trim().min(1).optional(),
+  templateId: z.string().trim().min(1).optional(),
+  status: ProjectInfoStatusSchema.default('OPEN'),
+  createdAt: z.number().int().nonnegative().optional(),
+  updatedAt: z.number().int().nonnegative().optional(),
+});
+export type ProjectInfo = z.infer<typeof ProjectInfoSchema>;
+
 // ========================
 // UI SCHEMA AND METADATA
 // ========================

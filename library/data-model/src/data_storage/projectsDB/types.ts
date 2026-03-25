@@ -2,6 +2,7 @@ import {
   DatabaseInterface,
   EncodedProjectUIModel,
   PossibleConnectionInfo,
+  ProjectInfo,
   ProjectMetadata,
 } from '../../types';
 
@@ -73,11 +74,27 @@ export type ProjectV3Fields = {
 };
 export type ProjectV3Document = PouchDB.Core.Document<ProjectV3Fields>;
 
-// Current (V3)
-export type ProjectDBFields = ProjectV3Fields;
+// V4
+export type ProjectV4Fields = {
+  // Data connection (mandatory)
+  dataDb: PossibleConnectionInfo;
+
+  // High-level project information
+  project: ProjectInfo;
+
+  // Canonical structured notebook metadata
+  metadata: ProjectMetadata;
+
+  // Encoded notebook UI specification
+  'ui-specification': EncodedProjectUIModel;
+};
+export type ProjectV4Document = PouchDB.Core.Document<ProjectV4Fields>;
+
+// Current (V4)
+export type ProjectDBFields = ProjectV4Fields;
 export type ProjectDocument = PouchDB.Core.Document<ProjectDBFields>;
 export type ExistingProjectDocument =
   PouchDB.Core.ExistingDocument<ProjectDBFields>;
 
-// DB Type (V3)
+// DB Type (V4)
 export type ProjectDB = DatabaseInterface<ProjectDBFields>;

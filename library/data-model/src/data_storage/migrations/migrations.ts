@@ -24,6 +24,7 @@ import {
   ProjectV1Fields,
   ProjectV2Fields,
   ProjectV3Fields,
+  ProjectV4Fields,
 } from '../projectsDB';
 import {toCanonicalProjectMetadata} from '../../types';
 import {TemplateV1Fields, TemplateV2Fields} from '../templatesDB/types';
@@ -316,6 +317,86 @@ export const projectsV2toV3Migration: MigrationFunc = doc => {
   return {action: 'update', updatedRecord: outputDoc};
 };
 
+const parseTimestampMs = (value: unknown): number | undefined => {
+  if (typeof value === 'number' && Number.isFinite(value) && value >= 0) {
+    return Math.floor(value);
+  }
+  if (typeof value === 'string') {
+    const asNumber = Number(value);
+    if (Number.isFinite(asNumber) && asNumber >= 0) {
+      return Math.floor(asNumber);
+    }
+    const parsed = Date.parse(value);
+    if (!Number.isNaN(parsed) && parsed >= 0) {
+      return parsed;
+    }
+  }
+  return undefined;
+};
+
+/**
+ * Introduces explicit project-level information block, clearly separated from
+ * notebook payload metadata + ui-specification.
+ */
+export const projectsV3toV4Migration: MigrationFunc = doc => {
+  const inputDoc =
+    doc as unknown as PouchDB.Core.ExistingDocument<ProjectV3Fields> & {
+      description?: unknown;
+      created?: unknown;
+      createdAt?: unknown;
+      last_updated?: unknown;
+      updatedAt?: unknown;
+    };
+
+  const canonical = toCanonicalProjectMetadata(inputDoc.metadata).metadata;
+  const projectName =
+    (typeof inputDoc.name === 'string' && inputDoc.name.trim().length > 0
+      ? inputDoc.name.trim()
+      : canonical.info.name) ?? inputDoc._id;
+  if (!canonical.info.name) {
+    canonical.info.name = projectName;
+  }
+
+  const projectDescription =
+    typeof inputDoc.description === 'string'
+      ? inputDoc.description
+      : canonical.info.description;
+
+  const createdAt =
+    parseTimestampMs(inputDoc.createdAt) ??
+    parseTimestampMs(inputDoc.created) ??
+    parseTimestampMs(inputDoc.last_updated);
+  const updatedAt =
+    parseTimestampMs(inputDoc.updatedAt) ??
+    parseTimestampMs(inputDoc.last_updated) ??
+    createdAt ??
+    Date.now();
+
+  const projectStatus: ProjectStatus =
+    inputDoc.status === ProjectStatus.CLOSED
+      ? ProjectStatus.CLOSED
+      : ProjectStatus.OPEN;
+
+  const outputDoc: PouchDB.Core.ExistingDocument<ProjectV4Fields> = {
+    _id: inputDoc._id,
+    _rev: inputDoc._rev,
+    dataDb: inputDoc.dataDb,
+    project: {
+      name: projectName,
+      description: projectDescription,
+      teamId: inputDoc.ownedByTeamId,
+      templateId: inputDoc.templateId,
+      status: projectStatus,
+      createdAt,
+      updatedAt,
+    },
+    metadata: canonical,
+    'ui-specification': inputDoc['ui-specification'],
+  };
+
+  return {action: 'update', updatedRecord: outputDoc};
+};
+
 export const invitesV2toV3Migration: MigrationFunc = doc => {
   // Cast input document to V2 type
   const inputDoc =
@@ -460,8 +541,8 @@ export const DB_TARGET_VERSIONS: DBTargetVersions = {
   [DatabaseType.INVITES]: {defaultVersion: 1, targetVersion: 4},
   // people v3
   [DatabaseType.PEOPLE]: {defaultVersion: 1, targetVersion: 4},
-  // projects v3
-  [DatabaseType.PROJECTS]: {defaultVersion: 1, targetVersion: 3},
+  // projects v4
+  [DatabaseType.PROJECTS]: {defaultVersion: 1, targetVersion: 4},
   [DatabaseType.TEMPLATES]: {defaultVersion: 1, targetVersion: 2},
   [DatabaseType.TEAMS]: {defaultVersion: 1, targetVersion: 1},
 };
@@ -512,6 +593,14 @@ export const DB_MIGRATIONS: MigrationDetails[] = [
     description:
       'Consolidates project metadata into project docs and removes metadata DB pointer.',
     migrationFunction: projectsV2toV3Migration,
+  },
+  {
+    dbType: DatabaseType.PROJECTS,
+    from: 3,
+    to: 4,
+    description:
+      'Adds explicit project-level details block, separated from notebook metadata payload.',
+    migrationFunction: projectsV3toV4Migration,
   },
   {
     dbType: DatabaseType.INVITES,
