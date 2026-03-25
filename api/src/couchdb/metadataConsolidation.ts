@@ -1,3 +1,29 @@
+/**
+ * Legacy metadata database consolidation for FAIMS projects.
+ *
+ * **Background:** Older deployments stored each project’s editable metadata (form
+ * configuration, labels, and related key/value material) in a *separate* CouchDB
+ * database per project, typically named `metadata-{projectId}` or referenced from
+ * the project document via `metadataDb` / `metadata_db`. The UI specification
+ * lived as a document with id `ui-specification` in that database; other entries
+ * used ids prefixed with `project-metadata-` (or a flattened
+ * `project-metadata-projectvalue` doc).
+ *
+ * **Current model:** Canonical project metadata and the encoded UI model are
+ * stored on the project document itself (`metadata`, `ui-specification`), as
+ * produced by `toCanonicalProjectMetadata` from `@faims3/data-model`. Legacy
+ * pointer fields on the project doc are removed after a successful migration.
+ *
+ * **What this module does:** For each project (or a filtered subset), it opens
+ * the legacy metadata database if it exists, reads all non-design documents,
+ * merges them into a single updated project document, and writes that document
+ * back to the projects database. Optional `dryRun` only reports what would
+ * happen; optional `cleanup` destroys the legacy metadata database after
+ * migration or when it is empty of migratable content.
+ *
+ * Typical callers: one-off or scripted migrations during upgrades, not hot-path
+ * request handling.
+ */
 import PouchDB from 'pouchdb';
 import {
   DatabaseInterface,
@@ -8,37 +34,55 @@ import {
 import {localGetProjectsDb} from '.';
 import {COUCHDB_INTERNAL_URL, LOCAL_COUCHDB_AUTH} from '../buildconfig';
 
+/** Prefix for legacy per-key metadata doc ids in the old metadata database. */
 const LEGACY_METADATA_PREFIX = 'project-metadata-';
+
+/** Legacy document id for the encoded UI model in the old metadata database. */
 const UI_SPEC_ID = 'ui-specification';
 
+/** A row from `allDocs` in a legacy metadata database (any shape except `_id`). */
 export type LegacyMetadataDocument = {
   _id: string;
   [key: string]: unknown;
 };
 
+/** Options for {@link consolidateLegacyMetadataDbs}. */
 export type ConsolidationOptions = {
+  /** If true, do not write the project doc or destroy databases; only fill reports. */
   dryRun?: boolean;
+  /** If true, destroy the legacy metadata DB after a successful migration or when empty. */
   cleanup?: boolean;
+  /** If set, only these project ids are considered; otherwise all projects in the projects DB. */
   projectIds?: string[];
+  /** Override legacy DB name per project id (otherwise derived from the project doc or `metadata-{id}`). */
   metadataDbNameByProjectId?: Record<string, string>;
 };
 
+/** Per-project outcome of a consolidation run. */
 export type ConsolidationReport = {
   projectId: string;
+  /** CouchDB database name used for legacy metadata for this project. */
   metadataDbName?: string;
+  /** High-level result for this project in this run. */
   status:
     | 'skipped-no-metadata-db'
     | 'skipped-not-found'
     | 'dry-run'
     | 'migrated'
     | 'error';
+  /** Keys dropped while normalizing metadata (see `toCanonicalProjectMetadata` report). */
   droppedKeys: string[];
+  /** Keys coerced during normalization. */
   coercedKeys: string[];
+  /** Non-fatal parse or validation notes from normalization. */
   parseIssues: string[];
+  /** Error messages when migration failed for this project. */
   errors: string[];
+  /** Whether the legacy metadata database was destroyed in this run. */
   cleanedUp: boolean;
 };
 
+/** Resolves the legacy metadata CouchDB database name for a project. */
 const getLegacyMetadataDbName = ({
   project,
   explicitDbName,
@@ -60,6 +104,7 @@ const getLegacyMetadataDbName = ({
   );
 };
 
+/** Loads all documents from a legacy metadata database (including `_id` / `_rev`). */
 const readLegacyMetadataDocuments = async ({
   metadataDb,
 }: {
@@ -76,6 +121,11 @@ const readLegacyMetadataDocuments = async ({
   return records;
 };
 
+/**
+ * Parses legacy metadata DB documents into a flat metadata map and optional UI spec.
+ * Skips `_design/*`. Handles `ui-specification`, `project-metadata-projectvalue`,
+ * and `project-metadata-{key}` rows.
+ */
 export const extractLegacyMetadataFromDocuments = (
   docs: LegacyMetadataDocument[]
 ) => {
@@ -114,6 +164,11 @@ export const extractLegacyMetadataFromDocuments = (
   return {uiSpec, flatMetadata};
 };
 
+/**
+ * Builds the project document that should be written after consolidation:
+ * merges {@link extractLegacyMetadataFromDocuments} with `toCanonicalProjectMetadata`,
+ * attaches `ui-specification`, and strips legacy `metadataDb` / `metadata_db` fields.
+ */
 export const buildConsolidatedProjectDoc = ({
   project,
   legacyMetadataDocs,
@@ -148,8 +203,11 @@ export const buildConsolidatedProjectDoc = ({
 };
 
 /**
- * Consolidates legacy per-project metadata DB documents into project docs.
- * Supports dry-run reports and optional cleanup of legacy metadata DBs.
+ * Walks projects (all or `projectIds`), reads each legacy metadata DB if present,
+ * and writes merged `metadata` + `ui-specification` onto the project document.
+ *
+ * @returns One {@link ConsolidationReport} per processed project id (skipped
+ *   projects still produce a report where applicable).
  */
 export const consolidateLegacyMetadataDbs = async ({
   dryRun = false,

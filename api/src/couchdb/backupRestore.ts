@@ -15,7 +15,31 @@
  *
  * Filename: backupRestore.ts
  * Description:
- *    Functions to backup and restore databases
+ *    Functions to backup and restore databases from JSONL backups.
+ *
+ *    Restore flow (high level):
+ *    - Stream the backup line by line. Each `type: "header"` line switches
+ *      the active logical database (projects, data, legacy metadata, or other).
+ *    - Projects and data DB sections are written straight to the local Pouch
+ *      targets used today (shared projects DB; per-project data DBs).
+ *
+ *    Legacy per-project metadata databases (backup DB names starting with
+ *    `metadata`, with project id after `||`) are handled specially:
+ *    - Historically, each project had its own Couch metadata DB holding docs
+ *      such as `ui-specification`, `project-metadata-*` keys, etc., while the
+ *      projects DB held a lighter project record (sometimes with pointers like
+ *      `metadataDb` / `metadata_db`). New deployments keep metadata and UI spec
+ *      on the project document in the projects DB (see `metadataConsolidation`).
+ *    - We do not recreate separate metadata DBs on restore: that would bring
+ *      back a layout the app no longer treats as the source of truth, and would
+ *      duplicate information already (or soon) represented on project docs.
+ *    - Instead, metadata backup lines are accumulated in memory per project id.
+ *      After the file is processed, we (1) normalise project rows that still
+ *      use older shapes (`toCanonicalProjectMetadata`, default `ui-specification`),
+ *      then (2) merge each project’s buffered legacy metadata docs into its
+ *      project document via `buildConsolidatedProjectDoc` and write once to the
+ *      projects DB. That yields a single consistent, consolidated store after
+ *      restore—equivalent in outcome to running consolidation against live DBs.
  */
 import {
   batchWriteDocuments,
@@ -57,8 +81,11 @@ export const restoreFromBackup = async ({
   let batch: any[] = [];
   let skipping = false;
   const projectIdsSeen = new Set<string>();
+  /** Buffered legacy metadata DB rows, keyed by project id — written only after
+   *  the full pass, merged into the projects DB (see file header). */
   const metadataDocsByProjectId: Record<string, LegacyMetadataDocument[]> = {};
   let currentDatabaseType: 'projects' | 'data' | 'metadata' | 'other' = 'other';
+  /** Set from `metadata||<projectId>` header segments while streaming metadata sections. */
   let currentMetadataProjectId: string | undefined = undefined;
 
   try {
@@ -128,7 +155,9 @@ export const restoreFromBackup = async ({
             } else {
               currentMetadataProjectId = undefined;
             }
-            // Metadata DB content is consolidated after restore into projects DB.
+            // No target Pouch DB: legacy metadata is not restored as its own
+            // database. Documents in this section are appended to
+            // metadataDocsByProjectId and merged after EOF (see below).
             db = undefined;
           } else if (!skipping && dbName.startsWith('data')) {
             currentDatabaseType = 'data';
@@ -152,6 +181,8 @@ export const restoreFromBackup = async ({
           currentDatabaseType === 'metadata' &&
           currentMetadataProjectId
         ) {
+          // Strip _rev so merged content can be applied to the project doc
+          // without revision conflicts from the old metadata DB.
           const metadataDoc = {
             _id: doc.doc._id,
             ...doc.doc,
@@ -204,8 +235,9 @@ export const restoreFromBackup = async ({
       batch = [];
     }
 
-    // If projects were restored in legacy schema, canonicalise the metadata
-    // shape before consolidation.
+    // Post-pass: projects DB may contain rows from an older backup shape
+    // (missing embedded `metadata` / `ui-specification`). Normalise those first
+    // so consolidation has a consistent base document to merge into.
     const projectsDb = localGetProjectsDb();
     const projectsDocs = await projectsDb.allDocs<ExistingProjectDocument>({
       include_docs: true,
@@ -240,7 +272,10 @@ export const restoreFromBackup = async ({
       });
     }
 
-    // Consolidate restored legacy metadata DB documents into projects DB docs.
+    // Merge each project’s buffered legacy metadata DB snapshot into its
+    // project document (same rules as `consolidateLegacyMetadataDbs` /
+    // `buildConsolidatedProjectDoc`). Skips ids with no matching project row
+    // (e.g. orphaned metadata backup sections).
     for (const projectId of Object.keys(metadataDocsByProjectId)) {
       const project = await projectsDb.get(projectId).catch(() => undefined);
       if (!project) {

@@ -1,6 +1,11 @@
+/**
+ * Helpers for reading project metadata from the {@link Project} shape, including
+ * legacy flat keys and canonical {@link ProjectMetadata} from `@faims3/data-model`.
+ */
 import {ProjectMetadata, toCanonicalProjectMetadata} from '@faims3/data-model';
 import {Project} from '../context/slices/projectSlice';
 
+/** Legacy string keys used in stored/flat project metadata documents. */
 export type LegacyMetadataKey =
   | 'name'
   | 'pre_description'
@@ -14,6 +19,10 @@ export type LegacyMetadataKey =
   | 'template_id'
   | 'last_updated';
 
+/**
+ * Maps camelCase field names (e.g. UI or code conventions) to {@link LegacyMetadataKey}
+ * values as they appear on raw metadata objects.
+ */
 export const LEGACY_METADATA_KEYS: Record<string, LegacyMetadataKey> = {
   name: 'name',
   preDescription: 'pre_description',
@@ -28,14 +37,22 @@ export const LEGACY_METADATA_KEYS: Record<string, LegacyMetadataKey> = {
   lastUpdated: 'last_updated',
 };
 
+/** Arbitrary metadata object from the project slice before full validation. */
 export type UnknownProjectMetadata = Record<string, unknown> | undefined;
 
+/**
+ * Normalises unknown metadata into canonical {@link ProjectMetadata} via the data model.
+ *
+ * @param metadata - Raw metadata (any shape accepted by `toCanonicalProjectMetadata`)
+ * @returns Canonical metadata structure
+ */
 export const canonicaliseProjectMetadata = (
   metadata: unknown
 ): ProjectMetadata => {
   return toCanonicalProjectMetadata(metadata).metadata;
 };
 
+/** Reads a single top-level property from raw metadata when present. */
 const getDirectMetadataValue = ({
   metadata,
   key,
@@ -49,6 +66,15 @@ const getDirectMetadataValue = ({
   return metadata[key];
 };
 
+/**
+ * Resolves a value by legacy key: prefers a direct property on raw metadata, then
+ * falls back to the canonical {@link ProjectMetadata} mapping (e.g. nested `info` / `settings`).
+ *
+ * `template_id` and `last_updated` are only read from the raw object, not from canonical paths.
+ *
+ * @param metadata - Project metadata (may be legacy or already canonical-compatible)
+ * @param key - Legacy flat key name
+ */
 export const getProjectMetadataValueByLegacyKey = (
   metadata: UnknownProjectMetadata,
   key: LegacyMetadataKey
@@ -86,6 +112,7 @@ export const getProjectMetadataValueByLegacyKey = (
   }
 };
 
+/** Coerces an unknown value to a display string; non-scalars become empty string. */
 const asString = (value: unknown): string => {
   if (value === null || value === undefined) {
     return '';
@@ -99,6 +126,7 @@ const asString = (value: unknown): string => {
   return '';
 };
 
+/** Coerces an unknown value to boolean (string "true", number 1, or boolean). */
 const asBoolean = (value: unknown): boolean => {
   if (typeof value === 'boolean') {
     return value;
@@ -112,6 +140,11 @@ const asBoolean = (value: unknown): boolean => {
   return false;
 };
 
+/**
+ * Project display title: `project.name` if set, otherwise metadata `name` (legacy or canonical).
+ *
+ * @param project - Project from app state
+ */
 export const getProjectName = (project: Project): string => {
   return (
     asString(project.name) ||
@@ -119,27 +152,42 @@ export const getProjectName = (project: Project): string => {
   );
 };
 
+/** Same as {@link getProjectName} (alias for clarity in list/UI contexts). */
 export const getProjectDisplayName = (project: Project): string =>
   getProjectName(project);
 
+/**
+ * Short intro text from legacy `pre_description` (canonical description is shared with full description).
+ *
+ * @param project - Project from app state
+ */
 export const getProjectDescription = (project: Project): string =>
   asString(
     getProjectMetadataValueByLegacyKey(project.metadata, 'pre_description')
   );
 
+/** Lead organisation / institution string from metadata. */
 export const getProjectLeadInstitution = (project: Project): string =>
   asString(
     getProjectMetadataValueByLegacyKey(project.metadata, 'lead_institution')
   );
 
+/** Primary contact / project lead name from metadata. */
 export const getProjectLeadName = (project: Project): string =>
   asString(getProjectMetadataValueByLegacyKey(project.metadata, 'project_lead'));
 
+/** Human-readable project status label from metadata settings. */
 export const getProjectStatusLabel = (project: Project): string =>
   asString(
     getProjectMetadataValueByLegacyKey(project.metadata, 'project_status')
   );
 
+/**
+ * Reads a boolean project setting from metadata by legacy key (currently only `showQRCodeButton`).
+ *
+ * @param metadata - Raw project metadata
+ * @param key - Setting key
+ */
 export const getProjectSettingBool = ({
   metadata,
   key,
