@@ -29,6 +29,7 @@ import authReducer, {
 } from './slices/authSlice';
 import {databaseService} from './slices/helpers/databaseService';
 import projectsReducer from './slices/projectSlice';
+import {migrateProjectsPersistedState} from './slices/projectSlice';
 
 // The below configures indexed DB storage which has a greater limit than
 // localStorage. UI specs contain images.
@@ -46,6 +47,8 @@ const projectsPersistConfig = {
   key: 'projects',
   storage: storage('faims-projects-db'),
   blacklist: ['isInitialised'],
+  version: 1,
+  migrate: migrateProjectsPersistedState,
 };
 
 const persistedProjectsReducer = persistReducer(

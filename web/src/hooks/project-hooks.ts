@@ -11,11 +11,13 @@ import {readFileAsText} from '@/lib/utils';
 export const createProjectFromTemplate = async ({
   user,
   name,
+  description,
   template,
   teamId,
 }: {
   user: User;
   name: string;
+  description?: string;
   template: string;
   teamId?: string;
 }) =>
@@ -27,8 +29,11 @@ export const createProjectFromTemplate = async ({
     },
     body: JSON.stringify({
       template_id: template,
-      name,
-      teamId,
+      project: {
+        name,
+        description,
+        ...(teamId ? {teamId} : {}),
+      },
     }),
   });
 
@@ -42,15 +47,18 @@ export const createProjectFromTemplate = async ({
 export const createProjectFromFile = async ({
   user,
   name,
+  description,
   file,
   teamId,
 }: {
   user: User;
   name: string;
+  description?: string;
   file: File;
   teamId?: string;
 }) => {
   const jsonString = await readFileAsText(file);
+  const parsedNotebook = JSON.parse(jsonString ?? '{}');
 
   return await fetch(`${import.meta.env.VITE_API_URL}/api/notebooks`, {
     method: 'POST',
@@ -58,7 +66,17 @@ export const createProjectFromFile = async ({
       'Content-Type': 'application/json',
       Authorization: `Bearer ${user.token}`,
     },
-    body: JSON.stringify({name, teamId, ...JSON.parse(jsonString)}),
+    body: JSON.stringify({
+      project: {
+        name,
+        description,
+        ...(teamId ? {teamId} : {}),
+      },
+      notebook: {
+        metadata: parsedNotebook.metadata,
+        'ui-specification': parsedNotebook['ui-specification'],
+      },
+    }),
   });
 };
 

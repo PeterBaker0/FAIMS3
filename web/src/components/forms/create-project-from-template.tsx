@@ -40,6 +40,11 @@ export function CreateProjectFromTemplateForm({
         }),
       },
       {
+        name: 'description',
+        label: `${NOTEBOOK_NAME_CAPITALIZED} Description (optional)`,
+        schema: z.string().optional(),
+      },
+      {
         name: 'team',
         label: `Create ${NOTEBOOK_NAME} in this team${canCreateGlobally ? ' (optional)' : ''}`,
         options: teams?.teams.map(({_id, name}) => ({
@@ -57,7 +62,15 @@ export function CreateProjectFromTemplateForm({
    * @param {{name: string}} params - The submitted form values.
    * @returns {Promise<{type: string; message: string}>} The result of the form submission.
    */
-  const onSubmit = async ({name, team}: {name: string; team?: string}) => {
+  const onSubmit = async ({
+    name,
+    description,
+    team,
+  }: {
+    name: string;
+    description?: string;
+    team?: string;
+  }) => {
     const response = await fetch(
       `${import.meta.env.VITE_API_URL}/api/notebooks`,
       {
@@ -68,8 +81,11 @@ export function CreateProjectFromTemplateForm({
         },
         body: JSON.stringify({
           template_id: templateId,
-          name,
-          ...(team ? {teamId: team} : {}),
+          project: {
+            name,
+            description,
+            ...(team ? {teamId: team} : {}),
+          },
         } satisfies PostCreateNotebookInput),
       }
     );

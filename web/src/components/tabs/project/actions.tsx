@@ -62,6 +62,12 @@ const ProjectActions = (): JSX.Element => {
   // need to invalidate the project query after upload
   const uploadProjectCallback = () => {
     queryClient.invalidateQueries({queryKey: ['projects', projectId]});
+    queryClient.invalidateQueries({queryKey: ['projects']});
+    if (data?.project.teamId) {
+      queryClient.invalidateQueries({
+        queryKey: ['projectsbyteam', user?.token, data.project.teamId],
+      });
+    }
   };
 
   const handleEditorClose = (file?: File) => {
@@ -196,15 +202,16 @@ const ProjectActions = (): JSX.Element => {
           </List>
         </Card>
 
-        {canEditProject && (
+        {(canEditProject || canAddProjectToTeam) && (
           <Card className="flex-1">
             <List className="flex flex-col gap-4">
               <ListItem>
                 <ListLabel>
-                  Replace {NOTEBOOK_NAME_CAPITALIZED} JSON File
+                  Update {NOTEBOOK_NAME_CAPITALIZED}
                 </ListLabel>
                 <ListDescription>
-                  Replace the {NOTEBOOK_NAME} JSON file.
+                  Update project details (name, description, team) and
+                  optionally replace the {NOTEBOOK_NAME} JSON file.
                 </ListDescription>
               </ListItem>
               <ListItem>

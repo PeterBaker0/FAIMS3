@@ -1,5 +1,6 @@
 import {
   couchInitialiser,
+  ProjectInfo,
   initDataDB,
   ProjectMetadata,
   ProjectDataObject,
@@ -7,6 +8,7 @@ import {
   ProjectStatus,
   ProjectUIModel,
   PublicServerInfo,
+  toCanonicalProjectMetadata,
 } from '@faims3/data-model';
 import {
   createAsyncThunk,
@@ -14,6 +16,7 @@ import {
   createSlice,
   PayloadAction,
 } from '@reduxjs/toolkit';
+import type {PersistedState} from 'redux-persist/es/types';
 import {CONDUCTOR_URLS} from '../../buildconfig';
 import {AppDispatch, RootState} from '../store';
 import {AuthState, isTokenValid, selectActiveServerId} from './authSlice';
@@ -102,6 +105,9 @@ export interface ProjectInformation {
   // Name of the project
   name: string;
 
+  // High-level project details returned from API project block
+  project?: ProjectInfo;
+
   // This is metadata information about the project
   metadata: ProjectMetadata;
 
@@ -123,6 +129,9 @@ export interface Project extends ProjectInformation {
 
   // the non-unique name of the project
   name: string;
+
+  // High-level project details returned from API project block
+  project?: ProjectInfo;
 
   // Which server is this in? (including here too since it's helpful)
   serverId: string;
@@ -170,6 +179,13 @@ export interface ProjectIdentity {
   serverId: string;
 }
 
+type PersistedProjectLike = Partial<Project> & {
+  metadata?: unknown;
+  project?: Partial<ProjectInfo>;
+  name?: unknown;
+  status?: unknown;
+};
+
 // Map from server ID to server details
 export type ServerIdToServerMap = {[serverId: string]: Server};
 
@@ -191,6 +207,49 @@ export const initialProjectState: ProjectsState = {
   servers: {},
   // start out uninitialised
   isInitialised: false,
+};
+
+const toProjectStatus = (status: unknown): ProjectStatus => {
+  return status === ProjectStatus.CLOSED
+    ? ProjectStatus.CLOSED
+    : ProjectStatus.OPEN;
+};
+
+const normalisePersistedProjectInfo = (
+  project: PersistedProjectLike
+): ProjectInfo => {
+  const canonical = toCanonicalProjectMetadata(project.metadata).metadata;
+  const name =
+    typeof project.project?.name === 'string' &&
+    project.project.name.trim().length > 0
+      ? project.project.name.trim()
+      : typeof project.name === 'string' && project.name.trim().length > 0
+        ? project.name.trim()
+        : canonical.info.name?.trim() && canonical.info.name.trim().length > 0
+          ? canonical.info.name.trim()
+          : 'notebook';
+
+  const status = toProjectStatus(project.project?.status ?? project.status);
+  const updatedAt =
+    typeof project.project?.updatedAt === 'number'
+      ? Math.floor(project.project.updatedAt)
+      : Date.now();
+
+  const createdAt =
+    typeof project.project?.createdAt === 'number'
+      ? Math.floor(project.project.createdAt)
+      : undefined;
+
+  return {
+    name,
+    description:
+      project.project?.description ?? canonical.info.description ?? undefined,
+    teamId: project.project?.teamId,
+    templateId: project.project?.templateId,
+    status,
+    createdAt,
+    updatedAt,
+  };
 };
 
 const projectsSlice = createSlice({
@@ -356,6 +415,9 @@ const projectsSlice = createSlice({
         // Superficial details
         metadata: payload.metadata,
         name: payload.name,
+        project:
+          payload.project ??
+          normalisePersistedProjectInfo(payload as PersistedProjectLike),
 
         uiSpecificationId: compiledSpecId,
         rawUiSpecification: payload.rawUiSpecification,
@@ -489,7 +551,11 @@ const projectsSlice = createSlice({
 
         // Superficial details updated only! You cannot change activated/sync
         // status here - these are controlled actions
+        name: payload.name,
         metadata: payload.metadata,
+        project:
+          payload.project ??
+          normalisePersistedProjectInfo(payload as PersistedProjectLike),
         uiSpecificationId: compiledSpecId,
         rawUiSpecification: payload.rawUiSpecification,
         status: payload.status,
@@ -527,6 +593,7 @@ const projectsSlice = createSlice({
         serverId: project.serverId,
         status: project.status,
         name: project.name,
+        project: project.project,
 
         // These are updated
         isActivated: true,
@@ -634,6 +701,7 @@ const projectsSlice = createSlice({
         serverId: project.serverId,
         status: project.status,
         name: project.name,
+        project: project.project,
 
         // These are updated (to indicate de-activation)
         isActivated: false,
@@ -686,6 +754,7 @@ const projectsSlice = createSlice({
         serverId: project.serverId,
         status: project.status,
         name: project.name,
+        project: project.project,
 
         // These are updated
         isActivated: true,
@@ -720,6 +789,7 @@ const projectsSlice = createSlice({
         serverId: project.serverId,
         status: project.status,
         name: project.name,
+        project: project.project,
 
         // Project remains activated, but syncing is stopped
         isActivated: true,
@@ -761,6 +831,7 @@ const projectsSlice = createSlice({
         serverId: project.serverId,
         status: project.status,
         name: project.name,
+        project: project.project,
 
         // These are updated
         isActivated: true,
@@ -886,6 +957,7 @@ const projectsSlice = createSlice({
         serverId: project.serverId,
         status: project.status,
         name: project.name,
+        project: project.project,
 
         // These are updated
         isActivated: true,
@@ -1014,6 +1086,7 @@ const projectsSlice = createSlice({
         serverId: project.serverId,
         status: project.status,
         name: project.name,
+        project: project.project,
 
         // These are updated
         isActivated: true,
@@ -1724,6 +1797,13 @@ export const initialiseProjects = createAsyncThunk<void, {serverId: string}>(
         actions.push(
           addProject({
             name: meta.name,
+            project:
+              meta.project ??
+              normalisePersistedProjectInfo({
+                name: meta.name,
+                status: meta.status,
+                metadata: meta.metadata,
+              }),
             metadata: meta.metadata as ProjectMetadata,
             projectId,
             serverId,
@@ -1736,6 +1816,16 @@ export const initialiseProjects = createAsyncThunk<void, {serverId: string}>(
         actions.push(
           updateProjectDetails({
             name: meta.name ?? existingProject.name,
+            project:
+              meta.project ??
+              normalisePersistedProjectInfo({
+                name: meta.name ?? existingProject.name,
+                status: meta.status ?? existingProject.status,
+                metadata:
+                  (meta.metadata as ProjectMetadata | undefined) ??
+                  existingProject.metadata,
+                project: existingProject.project,
+              }),
             metadata:
               (meta.metadata as ProjectMetadata | undefined) ??
               existingProject.metadata,
@@ -2093,6 +2183,67 @@ export const compileSpecs = (state: Readonly<ProjectsState>): void => {
       );
     }
   }
+};
+
+type PersistedServerLike = Omit<Partial<Server>, 'projects'> & {
+  projects?: Record<string, PersistedProjectLike>;
+};
+
+type PersistedProjectsState = Partial<ProjectsState> & {
+  servers?: Record<string, PersistedServerLike>;
+};
+
+/**
+ * Minimal redux-persist migration for the projects slice.
+ *
+ * Ensures persisted projects have the new `project` block, deriving it from
+ * existing persisted name/status/metadata when absent.
+ */
+export const migrateProjectsPersistedState = async (
+  persistedState: unknown
+): Promise<PersistedState> => {
+  if (!persistedState || typeof persistedState !== 'object') {
+    return persistedState as PersistedState;
+  }
+
+  const state = persistedState as PersistedProjectsState;
+  if (!state.servers || typeof state.servers !== 'object') {
+    return persistedState as PersistedState;
+  }
+
+  const nextServers: Record<string, PersistedServerLike> = {};
+  for (const [serverId, serverValue] of Object.entries(state.servers)) {
+    if (!serverValue || typeof serverValue !== 'object') {
+      nextServers[serverId] = serverValue;
+      continue;
+    }
+
+    const nextProjects: Record<string, PersistedProjectLike> = {};
+    const projects = serverValue.projects ?? {};
+    for (const [projectId, projectValue] of Object.entries(projects)) {
+      if (!projectValue || typeof projectValue !== 'object') {
+        nextProjects[projectId] = projectValue;
+        continue;
+      }
+      const persistedProject = projectValue as PersistedProjectLike;
+      nextProjects[projectId] = {
+        ...persistedProject,
+        project:
+          persistedProject.project ??
+          normalisePersistedProjectInfo(persistedProject),
+      };
+    }
+
+    nextServers[serverId] = {
+      ...serverValue,
+      projects: nextProjects,
+    };
+  }
+
+  return {
+    ...state,
+    servers: nextServers,
+  } as unknown as PersistedState;
 };
 
 /**

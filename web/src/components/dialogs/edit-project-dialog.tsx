@@ -27,16 +27,17 @@ export const EditProjectDialog = ({onSuccess}: {onSuccess: () => void}) => {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild className="w-fit">
         <Button variant="outline">
-          Replace {NOTEBOOK_NAME_CAPITALIZED} File
+          Update {NOTEBOOK_NAME_CAPITALIZED}
           <Pencil />
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Replace Project File</DialogTitle>
+          <DialogTitle>Update {NOTEBOOK_NAME_CAPITALIZED}</DialogTitle>
           <DialogDescription>
-            Upload a new {NOTEBOOK_NAME} file to replace the current one. The
-            new file must be a valid JSON file.
+            Update project details (name, description, team) and optionally
+            upload a new {NOTEBOOK_NAME} JSON file to replace the current
+            notebook payload.
           </DialogDescription>
         </DialogHeader>
         <UpdateProjectForm setDialogOpen={setOpen} onSuccess={onSuccess} />
