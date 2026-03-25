@@ -52,6 +52,11 @@ export function CreateProjectForm({
       }),
     },
     {
+      name: 'description',
+      label: 'Description (optional)',
+      schema: z.string().optional(),
+    },
+    {
       name: 'template',
       label: `Existing ${NOTEBOOK_NAME_CAPITALIZED} Template (optional)`,
       options: templates?.map(({_id, name}: GetTemplateByIdResponse) => ({
@@ -95,6 +100,7 @@ export function CreateProjectForm({
 
   interface onSubmitProps {
     name: string;
+    description?: string;
     team?: string;
     template?: string;
     file?: File;
@@ -106,7 +112,13 @@ export function CreateProjectForm({
    * @param {{name: string, template?: string, file?: File}} params - The submitted form values.
    * @returns {Promise<{type: string; message: string}>} The result of the form submission.
    */
-  const onSubmit = async ({name, template, file, team}: onSubmitProps) => {
+  const onSubmit = async ({
+    name,
+    description,
+    template,
+    file,
+    team,
+  }: onSubmitProps) => {
     if (!user) {
       return {type: 'submit', message: 'User not authenticated'};
     }
@@ -117,6 +129,7 @@ export function CreateProjectForm({
       response = await createProjectFromTemplate({
         user,
         name,
+        description,
         template,
         teamId: specifiedTeam ?? team,
       });
@@ -135,6 +148,7 @@ export function CreateProjectForm({
       response = await createProjectFromFile({
         user,
         name,
+        description,
         file: fileToUpload,
         teamId: specifiedTeam ?? team,
       });

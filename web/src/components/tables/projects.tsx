@@ -4,48 +4,56 @@ import {ColumnDef} from '@tanstack/react-table';
 import {DataTableColumnHeader} from '../data-table/column-header';
 import {TeamCellComponent} from './cells/team-cell';
 import {TemplateCellComponent} from './cells/template-cell';
+import {
+  getProjectLead,
+  getProjectDescription,
+} from '@/utils/projectMetadata';
 
 export const columns: ColumnDef<GetNotebookListResponse[number]>[] = [
   {
-    accessorKey: 'name',
+    id: 'name',
+    accessorFn: row => row.project?.name ?? row.name,
     header: ({column}) => (
       <DataTableColumnHeader column={column} title="Name" />
     ),
   },
   {
     id: 'team',
-    accessorKey: 'ownedByTeamId',
+    accessorFn: row => row.project?.teamId ?? row.ownedByTeamId,
     header: ({column}) => (
       <DataTableColumnHeader column={column} title="Team" />
     ),
     cell: ({
       row: {
-        original: {ownedByTeamId},
+        original,
       },
     }) => {
-      return ownedByTeamId ? (
-        <TeamCellComponent teamId={ownedByTeamId} />
+      const teamId = original.project?.teamId ?? original.ownedByTeamId;
+      return teamId ? (
+        <TeamCellComponent teamId={teamId} />
       ) : null;
     },
   },
   {
     id: 'template',
-    accessorKey: 'template_id',
+    accessorFn: row => row.project?.templateId ?? row.template_id,
     header: ({column}) => (
       <DataTableColumnHeader column={column} title="Template" />
     ),
     cell: ({
       row: {
-        original: {template_id},
+        original,
       },
     }) => {
-      return template_id ? (
-        <TemplateCellComponent templateId={template_id} />
+      const templateId = original.project?.templateId ?? original.template_id;
+      return templateId ? (
+        <TemplateCellComponent templateId={templateId} />
       ) : null;
     },
   },
   {
-    accessorKey: 'metadata.project_lead',
+    id: 'projectLead',
+    accessorFn: row => getProjectLead(row.metadata),
     header: ({column}) => (
       <DataTableColumnHeader
         column={column}
@@ -54,7 +62,8 @@ export const columns: ColumnDef<GetNotebookListResponse[number]>[] = [
     ),
   },
   {
-    accessorKey: 'metadata.pre_description',
+    id: 'description',
+    accessorFn: row => getProjectDescription(row.metadata),
     header: ({column}) => (
       <DataTableColumnHeader column={column} title="Description" />
     ),

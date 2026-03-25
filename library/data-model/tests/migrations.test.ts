@@ -16,6 +16,7 @@ import {
   ProjectStatus,
   ProjectV1Fields,
   ProjectV2Fields,
+  ProjectV3Fields,
   RefreshRecordV1ExistingDocument,
   RefreshRecordV2ExistingDocument,
   RefreshRecordV3ExistingDocument,
@@ -24,6 +25,7 @@ import {
   V3InviteDBFields,
   VerificationChallengeV3ExistingDocument,
 } from '../src/data_storage';
+import {toCanonicalProjectMetadata} from '../src/types';
 import {
   TemplateV1Fields,
   TemplateV2Fields,

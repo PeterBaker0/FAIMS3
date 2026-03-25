@@ -24,6 +24,7 @@ import {initialState, NotebookMetadata} from './initial';
 const protectedFields = [
   'meta',
   'project_status',
+  'projectStatus',
   'access',
   'accesses',
   'forms',
@@ -31,6 +32,7 @@ const protectedFields = [
   'ispublic',
   'isrequest',
   'sections',
+  'userMetadata',
 ];
 
 const metadataReducer = createSlice({

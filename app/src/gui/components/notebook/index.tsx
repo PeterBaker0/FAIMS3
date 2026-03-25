@@ -22,9 +22,10 @@ import {
 import * as ROUTES from '../../../constants/routes';
 import {selectActiveUser} from '../../../context/slices/authSlice';
 import {compiledSpecService} from '../../../context/slices/helpers/compiledSpecService';
-import {Project, selectProjectById} from '../../../context/slices/projectSlice';
+import {Project} from '../../../context/slices/projectSlice';
 import {useAppSelector} from '../../../context/store';
 import {useRecordAudit} from '../../../utils/apiHooks/notebooks';
+import {getProjectTemplateId} from '../../../utils/projectMetadata';
 import {
   invalidateProjectHydration,
   invalidateProjectRecordList,
@@ -195,12 +196,7 @@ export default function NotebookComponent({project}: NotebookComponentProps) {
 
   const viewsets = uiSpecification.viewsets;
 
-  const templateId = useAppSelector(
-    state =>
-      selectProjectById(state, project.projectId)?.metadata?.['template_id'] as
-        | string
-        | undefined
-  );
+  const templateId = getProjectTemplateId(project);
 
   /**
    * Handles the change event when the user switches between the tabs.

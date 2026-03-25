@@ -33,7 +33,6 @@ import {
   initDataDB,
   initDirectoryDB,
   initInvitesDB,
-  initMetadataDB,
   initMigrationsDB,
   initPeopleDB,
   initProjectsDB,
@@ -48,7 +47,6 @@ import {
   ProjectDataObject,
   ProjectDocument,
   ProjectID,
-  ProjectMetaObject,
   TeamsDB,
   TemplateDB,
 } from '@faims3/data-model';
@@ -62,6 +60,7 @@ import {
   LOCAL_COUCHDB_AUTH,
 } from '../buildconfig';
 import * as Exceptions from '../exceptions';
+import {consolidateLegacyMetadataDbs} from './metadataConsolidation';
 import {getAllProjectsDirectory} from './notebooks';
 import {registerAdminUser} from './users';
 
@@ -285,59 +284,6 @@ export const getTeamsDB = (): TeamsDB => {
   return _teamsDB;
 };
 /**
- * Returns the metadata DB for a given project - involves fetching the project
- * doc and then fetching the corresponding metadata db
- * @param projectID The project Id to use
- * @returns The metadata DB for this project
- */
-export const getMetadataDb = async (
-  projectID: ProjectID
-): Promise<DatabaseInterface<ProjectMetaObject>> => {
-  // Gets the projects DB
-  const projectsDB = localGetProjectsDb();
-  if (!projectsDB) {
-    throw new Exceptions.InternalSystemError(
-      'Could not fetch the projects DB. Contact system administrator.'
-    );
-  }
-
-  // Get the project doc for the given ID
-  const projectDoc = await projectsDB.get(projectID);
-
-  // 404 if project doc not found
-  if (!projectDoc) {
-    throw new Exceptions.ItemNotFoundException(
-      'Cannot find the given project ID in the projects database.'
-    );
-  }
-
-  // Now get the metadata DB from the project document (and be backwards
-  // compatible)
-  let db: PossibleConnectionInfo;
-  db = projectDoc.metadataDb;
-  if (!db) {
-    const doc = projectDoc as any;
-    db = doc.metadata_db;
-    if (!db) {
-      throw new Exceptions.InternalSystemError(
-        "The given project document does not contain a mandatory reference to it's metadata database. Unsure how to fetch metadata DB. Aborting."
-      );
-    }
-  }
-
-  // Build the pouch connection for this DB
-  const dbUrl = COUCHDB_INTERNAL_URL + '/' + db.db_name;
-  const pouch_options = pouchOptions();
-
-  // Authorise against this DB
-  if (LOCAL_COUCHDB_AUTH !== undefined) {
-    pouch_options.auth = LOCAL_COUCHDB_AUTH;
-  }
-
-  return new PouchDB(dbUrl, pouch_options);
-};
-
-/**
  * Returns the data DB for a given project - involves fetching the project
  * doc and then fetching the corresponding data db
  * @param projectID The project ID to use
@@ -384,38 +330,6 @@ export const getDataDb = async (
     pouch_options.auth = LOCAL_COUCHDB_AUTH;
   }
   return new PouchDB(dbUrl, pouch_options);
-};
-
-/**
- * Initialises the database level configuration for a project's metadata DB. Can
- * create the DB if it doesn't already exist.
- */
-export const initialiseMetadataDb = async ({
-  projectId,
-  force = false,
-}: {
-  projectId: string;
-  force?: boolean;
-}): Promise<DatabaseInterface<ProjectMetaObject>> => {
-  // Are we in a testing environment?
-  const isTesting = process.env.NODE_ENV === 'test';
-
-  // Get the metadata DB
-  const metaDb = await getMetadataDb(projectId);
-
-  try {
-    await couchInitialiser({
-      db: metaDb,
-      content: initMetadataDB({projectId}),
-      config: {applyPermissions: !isTesting, forceWrite: force},
-    });
-  } catch (e) {
-    throw new Exceptions.InternalSystemError(
-      `An error occurred while initialising the metadata DB for project ${projectId}!... ${e}`
-    );
-  }
-
-  return metaDb;
 };
 
 /**
@@ -620,16 +534,14 @@ export const initialiseDbAndKeys = async ({
     );
   }
 
-  // For each project, ensure the metadata and data DBs are also
-  // initialised/synced
+  // For each project, ensure the data DBs are also initialised/synced
   const projects = await getAllProjectsDirectory();
 
   for (const project of projects) {
     // Project ID
     const projectId = project._id;
 
-    // Now initialise the DBs (potentially updating security documents etc)
-    await initialiseMetadataDb({projectId, force});
+    // Ensure data DB initialisation (potentially updating security docs etc)
     await initialiseDataDb({projectId, force});
   }
 
@@ -655,10 +567,14 @@ export const initialiseDbAndKeys = async ({
 export const initialiseAndMigrateDBs = async ({
   force = false,
   pushKeys = true,
+  metadataDryRun = false,
+  metadataCleanup = false,
 }: {
   force?: boolean;
   // Should we push the key configuration?
   pushKeys?: boolean;
+  metadataDryRun?: boolean;
+  metadataCleanup?: boolean;
 }) => {
   await initialiseDbAndKeys({force, pushKeys});
 
@@ -687,29 +603,46 @@ export const initialiseAndMigrateDBs = async ({
   const migrationsDb = getMigrationDb();
   await migrateDbs({dbs, migrationDb: migrationsDb, userId: 'system'});
 
-  // Now migrate all data/metadata DBs
+  // Now migrate all project data DBs
   const projects = await getAllProjectsDirectory();
-  dbs = [];
+  const dataDbs: {dbType: DatabaseType; dbName: string; db: DatabaseInterface}[] =
+    [];
 
   for (const project of projects) {
     // Project ID
     const projectId = project._id;
     const dataDb = (await getDataDb(projectId)) as DatabaseInterface;
-    const metadataDb = (await getMetadataDb(projectId)) as DatabaseInterface;
-    dbs.concat([
-      {
-        db: dataDb,
-        dbType: DatabaseType.DATA,
-        dbName: dataDb.name,
-      },
-      {
-        db: metadataDb,
-        dbType: DatabaseType.METADATA,
-        dbName: metadataDb.name,
-      },
-    ]);
+    dataDbs.push({
+      db: dataDb,
+      dbType: DatabaseType.DATA,
+      dbName: dataDb.name,
+    });
   }
-  await migrateDbs({dbs, migrationDb: migrationsDb, userId: 'system'});
+  await migrateDbs({dbs: dataDbs, migrationDb: migrationsDb, userId: 'system'});
+
+  // Consolidate legacy metadata DB data into project documents.
+  const consolidationReports = await consolidateLegacyMetadataDbs({
+    dryRun: metadataDryRun,
+    cleanup: metadataCleanup && !metadataDryRun,
+  });
+  if (consolidationReports.some(report => report.status === 'error')) {
+    throw new Exceptions.InternalSystemError(
+      'Metadata consolidation encountered one or more errors. Check logs for details.'
+    );
+  }
+  if (consolidationReports.length > 0) {
+    const summary = consolidationReports.reduce(
+      (acc, report) => {
+        acc[report.status] = (acc[report.status] ?? 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
+    console.log(
+      '[metadata-consolidation] summary',
+      JSON.stringify(summary, undefined, 2)
+    );
+  }
 
   // For users, we also establish an admin user, if not already present
   // do this after all migrations so we know the db is up to date

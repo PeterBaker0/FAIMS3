@@ -11,6 +11,14 @@ import {
 } from '@mui/material';
 import {Project} from '../../../context/slices/projectSlice';
 import MetadataRenderer from '../metadataRenderer';
+import {
+  getProjectDescription,
+  getProjectLeadInstitution,
+  getProjectLastUpdated,
+  getProjectLeadName,
+  getProjectName,
+  getProjectStatusLabel,
+} from '../../../utils/projectMetadata';
 
 interface MetadataDisplayComponentProps {
   project: Project;
@@ -53,8 +61,7 @@ export const MetadataDisplayComponent = (
         <Typography variant="body1" gutterBottom sx={{marginBottom: '16px'}}>
           <strong>Name:</strong>{' '}
           <MetadataRenderer
-            project_id={props.project.projectId}
-            explicitValue={props.project.name ?? props.project.metadata.name}
+            explicitValue={getProjectName(props.project)}
             chips={false}
           />
         </Typography>
@@ -72,8 +79,7 @@ export const MetadataDisplayComponent = (
         >
           <strong>Description:</strong>{' '}
           <MetadataRenderer
-            project_id={props.project.projectId}
-            metadata_key={'pre_description'}
+            explicitValue={getProjectDescription(props.project)}
             chips={false}
           />
         </Typography>
@@ -81,8 +87,7 @@ export const MetadataDisplayComponent = (
         <Typography variant="body1" gutterBottom sx={{marginBottom: '16px'}}>
           <strong>Lead Institution:</strong>{' '}
           <MetadataRenderer
-            project_id={props.project.projectId}
-            metadata_key={'lead_institution'}
+            explicitValue={getProjectLeadInstitution(props.project)}
             chips={false}
           />
         </Typography>
@@ -93,8 +98,7 @@ export const MetadataDisplayComponent = (
         >
           <strong>Project Lead:</strong>{' '}
           <MetadataRenderer
-            project_id={props.project.projectId}
-            metadata_key={'project_lead'}
+            explicitValue={getProjectLeadName(props.project)}
             chips={false}
           />
         </Typography>
@@ -108,8 +112,7 @@ export const MetadataDisplayComponent = (
             </Typography>
             <Typography variant="body2" color="textPrimary" gutterBottom>
               <MetadataRenderer
-                project_id={props.project.projectId}
-                metadata_key={'pre_description'}
+                explicitValue={getProjectDescription(props.project)}
                 chips={false}
               />
             </Typography>
@@ -128,8 +131,7 @@ export const MetadataDisplayComponent = (
                   </TableCell>
                   <TableCell>
                     <MetadataRenderer
-                      project_id={props.project.projectId}
-                      metadata_key={'project_status'}
+                      explicitValue={getProjectStatusLabel(props.project)}
                       chips={false}
                     />
                   </TableCell>
@@ -142,8 +144,7 @@ export const MetadataDisplayComponent = (
                   </TableCell>
                   <TableCell>
                     <MetadataRenderer
-                      project_id={props.project.projectId}
-                      metadata_key={'lead_institution'}
+                      explicitValue={getProjectLeadInstitution(props.project)}
                       chips={false}
                     />
                   </TableCell>
@@ -154,8 +155,7 @@ export const MetadataDisplayComponent = (
                   </TableCell>
                   <TableCell>
                     <MetadataRenderer
-                      project_id={props.project.projectId}
-                      metadata_key={'project_lead'}
+                      explicitValue={getProjectLeadName(props.project)}
                       chips={false}
                     />
                   </TableCell>
@@ -166,8 +166,9 @@ export const MetadataDisplayComponent = (
                   </TableCell>
                   <TableCell>
                     <MetadataRenderer
-                      project_id={props.project.projectId}
-                      metadata_key={'last_updated'}
+                      explicitValue={
+                        getProjectLastUpdated(props.project) ?? ''
+                      }
                       chips={false}
                     />
                   </TableCell>

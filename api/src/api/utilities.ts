@@ -283,7 +283,7 @@ if (DEVELOPER_MODE) {
     isAllowedToMiddleware({action: Action.RESTORE_FROM_BACKUP}),
     upload.single('backup'),
     async (req: any, res) => {
-      await restoreFromBackup(req.file.path);
+        await restoreFromBackup({filename: req.file.path});
       res.json({status: 'success'});
     }
   );

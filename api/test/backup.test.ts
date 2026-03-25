@@ -26,11 +26,13 @@ import {
   getRecordsWithRegex,
   notebookRecordIterator,
   registerClient,
+  toCanonicalProjectMetadata,
 } from '@faims3/data-model';
 import {expect} from 'chai';
 import {restoreFromBackup} from '../src/couchdb/backupRestore';
 import {
   getUserProjectsDetailed,
+  getProjectById,
   getProjectUIModel,
 } from '../src/couchdb/notebooks';
 import {getExpressUserFromEmailOrUserId} from '../src/couchdb/users';
@@ -61,6 +63,20 @@ describe('Backup and restore', () => {
       const notebooks = await getUserProjectsDetailed(user);
       expect(notebooks.length).to.equal(2);
       expect(notebooks[0].name).to.equal('Campus Survey Demo');
+      expect(notebooks[0].metadata).not.to.be.undefined;
+
+      // restored metadata should be canonicalised on project doc,
+      // but API responses remain in legacy-flat compatibility shape.
+      const restoredProject = await getProjectById(notebooks[0].project_id);
+      const canonicalFromProject = toCanonicalProjectMetadata(
+        restoredProject.metadata
+      ).metadata;
+      expect(canonicalFromProject.info.name).to.equal('Campus Survey Demo');
+      expect(canonicalFromProject.info.projectLead).to.equal('Penny Crook');
+      expect(canonicalFromProject.info.leadInstitution).to.equal(
+        'Macquarie University'
+      );
+      expect(canonicalFromProject.settings.schemaVersion).to.equal('1.0');
 
       // test record iterator while we're here
       const projectId = notebooks[0].project_id;

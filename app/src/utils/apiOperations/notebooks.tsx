@@ -29,7 +29,12 @@ export const createNotebookFromTemplate = async (input: {
     input.listingId,
     input.username,
     '/api/notebooks',
-    {template_id: input.templateId, name: input.name} as PostCreateNotebookInput
+    {
+      template_id: input.templateId,
+      project: {
+        name: input.name,
+      },
+    } as PostCreateNotebookInput
   );
 };
 

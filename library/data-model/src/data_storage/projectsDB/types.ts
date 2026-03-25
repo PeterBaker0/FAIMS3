@@ -1,4 +1,10 @@
-import {DatabaseInterface, PossibleConnectionInfo} from '../../types';
+import {
+  DatabaseInterface,
+  EncodedProjectUIModel,
+  PossibleConnectionInfo,
+  ProjectInfo,
+  ProjectMetadata,
+} from '../../types';
 
 // V1
 export type ProjectV1Fields = {
@@ -43,11 +49,52 @@ export type ProjectV2Fields = {
 };
 export type ProjectV2Document = PouchDB.Core.Document<ProjectV2Fields>;
 
-// Current (V2)
-export type ProjectDBFields = ProjectV2Fields;
+// V3
+export type ProjectV3Fields = {
+  // Project name
+  name: string;
+
+  // Project status (default:= CLOSED)
+  status: ProjectStatus;
+
+  // Data connection (mandatory)
+  dataDb: PossibleConnectionInfo;
+
+  // Canonical structured project metadata
+  metadata: ProjectMetadata;
+
+  // Encoded UI specification
+  'ui-specification': EncodedProjectUIModel;
+
+  // Team ownership? Undefined means owned by an individual
+  ownedByTeamId?: string;
+
+  // Was the project created from a template?
+  templateId?: string;
+};
+export type ProjectV3Document = PouchDB.Core.Document<ProjectV3Fields>;
+
+// V4
+export type ProjectV4Fields = {
+  // Data connection (mandatory)
+  dataDb: PossibleConnectionInfo;
+
+  // High-level project information
+  project: ProjectInfo;
+
+  // Canonical structured notebook metadata
+  metadata: ProjectMetadata;
+
+  // Encoded notebook UI specification
+  'ui-specification': EncodedProjectUIModel;
+};
+export type ProjectV4Document = PouchDB.Core.Document<ProjectV4Fields>;
+
+// Current (V4)
+export type ProjectDBFields = ProjectV4Fields;
 export type ProjectDocument = PouchDB.Core.Document<ProjectDBFields>;
 export type ExistingProjectDocument =
   PouchDB.Core.ExistingDocument<ProjectDBFields>;
 
-// DB Type (V2)
+// DB Type (V4)
 export type ProjectDB = DatabaseInterface<ProjectDBFields>;

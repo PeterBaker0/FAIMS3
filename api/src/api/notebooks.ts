@@ -21,8 +21,6 @@
 import {
   Action,
   addProjectRole,
-  CreateNotebookFromScratch,
-  CreateNotebookFromTemplate,
   EncodedProjectUIModel,
   GetExportNotebookResponse,
   getIdsByFieldName,
@@ -45,6 +43,7 @@ import {
   PutChangeNotebookTeamInputSchema,
   PutUpdateNotebookInputSchema,
   PutUpdateNotebookResponse,
+  ProjectStatus,
   removeProjectRole,
   Role,
   slugify,
@@ -82,11 +81,12 @@ import {
   createNotebook,
   deleteNotebook,
   getEncodedNotebookUISpec,
-  getNotebookMetadata,
+  getNotebookPayload,
   getProjectById,
   getProjectUIModel,
   getRolesForNotebook,
   getUserProjectsDetailed,
+  updateProjectDetailsOnly,
   updateNotebook,
 } from '../couchdb/notebooks';
 import {getTemplate} from '../couchdb/templates';
@@ -131,10 +131,9 @@ api.get(
 /**
  * POST to /notebooks/ to create a new notebook.
  *
- * This route accepts either a from scratch or from template payload. The
- * inclusion of a template_id indicates from a template, and the inclusion of a
- * ui-specification and metadata indicates from scratch. Both payloads are
- * validated in a type safe way.
+ * New shape requires explicit project details and either:
+ * - template_id (create from template), or
+ * - notebook payload (create from JSON/scratch).
  */
 api.post(
   '/',
@@ -146,7 +145,7 @@ api.post(
     getAction(req) {
       const body = req.body as PostCreateNotebookInput;
       // If in team - suitable action (which is against team ID)
-      if (body.teamId) {
+      if (body.project.teamId) {
         return Action.CREATE_PROJECT_IN_TEAM;
       } else {
         // Otherwise global create project required
@@ -155,9 +154,9 @@ api.post(
     },
     getResourceId(req) {
       const body = req.body as PostCreateNotebookInput;
-      if (body.teamId) {
+      if (body.project.teamId) {
         // If creating a project in a team, the resource ID is the team!
-        return body.teamId;
+        return body.project.teamId;
       } else {
         // If creating a project globally - there is no resource ID!
         return undefined;
@@ -169,66 +168,38 @@ api.post(
     if (!req.user) {
       throw new Exceptions.UnauthorizedException();
     }
-    // Validate payload combination
-    if ('ui-specification' in req.body && 'template_id' in req.body) {
-      throw new Exceptions.ValidationException(
-        'Inappropriate inclusion of both a template_id and a ui-specification when creating a notebook.'
-      );
-    }
+    let notebookPayload:
+      | {
+          metadata: unknown;
+          'ui-specification': EncodedProjectUIModel;
+        }
+      | undefined;
+    let templateId: string | undefined;
 
-    // Functions which determine which type of payload is present
-
-    // TODO consider using a discriminated union approach for parsing here to
-    // make this more efficient e.g. zod allows literals on objects with
-    // discriminated unions on this
-    const isFromScratch = (
-      payload: PostCreateNotebookInput
-    ): payload is CreateNotebookFromScratch => {
-      return 'ui-specification' in payload;
-    };
-    const isFromTemplate = (
-      payload: PostCreateNotebookInput
-    ): payload is CreateNotebookFromTemplate => {
-      return 'template_id' in payload;
-    };
-
-    // Metadata is from payload, or from template
-    let metadata: any;
-    // ui Spec is from payload if manual, or from template
-    let uiSpec: EncodedProjectUIModel;
-    // Project name is in both payloads
-    const projectName: string = req.body.name;
-    // Template ID is only needed if created from template
-    let templateId: string | undefined = undefined;
-
-    // Check the type of creation
-    if (isFromTemplate(req.body)) {
-      // Now we use the template to get details needed to instantiate a new notebook
+    if ('template_id' in req.body) {
       const template = await getTemplate(req.body.template_id);
-
-      // Pull out values needed to create a new notebook
-      metadata = template.metadata;
-      uiSpec = template['ui-specification'];
       templateId = template._id;
-    } else if (isFromScratch(req.body)) {
-      // Creating a new notebook from scratch
-      uiSpec = req.body['ui-specification'];
-      metadata = req.body.metadata;
-    } else {
+      notebookPayload = {
+        metadata: template.metadata,
+        'ui-specification': template['ui-specification'],
+      };
+    } else if ('notebook' in req.body) {
+      notebookPayload = req.body.notebook;
+    }
+
+    if (!notebookPayload) {
       throw new Exceptions.ValidationException(
-        'Could not parse input payload as either a from scratch or from template creation. Contact a system administrator and validate payload integrity.'
+        'Could not determine notebook payload for creation.'
       );
     }
 
-    const projectID = await createNotebook(
-      projectName,
-      uiSpec,
-      metadata,
-      // link to template ID if necessary
-      templateId,
-      // team ID if provided (authorisation to do so already checked)
-      req.body.teamId
-    );
+    const projectID = await createNotebook({
+      project: {
+        ...req.body.project,
+        templateId,
+      },
+      notebook: notebookPayload,
+    });
     if (projectID) {
       // Make the user an admin of this notebook
       addProjectRole({
@@ -266,19 +237,20 @@ api.get(
     const projectId = req.params.id;
 
     const project = await getProjectById(projectId);
-    const metadata = await getNotebookMetadata(projectId);
+    const notebookPayload = await getNotebookPayload(projectId);
     const uiSpec = await getEncodedNotebookUISpec(projectId);
 
-    if (metadata && uiSpec) {
+    if (notebookPayload && uiSpec) {
       res.json({
-        // include name
-        name: project.name,
-        metadata,
-        // TODO fully implement a UI Spec zod model, and do runtime validation
-        // in all client apps
+        project: project.project,
+        name: project.project.name,
+        metadata: notebookPayload.metadata,
         'ui-specification': uiSpec as unknown as Record<string, unknown>,
-        ownedByTeamId: project.ownedByTeamId,
-        status: project.status,
+        ownedByTeamId: project.project.teamId,
+        status:
+          project.project.status === ProjectStatus.CLOSED
+            ? ProjectStatus.CLOSED
+            : ProjectStatus.OPEN,
         recordCount: await countRecordsInNotebook(projectId),
       } satisfies GetNotebookResponse);
     } else {
@@ -286,9 +258,9 @@ api.get(
         'Notebook not found. ' +
           JSON.stringify({
             'ui-specification': uiSpec as unknown as Record<string, unknown>,
-            ownedByTeamId: project.ownedByTeamId,
-            status: project.status,
-            metadata,
+            ownedByTeamId: project.project.teamId,
+            status: project.project.status,
+            metadata: notebookPayload?.metadata,
           })
       );
     }
@@ -299,12 +271,6 @@ api.get(
 api.put(
   '/:id',
   requireAuthenticationAPI,
-  isAllowedToMiddleware({
-    action: Action.UPDATE_PROJECT_UISPEC,
-    getResourceId(req) {
-      return req.params.id;
-    },
-  }),
   processRequest({
     params: z.object({id: z.string()}),
     body: PutUpdateNotebookInputSchema,
@@ -313,10 +279,45 @@ api.put(
     if (!req.user) {
       throw new Exceptions.UnauthorizedException();
     }
-    const uiSpec = req.body['ui-specification'];
-    const metadata = req.body.metadata;
     const projectID = req.params.id;
-    await updateNotebook(projectID, uiSpec, metadata);
+    const canUpdateProjectDetails = userCanDo({
+      action: Action.UPDATE_PROJECT_DETAILS,
+      user: req.user,
+      resourceId: projectID,
+    });
+    const canUpdateProjectUiSpec = userCanDo({
+      action: Action.UPDATE_PROJECT_UISPEC,
+      user: req.user,
+      resourceId: projectID,
+    });
+
+    if (req.body.project && !canUpdateProjectDetails) {
+      throw new Exceptions.UnauthorizedException(
+        'You are not authorised to update project details.'
+      );
+    }
+    if (req.body.notebook && !canUpdateProjectUiSpec) {
+      throw new Exceptions.UnauthorizedException(
+        'You are not authorised to update notebook JSON.'
+      );
+    }
+
+    if (req.body.notebook) {
+      await updateNotebook({
+        projectId: projectID,
+        project: req.body.project,
+        notebook: req.body.notebook,
+      });
+    } else if (req.body.project) {
+      await updateProjectDetailsOnly({
+        projectId: projectID,
+        project: req.body.project,
+      });
+    } else {
+      throw new Exceptions.ValidationException(
+        'At least one of project or notebook must be provided.'
+      );
+    }
     return res.json({notebook: projectID});
   }
 );
@@ -880,10 +881,10 @@ api.post(
       );
     }
 
-    // Get the notebook metadata to modify
-    const notebookMetadata = await getNotebookMetadata(req.params.id);
+    // Ensure notebook exists
+    const notebookPayload = await getNotebookPayload(req.params.id);
 
-    if (!notebookMetadata) {
+    if (!notebookPayload) {
       throw new Exceptions.ItemNotFoundException(
         'Could not find specified notebook.'
       );
@@ -898,7 +899,7 @@ api.post(
       });
     } else {
       // Remove project role from the user
-      removeProjectRole({user, projectId: notebookMetadata.project_id, role});
+      removeProjectRole({user, projectId: req.params.id, role});
     }
 
     // save the user after modifications have been made

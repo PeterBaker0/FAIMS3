@@ -36,12 +36,16 @@ import {
   RouteObject,
   Navigate,
 } from 'react-router-dom';
-import {migrateNotebook} from '@faims3/data-model';
+import {
+  migrateNotebook,
+  toCanonicalProjectMetadata,
+  toLegacyFlatMetadata,
+} from '@faims3/data-model';
 
 import {createDesignerStore} from './createDesignerStore';
 import globalTheme from './theme';
 import type {Notebook, NotebookWithHistory} from './state/initial';
-import {stripDesignerIdentifiers, toNotebook} from './domain/notebook/adapters';
+import {stripDesignerIdentifiers} from './domain/notebook/adapters';
 
 import {NotebookEditor} from './components/notebook-editor';
 import {InfoPanel} from './components/info-panel';
@@ -90,7 +94,9 @@ export function DesignerWidget({
     if (!notebook?.metadata) return undefined;
 
     const flat: Notebook = {
-      metadata: notebook.metadata,
+      metadata: toLegacyFlatMetadata(
+        toCanonicalProjectMetadata(notebook.metadata).metadata
+      ),
       'ui-specification': notebook['ui-specification'].present,
     };
     // migrate the notebook - update any out of date fields or structures
@@ -108,7 +114,9 @@ export function DesignerWidget({
     });
 
     return {
-      metadata: migratedMetadata,
+      metadata: toLegacyFlatMetadata(
+        toCanonicalProjectMetadata(migratedMetadata).metadata
+      ),
       'ui-specification': {
         present: migratedUiSpec,
         past: [],
@@ -172,7 +180,15 @@ export function DesignerWidget({
 
   /** Serialise present notebook, strip internal ids, and return a downloadable JSON `File`. */
   const handleDone = () => {
-    const actualNotebook: Notebook = toNotebook(store.getState().notebook);
+    const {metadata, 'ui-specification': historyState} =
+      store.getState().notebook;
+
+    const actualNotebook: Notebook = {
+      metadata: toLegacyFlatMetadata(
+        toCanonicalProjectMetadata(metadata).metadata
+      ),
+      'ui-specification': historyState.present,
+    };
 
     // Remove internal IDs before serialisation
     const exportNotebook = stripDesignerIdentifiers(actualNotebook);

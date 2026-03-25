@@ -4,12 +4,35 @@ import {readFileAsText} from '@/lib/utils';
 import {z} from 'zod';
 import {NOTEBOOK_NAME} from '@/constants';
 import {Route} from '@/routes/_protected/projects/$projectId';
+import {useGetProject} from '@/hooks/queries';
+import {Field} from '../form';
 
-const fields = [
+const fields: Field[] = [
+  {
+    name: 'name',
+    label: 'Name',
+    schema: z.string().trim().min(5, {
+      message: 'Project name must be at least 5 characters.',
+    }),
+  },
+  {
+    name: 'description',
+    label: 'Description',
+    schema: z.string().optional(),
+  },
+  {
+    name: 'teamId',
+    label: 'Team ID (optional)',
+    schema: z.string().trim().optional(),
+  },
   {
     name: 'file',
+    label: 'JSON file (optional)',
     type: 'file',
-    schema: z.instanceof(File).refine(file => file.type === 'application/json'),
+    schema: z
+      .instanceof(File)
+      .refine(file => file.type === 'application/json')
+      .optional(),
   },
 ];
 
@@ -30,13 +53,70 @@ export function UpdateProjectForm({
 }) {
   const {user} = useAuth();
   const {projectId} = Route.useParams();
+  const {data: projectData} = useGetProject({user, projectId});
 
-  const onSubmit = async ({file}: {file: File}) => {
+  const onSubmit = async ({
+    file,
+    name,
+    description,
+    teamId,
+  }: {
+    file?: File;
+    name: string;
+    description?: string;
+    teamId?: string;
+  }) => {
     if (!user) return {type: 'submit', message: 'User not authenticated'};
+    const payload: {
+      project?: {
+        name?: string;
+        description?: string;
+        teamId?: string;
+      };
+      notebook?: {
+        metadata: unknown;
+        'ui-specification': Record<string, unknown>;
+      };
+    } = {
+      project: {
+        name: name.trim(),
+        description: description?.trim() || undefined,
+        teamId: teamId?.trim() || undefined,
+      },
+    };
 
-    const jsonString = await readFileAsText(file);
+    if (file) {
+      const jsonString = await readFileAsText(file);
+      if (!jsonString) return {type: 'submit', message: 'Error reading file'};
+      let parsed: {
+        metadata?: unknown;
+        'ui-specification'?: Record<string, unknown>;
+      };
+      try {
+        parsed = JSON.parse(jsonString) as {
+          metadata?: unknown;
+          'ui-specification'?: Record<string, unknown>;
+        };
+      } catch {
+        return {
+          type: 'submit',
+          message: 'Invalid JSON file format.',
+        };
+      }
 
-    if (!jsonString) return {type: 'submit', message: 'Error reading file'};
+      if (!parsed.metadata || !parsed['ui-specification']) {
+        return {
+          type: 'submit',
+          message:
+            "Invalid JSON file. Expected both 'metadata' and 'ui-specification'.",
+        };
+      }
+
+      payload.notebook = {
+        metadata: parsed.metadata,
+        'ui-specification': parsed['ui-specification'],
+      };
+    }
 
     const response = await fetch(
       `${import.meta.env.VITE_API_URL}/api/notebooks/${projectId}`,
@@ -46,12 +126,12 @@ export function UpdateProjectForm({
           'Content-Type': 'application/json',
           Authorization: `Bearer ${user.token}`,
         },
-        body: jsonString,
+        body: JSON.stringify(payload),
       }
     );
 
     if (!response.ok)
-      return {type: 'submit', message: 'Error updating template'};
+      return {type: 'submit', message: 'Error updating project'};
 
     // call the onSuccess callback if everything worked
     onSuccess();
@@ -68,6 +148,11 @@ export function UpdateProjectForm({
       warningMessage={
         "If the project's response format has changed, there will be inconsistences in responses."
       }
+      defaultValues={{
+        name: projectData?.project?.name ?? projectData?.name ?? '',
+        description: projectData?.project?.description ?? '',
+        teamId: projectData?.project?.teamId ?? '',
+      }}
     />
   );
 }

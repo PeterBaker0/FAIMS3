@@ -33,7 +33,7 @@ export interface Field {
   name: string;
   label?: string;
   description?: string;
-  schema: z.ZodSchema;
+  schema: z.ZodTypeAny;
   type?: string;
   options?: {label: string; value: string}[];
   excludedBy?: string;
@@ -102,8 +102,8 @@ export function Form<
         fields.reduce((acc, {name, schema}) => {
           acc[name] = schema;
           return acc;
-        }, {} as z.ZodRawShape)
-      )
+        }, {} as Record<string, z.ZodTypeAny>)
+      ) as any
     ),
     defaultValues,
   });

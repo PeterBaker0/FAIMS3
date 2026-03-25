@@ -35,6 +35,20 @@ import {MDXEditorMethods} from '@mdxeditor/editor';
 
 import {VITE_TEMPLATE_PROTECTIONS} from '../buildconfig';
 import {propertyUpdated} from '../state/metadata-reducer';
+import {
+  getMetadataDescription,
+  getMetadataLeadInstitution,
+  getMetadataName,
+  getMetadataNotebookVersion,
+  getMetadataProjectLead,
+  getMetadataShowQRCodeButton,
+  setMetadataDescription,
+  setMetadataLeadInstitution,
+  setMetadataName,
+  setMetadataNotebookVersion,
+  setMetadataProjectLead,
+  setMetadataShowQRCodeButton,
+} from '../utils/projectMetadata';
 
 /** Notebook metadata editor: core fields, custom key/value pairs, MDX pre-description. */
 export const InfoPanel = () => {
@@ -135,9 +149,9 @@ export const InfoPanel = () => {
                 label="Project Name"
                 name="name"
                 data-testid="name"
-                value={metadata.name}
+                value={getMetadataName(metadata)}
                 onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
-                  setProp('name', event.target.value);
+                  setProp('name', setMetadataName(metadata, event.target.value));
                 }}
               />
               <FormHelperText>
@@ -150,9 +164,12 @@ export const InfoPanel = () => {
                 fullWidth
                 label="Project Lead"
                 name="project_lead"
-                value={metadata.project_lead}
+                value={getMetadataProjectLead(metadata)}
                 onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
-                  setProp('project_lead', event.target.value);
+                  setProp(
+                    'project_lead',
+                    setMetadataProjectLead(metadata, event.target.value)
+                  );
                 }}
               />
             </Grid>
@@ -162,9 +179,12 @@ export const InfoPanel = () => {
                 fullWidth
                 label="Lead Institution"
                 name="lead_institution"
-                value={metadata.lead_institution}
+                value={getMetadataLeadInstitution(metadata)}
                 onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
-                  setProp('lead_institution', event.target.value);
+                  setProp(
+                    'lead_institution',
+                    setMetadataLeadInstitution(metadata, event.target.value)
+                  );
                 }}
               />
             </Grid>
@@ -172,10 +192,16 @@ export const InfoPanel = () => {
 
           <Grid item xs={12}>
             <MdxEditor
-              initialMarkdown={metadata.pre_description as string}
+              initialMarkdown={getMetadataDescription(metadata)}
               editorRef={ref}
               handleChange={() =>
-                setProp('pre_description', ref.current?.getMarkdown() as string)
+                setProp(
+                  'pre_description',
+                  setMetadataDescription(
+                    metadata,
+                    ref.current?.getMarkdown() as string
+                  )
+                )
               }
             />
             <FormHelperText>
@@ -197,11 +223,14 @@ export const InfoPanel = () => {
                 <FormControlLabel
                   control={
                     <Checkbox
-                      checked={metadata.showQRCodeButton === 'true'}
+                      checked={getMetadataShowQRCodeButton(metadata)}
                       onChange={e =>
                         setProp(
                           'showQRCodeButton',
-                          e.target.checked ? 'true' : 'false'
+                          setMetadataShowQRCodeButton(
+                            metadata,
+                            e.target.checked
+                          )
                         )
                       }
                     />
@@ -218,9 +247,15 @@ export const InfoPanel = () => {
                     fullWidth
                     label="Notebook Version"
                     name="notebook_version"
-                    value={metadata.notebook_version}
+                    value={getMetadataNotebookVersion(metadata)}
                     onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
-                      setProp('notebook_version', event.target.value);
+                      setProp(
+                        'notebook_version',
+                        setMetadataNotebookVersion(
+                          metadata,
+                          event.target.value
+                        )
+                      );
                     }}
                   />
                   <FormHelperText>

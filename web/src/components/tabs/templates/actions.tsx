@@ -15,6 +15,7 @@ import {EditTemplateDialog} from '@/components/dialogs/edit-template';
 import {Action, getUserResourcesForAction} from '@faims3/data-model';
 import {useIsAuthorisedTo} from '@/hooks/auth-hooks';
 import {AddTemplateToTeamDialog} from '@/components/dialogs/add-template-to-team-dialog';
+import {getTemplateStatus} from '@/utils/projectMetadata';
 import {
   toDesignerNotebookWithHistory,
   useDesignerSaveMutation,
@@ -60,6 +61,7 @@ const TemplateActions = () => {
     action: Action.UPDATE_TEMPLATE_UISPEC,
     resourceId: templateId,
   });
+  const templateArchived = getTemplateStatus(data?.metadata) === 'archived';
 
   const canCreateProject = useIsAuthorisedTo({
     action: Action.CREATE_PROJECT,
@@ -180,7 +182,7 @@ const TemplateActions = () => {
         )}
         <Card>
           <List>
-            {data?.metadata.project_status === 'archived' ? (
+            {templateArchived ? (
               <ListItem>
                 <ListLabel>Un-archive Template</ListLabel>
                 <ListDescription>
@@ -194,7 +196,7 @@ const TemplateActions = () => {
               </ListItem>
             )}
             <ArchiveTemplateDialog
-              archived={data?.metadata.project_status === 'archived'}
+              archived={templateArchived}
             />
           </List>
         </Card>

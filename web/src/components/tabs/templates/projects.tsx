@@ -21,7 +21,7 @@ const TemplateProjects = ({templateId}: {templateId: string}) => {
     <DataTable
       columns={columns}
       data={
-        data?.filter((notebook: any) => notebook.template_id === templateId) ||
+        data?.filter((notebook: any) => notebook.project?.templateId === templateId) ||
         []
       }
       button={<ProjectFromTemplateDialog />}

@@ -21,6 +21,7 @@ import {generateTestRecordsForProject} from '@/hooks/project-hooks';
 import {Input} from '@mui/material';
 import {AddProjectToTeamDialog} from '@/components/dialogs/add-project-to-team-dialog';
 import {CreateTemplateFromProjectDialog} from '@/components/dialogs/create-tempalate-from-project-dialog';
+import {toDesignerLegacyFlatMetadata} from '@/utils/projectMetadata';
 import {
   toDesignerNotebookWithHistory,
   useDesignerSaveMutation,
@@ -61,6 +62,12 @@ const ProjectActions = (): JSX.Element => {
   // need to invalidate the project query after upload
   const uploadProjectCallback = () => {
     queryClient.invalidateQueries({queryKey: ['projects', projectId]});
+    queryClient.invalidateQueries({queryKey: ['projects']});
+    if (data?.project.teamId) {
+      queryClient.invalidateQueries({
+        queryKey: ['projectsbyteam', user?.token, data.project.teamId],
+      });
+    }
   };
 
   const handleEditorClose = (file?: File) => {
@@ -181,7 +188,9 @@ const ProjectActions = (): JSX.Element => {
                   href={`data:text/json;charset=utf-8,${encodeURIComponent(
                     JSON.stringify({
                       'ui-specification': data?.['ui-specification'],
-                      metadata: data?.metadata,
+                      metadata: data?.metadata
+                        ? toDesignerLegacyFlatMetadata(data.metadata)
+                        : undefined,
                     })
                   )}`}
                   download={`${projectId}.json`}
@@ -193,15 +202,16 @@ const ProjectActions = (): JSX.Element => {
           </List>
         </Card>
 
-        {canEditProject && (
+        {(canEditProject || canAddProjectToTeam) && (
           <Card className="flex-1">
             <List className="flex flex-col gap-4">
               <ListItem>
                 <ListLabel>
-                  Replace {NOTEBOOK_NAME_CAPITALIZED} JSON File
+                  Update {NOTEBOOK_NAME_CAPITALIZED}
                 </ListLabel>
                 <ListDescription>
-                  Replace the {NOTEBOOK_NAME} JSON file.
+                  Update project details (name, description, team) and
+                  optionally replace the {NOTEBOOK_NAME} JSON file.
                 </ListDescription>
               </ListItem>
               <ListItem>

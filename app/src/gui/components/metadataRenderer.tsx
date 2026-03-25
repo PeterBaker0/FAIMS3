@@ -18,44 +18,24 @@
  *   TODO
  */
 
-import {ProjectID} from '@faims3/data-model';
 import {Chip} from '@mui/material';
-import {selectProjectById} from '../../context/slices/projectSlice';
-import {useAppSelector} from '../../context/store';
 import {RichTextContent} from '@faims3/forms';
 
 type MetadataProps = {
-  project_id: ProjectID;
   // You can force through an explicit value
   explicitValue?: string;
-  // OR you can ask for a value by key from the metadata
-  metadata_key?: string;
   metadata_label?: string;
   chips?: boolean;
 };
 
 export default function MetadataRenderer(props: MetadataProps) {
   const {
-    project_id,
-    metadata_key,
     metadata_label,
     chips = true,
     explicitValue,
   } = props;
-  const metadata = useAppSelector(
-    state => selectProjectById(state, project_id)?.metadata
-  );
-  const possibleValue = explicitValue
-    ? explicitValue
-    : metadata_key
-      ? metadata?.[metadata_key]
-      : 'Error';
-  const value = possibleValue ? (possibleValue as string) : '';
-
-  // Use RichTextField for 'pre_description' field
-  if (metadata_key === 'pre_description' && value !== '') {
-    return <RichTextContent content={value} />;
-  }
+  const possibleValue = explicitValue ?? '';
+  const value = possibleValue ? String(possibleValue) : '';
 
   // For other fields, use original rendering logic
   return chips && value !== '' ? (

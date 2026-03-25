@@ -6,14 +6,17 @@ import {Card} from '@/components/ui/card';
 import {useGetProject} from '@/hooks/queries';
 import {TeamCellComponent} from '@/components/tables/cells/team-cell';
 import {ProjectStatus} from '@faims3/data-model';
+import {
+  getProjectLead as getNotebookLead,
+} from '@/utils/projectMetadata';
 
 const detailsFields = [
-  {field: 'name', label: 'Name', isMetadata: false},
-  {field: 'pre_description', label: 'Description'},
-  {field: 'project_lead', label: 'Created by'},
-  {field: 'notebook_version', label: 'Version'},
+  {field: 'project.name', label: 'Name'},
+  {field: 'project.description', label: 'Description'},
+  {field: 'metadataLead', label: 'Notebook Lead'},
+  {field: 'metadataVersion', label: 'Notebook Version'},
   {
-    field: 'ownedByTeamId',
+    field: 'project.teamId',
     label: 'Team',
     render: (teamId: string | undefined) => {
       if (!teamId) {
@@ -22,10 +25,9 @@ const detailsFields = [
         return <TeamCellComponent teamId={teamId} />;
       }
     },
-    isMetadata: false,
   },
   {
-    field: 'status',
+    field: 'project.status',
     label: 'Status',
     render: (status: string | undefined) => {
       if (status === ProjectStatus.OPEN) {
@@ -51,9 +53,8 @@ const detailsFields = [
         );
       }
     },
-    isMetadata: false,
   },
-  {field: 'recordCount', label: 'Current Record Count', isMetadata: false},
+  {field: 'recordCount', label: 'Current Record Count'},
 ];
 
 /**
@@ -71,10 +72,23 @@ const ProjectDetails = ({projectId}: {projectId: string}) => {
   return (
     <Card>
       <List>
-        {detailsFields.map(({field, label, render, isMetadata = true}) => {
-          const cellData = isMetadata
-            ? data?.metadata[field]
-            : (data as any | undefined)?.[field];
+        {detailsFields.map(({field, label, render}) => {
+          const normalisedCellData =
+            field === 'project.name'
+              ? data?.project.name
+              : field === 'project.description'
+                ? data?.project.description
+                : field === 'project.teamId'
+                  ? data?.project.teamId
+                  : field === 'project.status'
+                    ? data?.project.status
+                    : field === 'metadataLead'
+                      ? getNotebookLead(data?.metadata)
+                      : field === 'metadataVersion'
+                        ? data?.metadata?.settings?.notebookVersion
+                        : field === 'recordCount'
+                          ? data?.recordCount?.toString()
+                          : undefined;
           return (
             <ListItem key={field}>
               <ListLabel>{label}</ListLabel>
@@ -82,7 +96,9 @@ const ProjectDetails = ({projectId}: {projectId: string}) => {
                 <Skeleton />
               ) : (
                 <ListDescription>
-                  {render ? render(cellData) : cellData}
+                  {render
+                    ? render(normalisedCellData)
+                    : normalisedCellData}
                 </ListDescription>
               )}
             </ListItem>

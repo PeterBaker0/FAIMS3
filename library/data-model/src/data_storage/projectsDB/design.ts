@@ -16,12 +16,15 @@ const indexDocument = {
   views: {
     [PROJECTS_BY_TEAM_ID_POSTFIX]: {
       map: convertToCouchDBString(doc => {
-        if (
-          doc &&
-          doc.ownedByTeamId !== undefined &&
-          doc.ownedByTeamId.length > 0
-        ) {
-          emit(doc.ownedByTeamId, 1);
+        const teamId =
+          doc?.project?.teamId !== undefined &&
+          doc.project.teamId.length > 0
+            ? doc.project.teamId
+            : doc?.ownedByTeamId !== undefined && doc.ownedByTeamId.length > 0
+              ? doc.ownedByTeamId
+              : undefined;
+        if (teamId !== undefined) {
+          emit(teamId, 1);
         }
       }),
     },
