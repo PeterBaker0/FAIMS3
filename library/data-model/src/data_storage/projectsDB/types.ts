@@ -142,11 +142,9 @@ export type ProjectV4Document = z.infer<typeof ProjectV4DocumentSchema>;
 // Current exports
 // =============
 
-/** @lintignore Intentional stable/versioned schema alias. */
 export const ProjectDBFieldsSchema = ProjectV4FieldsSchema;
 export type ProjectDBFields = z.infer<typeof ProjectDBFieldsSchema>;
 
-/** @lintignore Intentional stable/versioned schema alias. */
 export const ProjectDocumentSchema = ProjectV4DocumentSchema;
 export type ProjectDocument = z.infer<typeof ProjectDocumentSchema>;
 

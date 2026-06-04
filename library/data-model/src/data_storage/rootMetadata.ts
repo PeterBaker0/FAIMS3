@@ -15,12 +15,10 @@ export const RootDescriptionInputSchema = z
   });
 
 /** Optional root description on persisted project/template documents (v4/v5). */
-/** @lintignore Intentional stable/versioned schema alias. */
 export const PersistedRootDescriptionSchema =
   RootDescriptionInputSchema.optional();
 
 /** Optional description on POST /api/notebooks and POST /api/templates. */
-/** @lintignore Intentional stable/versioned schema alias. */
 export const CreateRootDescriptionSchema = PersistedRootDescriptionSchema;
 
 /** Normalize API/form description for Couch storage (omit when empty). */
