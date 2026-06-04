@@ -67,7 +67,7 @@ const exportAppBarHeading = () => {
   }
 };
 export const theme = exportTheme();
-export const appBarStyling = exportAppBarStyling();
-export const projectListLayout = exportProjectListLayout();
-export const projectListVerbose = exportProjectListVerbose();
-export const appBarHeading = exportAppBarHeading();
+const appBarStyling = exportAppBarStyling();
+const projectListLayout = exportProjectListLayout();
+const projectListVerbose = exportProjectListVerbose();
+const appBarHeading = exportAppBarHeading();

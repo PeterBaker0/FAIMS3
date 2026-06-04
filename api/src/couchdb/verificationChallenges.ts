@@ -389,7 +389,7 @@ export const getVerificationChallengeByCode = async ({
  *
  * @returns A Promise that resolves to an array of all verification challenge documents
  */
-export const getAllVerificationChallenges = async (): Promise<
+const getAllVerificationChallenges = async (): Promise<
   VerificationChallengeExistingDocument[]
 > => {
   const authDB = getAuthDB();

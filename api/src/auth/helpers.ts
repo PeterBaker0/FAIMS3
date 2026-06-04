@@ -255,7 +255,7 @@ export function providersToRenderDetails({
  * Fetches and validates an invite by ID
  * @returns invite if valid/present
  */
-export async function lookupAndValidateInvite({
+async function lookupAndValidateInvite({
   inviteCode,
 }: {
   inviteCode: string;

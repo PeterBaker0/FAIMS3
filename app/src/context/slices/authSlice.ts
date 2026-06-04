@@ -248,7 +248,7 @@ const authSlice = createSlice({
 export const selectActiveUser = (state: AuthStore) => state.auth.activeUser;
 export const selectIsAuthenticated = (state: AuthStore) =>
   state.auth.isAuthenticated;
-export const selectActiveToken = (state: AuthStore) => {
+const selectActiveToken = (state: AuthStore) => {
   const activeUser = state.auth.activeUser;
   if (!activeUser) return undefined;
   return state.auth.servers[activeUser.serverId]?.users[activeUser.username];
@@ -269,7 +269,7 @@ export const selectAllServerUsers = createSelector(
 
 // This is a special selector which looks for a given serverId re-renders
 // optimally
-export const selectSpecificServer = createSelector(
+const selectSpecificServer = createSelector(
   [
     (state: AuthStore) => state.auth.servers,
     (_state: AuthStore, serverId: string) => serverId,
@@ -289,7 +289,7 @@ export const selectActiveServerId = createSelector(
 // ======================
 
 // Helper functions (which use the store state)
-export const getServerConnection = ({
+const getServerConnection = ({
   state,
   serverId,
   username,
@@ -355,7 +355,7 @@ export const setServerConnection = createAsyncThunk<
   }
 });
 
-export const setAndRefreshActiveConnection = createAsyncThunk<
+const setAndRefreshActiveConnection = createAsyncThunk<
   void,
   ServerUserIdentity
 >(
@@ -375,7 +375,7 @@ export const setAndRefreshActiveConnection = createAsyncThunk<
 /**
  * Atomic async operation on store to refresh a specific connection
  */
-export const refreshToken = createAsyncThunk<
+const refreshToken = createAsyncThunk<
   void,
   {serverId: string; username: string}
 >('auth/refreshToken', async ({serverId, username}, {dispatch, getState}) => {
@@ -429,7 +429,7 @@ export const refreshToken = createAsyncThunk<
 /**
  * Atomic async operation on store to refresh the active user's token
  */
-export const refreshActiveUser = createAsyncThunk<void, void>(
+const refreshActiveUser = createAsyncThunk<void, void>(
   'auth/refreshActive',
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

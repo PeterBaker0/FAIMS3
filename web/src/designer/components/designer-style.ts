@@ -37,7 +37,7 @@ export const designerCheckboxSx: SxProps<Theme> = {
   },
 };
 
-export const designerDividerSx: SxProps<Theme> = {
+const designerDividerSx: SxProps<Theme> = {
   borderColor: 'divider',
   borderWidth: 1.25,
   mx: -3,
@@ -110,7 +110,7 @@ export const designerInlineEditActionIconSx: SxProps<Theme> = {
 
 export const designerPrimaryActionButtonSx: SxProps<Theme> = {};
 
-export const designerControlHeadingSx: SxProps<Theme> = {
+const designerControlHeadingSx: SxProps<Theme> = {
   color: 'text.primary',
   fontWeight: 700,
   fontSize: '1.25rem',
@@ -126,7 +126,7 @@ export const designerFieldSubHeadingSx: SxProps<Theme> = {
   textAlign: 'left',
 };
 
-export const designerSubheadingSx: SxProps<Theme> = {
+const designerSubheadingSx: SxProps<Theme> = {
   color: 'text.secondary',
   fontWeight: 600,
   fontSize: '1rem',

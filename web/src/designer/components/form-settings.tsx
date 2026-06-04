@@ -247,7 +247,7 @@ export const FormSettingsContent = ({viewSetId}: {viewSetId: string}) => {
   );
 };
 
-export const FormSettingsPanel = ({viewSetId}: {viewSetId: string}) => {
+const FormSettingsPanel = ({viewSetId}: {viewSetId: string}) => {
   const [expanded, setExpanded] = React.useState(false);
 
   return (
@@ -287,4 +287,3 @@ export const FormSettingsPanel = ({viewSetId}: {viewSetId: string}) => {
 };
 
 /** Default export of {@link FormSettingsPanel}. */
-export default FormSettingsPanel;

@@ -82,7 +82,7 @@ export const updateSpeechSettings = (
  * };
  * ```
  */
-export const SpeechSettingsEditor = ({
+const SpeechSettingsEditor = ({
   fieldName,
 }: SpeechSettingsEditorProps) => {
   const field = useAppSelector(
@@ -161,4 +161,3 @@ export const SpeechSettingsEditor = ({
 };
 
 /** Default export of {@link SpeechSettingsEditor}. */
-export default SpeechSettingsEditor;

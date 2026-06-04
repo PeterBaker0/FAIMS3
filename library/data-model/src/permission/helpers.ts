@@ -13,7 +13,7 @@ import {ResourceRole} from './types';
  * @param action The action to check
  * @returns Boolean indicating if the action is allowed
  */
-export function canPerformAction({
+function canPerformAction({
   roles,
   action,
 }: {
@@ -89,7 +89,7 @@ export function drillRoles({role}: {role: Role}): Role[] {
 }
 
 // Clear cache if needed
-export function clearRoleDrillCache(): void {
+function clearRoleDrillCache(): void {
   roleDrillCache.clear();
 }
 
@@ -138,7 +138,7 @@ export function roleGrantsAction({
   return false;
 }
 
-export const resourceRolesEqual = (a: ResourceRole, b: ResourceRole): boolean =>
+const resourceRolesEqual = (a: ResourceRole, b: ResourceRole): boolean =>
   a.resourceId === b.resourceId && a.role === b.role;
 
 /**
@@ -146,7 +146,7 @@ export const resourceRolesEqual = (a: ResourceRole, b: ResourceRole): boolean =>
  * @param roles Array of roles to check
  * @returns Array of all actions granted by these roles
  */
-export function getAllActionsForRoles(roles: Role[]): Action[] {
+function getAllActionsForRoles(roles: Role[]): Action[] {
   const actionSet = new Set<Action>();
 
   roles.forEach(role => {

@@ -17,7 +17,7 @@ type DBReplicateOptions =
       push: PouchDB.Replication.ReplicateOptions;
     };
 
-export const ATTACHMENT_FILTER_CONFIG = {
+const ATTACHMENT_FILTER_CONFIG = {
   filter: '_view',
   view: 'attachment_filter/attachment_filter',
 };
@@ -26,7 +26,7 @@ export const ATTACHMENT_FILTER_CONFIG = {
 type LocalDatabaseOptions = PouchDB.Configuration.DatabaseConfiguration;
 
 // Default local options is none
-export const LOCAL_POUCH_OPTIONS: LocalDatabaseOptions = {};
+const LOCAL_POUCH_OPTIONS: LocalDatabaseOptions = {};
 
 // enable memory adapter for testing
 if (RUNNING_UNDER_TEST) {
@@ -75,7 +75,7 @@ export function buildPouchIdentifier({
   return `${serverId}_${projectId}_data`;
 }
 
-export const DATA_DB_PREFIX = 'data-';
+const DATA_DB_PREFIX = 'data-';
 
 /**
  * Generates the couch DB name from the project ID.
@@ -366,4 +366,4 @@ export const fetchNotebookDetails = async ({
 };
 
 /** @deprecated Use {@link fetchNotebookDetails}. */
-export const fetchProjectMetadataAndSpec = fetchNotebookDetails;
+const fetchProjectMetadataAndSpec = fetchNotebookDetails;

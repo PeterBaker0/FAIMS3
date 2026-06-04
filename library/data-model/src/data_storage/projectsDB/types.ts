@@ -58,6 +58,7 @@ export enum ProjectStatusV2 {
 export enum ProjectStatus {
   OPEN = 'OPEN',
   CLOSED = 'CLOSED',
+  /** @lintignore Active archive lifecycle value used by api/app/web. */
   ARCHIVED = 'ARCHIVED',
 }
 
@@ -139,9 +140,11 @@ export type ProjectV4Document = z.infer<typeof ProjectV4DocumentSchema>;
 // Current exports
 // =============
 
+/** @lintignore Intentional stable/versioned schema alias. */
 export const ProjectDBFieldsSchema = ProjectV4FieldsSchema;
 export type ProjectDBFields = z.infer<typeof ProjectDBFieldsSchema>;
 
+/** @lintignore Intentional stable/versioned schema alias. */
 export const ProjectDocumentSchema = ProjectV4DocumentSchema;
 export type ProjectDocument = z.infer<typeof ProjectDocumentSchema>;
 

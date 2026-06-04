@@ -255,6 +255,7 @@ export const GetNotebookResponseSchema = ExistingProjectDocumentSchema.extend({
 export type GetNotebookResponse = z.infer<typeof GetNotebookResponseSchema>;
 
 /** @deprecated Use {@link GetNotebookResponse} */
+/** @lintignore Intentional stable/versioned schema alias. */
 export const APINotebookGetSchema = GetNotebookResponseSchema;
 export type APINotebookGet = GetNotebookResponse;
 
@@ -328,6 +329,7 @@ export type PostCreateNotebookResponse = z.infer<
 >;
 
 // GET users for a notebook - no input
+/** @lintignore Intentional stable/versioned schema alias. */
 export const GetNotebookUsersResponseSchema = NotebookAuthSummarySchema;
 export type GetNotebookUsersResponse = z.infer<
   typeof GetNotebookUsersResponseSchema
@@ -346,6 +348,7 @@ export type PutUpdateNotebookMetadataInput = z.infer<
 >;
 
 /** @deprecated Use {@link PutUpdateNotebookMetadataInputSchema} */
+/** @lintignore Intentional stable/versioned schema alias. */
 export const PutUpdateNotebookInputSchema =
   PutUpdateNotebookMetadataInputSchema;
 export type PutUpdateNotebookInput = PutUpdateNotebookMetadataInput;
@@ -503,6 +506,7 @@ export type GetListTemplatesResponse = z.infer<
 >;
 
 // GET a specific template by _id response
+/** @lintignore Intentional stable/versioned schema alias. */
 export const GetTemplateByIdResponseSchema = TemplateApiDocumentSchema;
 export type GetTemplateByIdResponse = z.infer<
   typeof GetTemplateByIdResponseSchema
@@ -608,16 +612,19 @@ export const GetListTeamsResponseSchema = z.object({
 /**
  * GET /api/teams/:id response
  */
+/** @lintignore Intentional stable/versioned schema alias. */
 export const GetTeamByIdResponseSchema = TeamDocumentSchema;
 
 /**
  * POST /api/teams response
  */
+/** @lintignore Intentional stable/versioned schema alias. */
 export const PostCreateTeamResponseSchema = TeamDocumentSchema;
 
 /**
  * PUT /api/teams/:id response
  */
+/** @lintignore Intentional stable/versioned schema alias. */
 export const PutUpdateTeamResponseSchema = TeamDocumentSchema;
 
 // inferred types
@@ -777,6 +784,7 @@ const InviteDocumentSchema = z.object({
 /**
  * GET /api/invites/:inviteId response
  */
+/** @lintignore Intentional stable/versioned schema alias. */
 export const GetInviteByIdResponseSchema = InviteInfoResponseSchema;
 
 /**
@@ -1043,6 +1051,7 @@ export const PostCreateLongLivedTokenResponseSchema =
     token: z.string(), // Only included on creation
   });
 
+/** @lintignore Intentional stable/versioned schema alias. */
 export const PutUpdateLongLivedTokenResponseSchema =
   LongLivedTokenResponseSchema;
 

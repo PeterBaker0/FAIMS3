@@ -91,7 +91,7 @@ export function getStoredUser(): User | null {
  *
  * @returns the User object if we have a valid user or null if not
  */
-export function parseUserJSON(storedUser: any): User | null {
+function parseUserJSON(storedUser: any): User | null {
   if (!storedUser) return null;
 
   try {

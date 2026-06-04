@@ -56,7 +56,7 @@ export const userCanDo = ({
  * @returns The Bearer token without the 'Bearer ' prefix if present, otherwise
  * undefined
  */
-export function extractBearerToken(req: Express.Request): string | undefined {
+function extractBearerToken(req: Express.Request): string | undefined {
   // Get the Authorization header from the request
   const authHeader = req.headers.authorization;
 

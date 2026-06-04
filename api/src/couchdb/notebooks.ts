@@ -132,7 +132,7 @@ export const getProjectById = async (
 /**
  * Puts a single project document
  */
-export const putProjectDoc = async (doc: ProjectDocument) => {
+const putProjectDoc = async (doc: ProjectDocument) => {
   try {
     return await localGetProjectsDb().put(doc);
   } catch (e) {

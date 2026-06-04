@@ -6,7 +6,7 @@ import {z} from 'zod';
 // to the app using the following interfaces.
 
 // Base schema for common fields across all providers
-export const BaseAuthProviderConfigSchema = z.object({
+const BaseAuthProviderConfigSchema = z.object({
   id: z.string(),
   index: z.number().optional(), // order for display in UI
   type: z.string(),
@@ -29,7 +29,7 @@ export type BaseAuthProviderConfig = z.infer<
 >;
 
 // Google auth provider schema
-export const GoogleAuthProviderConfigSchema =
+const GoogleAuthProviderConfigSchema =
   BaseAuthProviderConfigSchema.extend({
     type: z.literal('google'),
     clientID: z.string(),
@@ -40,7 +40,7 @@ export type GoogleAuthProviderConfig = z.infer<
 >;
 
 // OIDC auth provider schema
-export const OIDCAuthProviderConfigSchema = BaseAuthProviderConfigSchema.extend(
+const OIDCAuthProviderConfigSchema = BaseAuthProviderConfigSchema.extend(
   {
     type: z.literal('oidc'),
     issuer: z.string(),
@@ -61,7 +61,7 @@ export type OIDCAuthProviderConfig = z.infer<
  * Based on passport-saml configuration options.
  * See https://www.passportjs.org/packages/passport-saml/ for details.
  */
-export const SAMLAuthProviderConfigSchema = BaseAuthProviderConfigSchema.extend(
+const SAMLAuthProviderConfigSchema = BaseAuthProviderConfigSchema.extend(
   {
     type: z.literal('saml'),
     // Override default callback method to just POST
@@ -185,19 +185,19 @@ export const AuthProviderConfigMapSchema = z.record(AuthProviderSchema);
 export type AuthProviderConfigMap = z.infer<typeof AuthProviderConfigMapSchema>;
 
 // Type guard functions for runtime type checking
-export function isGoogleProvider(
+function isGoogleProvider(
   config: AuthProviderConfig
 ): config is GoogleAuthProviderConfig {
   return config.type === 'google';
 }
 
-export function isOIDCProvider(
+function isOIDCProvider(
   config: AuthProviderConfig
 ): config is OIDCAuthProviderConfig {
   return config.type === 'oidc';
 }
 
-export function isSAMLProvider(
+function isSAMLProvider(
   config: AuthProviderConfig
 ): config is SAMLAuthProviderConfig {
   return config.type === 'saml';

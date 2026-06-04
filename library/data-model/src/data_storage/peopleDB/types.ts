@@ -143,6 +143,7 @@ export type PeopleV5Fields = z.infer<typeof PeopleV5FieldsSchema>;
 export type PeopleV5Document = PouchDB.Core.ExistingDocument<PeopleV5Fields>;
 
 // Current version
+/** @lintignore Intentional stable/versioned schema alias. */
 export const PeopleDBFieldsSchema = PeopleV5FieldsSchema;
 export type PeopleDBFields = z.infer<typeof PeopleDBFieldsSchema>;
 

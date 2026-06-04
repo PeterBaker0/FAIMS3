@@ -34,18 +34,18 @@ const CODE_EXPIRY_MS = EMAIL_CODE_EXPIRY_MINUTES * 60 * 1000;
  */
 
 // Maximum number of email codes a user can request within the rate limit window
-export const MAX_EMAIL_CODE_ATTEMPTS = 5;
+const MAX_EMAIL_CODE_ATTEMPTS = 5;
 // Rate limit window in milliseconds (30 minutes)
-export const EMAIL_CODE_RATE_LIMIT_WINDOW_MS = 30 * 60 * 1000;
+const EMAIL_CODE_RATE_LIMIT_WINDOW_MS = 30 * 60 * 1000;
 // Cooldown period in milliseconds (2 hours) after reaching max attempts
-export const EMAIL_CODE_COOLDOWN_MS = 2 * 60 * 60 * 1000;
+const EMAIL_CODE_COOLDOWN_MS = 2 * 60 * 60 * 1000;
 
 /**
  * Takes a reset code and embeds into URL
  * @param code The unhashed code to embed into the URL
  * @returns The URL to present to the user
  */
-export function buildCodeIntoUrl({
+function buildCodeIntoUrl({
   code,
   redirect,
 }: {
@@ -67,7 +67,7 @@ export function buildCodeIntoUrl({
  *
  * @returns A Promise that resolves to an object indicating if the user can create a code
  */
-export const checkCanCreateEmailCode = async ({
+const checkCanCreateEmailCode = async ({
   userId,
   maxAttempts = MAX_EMAIL_CODE_ATTEMPTS,
   rateLimitWindowMs = EMAIL_CODE_RATE_LIMIT_WINDOW_MS,
@@ -273,7 +273,7 @@ export const markCodeAsUsed = async (
  * @param userId The ID of the user whose codes are being retrieved.
  * @returns A Promise that resolves to an array of AuthRecords.
  */
-export const getCodesByUserId = async (
+const getCodesByUserId = async (
   userId: string
 ): Promise<EmailCodeExistingDocument[]> => {
   const authDB = getAuthDB();
@@ -326,7 +326,7 @@ export const getCodeByCode = async (
  * Retrieves all email codes in the database.
  * @returns A Promise that resolves to an array of all AuthRecords.
  */
-export const getAllCodes = async (): Promise<EmailCodeExistingDocument[]> => {
+const getAllCodes = async (): Promise<EmailCodeExistingDocument[]> => {
   const authDB = getAuthDB();
 
   const result = await authDB.query<EmailCodeExistingDocument>(
@@ -347,7 +347,7 @@ export const getAllCodes = async (): Promise<EmailCodeExistingDocument[]> => {
  * @returns A Promise that resolves when the code is successfully deleted.
  * @throws Error if the code is not found or if there's an issue with deletion.
  */
-export const deleteEmailCode = async (
+const deleteEmailCode = async (
   index: GetEmailCodeIndex,
   identifier: string
 ): Promise<void> => {

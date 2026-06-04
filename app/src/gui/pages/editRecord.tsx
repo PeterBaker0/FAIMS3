@@ -64,7 +64,7 @@ const DEFAULT_NAVIGATION_STATE: FormNavigationContext = {mode: 'root'};
 type UseFormNavigationContextResult = FormNavigationContext;
 
 /** Custom hook to parse out safely navigation context */
-export function useFormNavigationContext(): UseFormNavigationContextResult {
+function useFormNavigationContext(): UseFormNavigationContextResult {
   // Get react router nav state
   const location = useLocation();
   const result = FormNavigationContextSchema.safeParse(location.state);

@@ -20,7 +20,7 @@ function errorMessageFromUserJsonBody(
 /**
  * POST /api/users/:targetUserId/disable — soft-disable account (retains data).
  */
-export const postDisableUserAccount = async ({
+const postDisableUserAccount = async ({
   user,
   targetUserId,
 }: {
@@ -46,7 +46,7 @@ export const postDisableUserAccount = async ({
 /**
  * POST /api/users/:targetUserId/enable — restore sign-in for a disabled account.
  */
-export const postEnableUserAccount = async ({
+const postEnableUserAccount = async ({
   user,
   targetUserId,
 }: {

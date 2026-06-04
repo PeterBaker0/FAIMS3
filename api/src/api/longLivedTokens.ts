@@ -321,4 +321,3 @@ api.delete(
   }
 );
 
-export default api;

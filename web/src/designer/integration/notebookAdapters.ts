@@ -29,7 +29,7 @@ import {
 } from './legacyNotebook';
 
 export type {NormalizeApiUiSpecificationResult};
-export {tryNormalizeApiUiSpecification};
+{tryNormalizeApiUiSpecification};
 
 /** Project or template GET payload carrying an inlined design bundle. */
 type ApiRecordWithUiSpecification = {
@@ -52,7 +52,7 @@ export const toDesignerNotebookWithHistory = (
 };
 
 /** Wrap a normalized definition for Redux (empty undo stacks). */
-export const notebookDefinitionToDesignerHistory = (
+const notebookDefinitionToDesignerHistory = (
   definition: NotebookDefinition
 ): NotebookWithHistory => ({
   metadata: definition.metadata,

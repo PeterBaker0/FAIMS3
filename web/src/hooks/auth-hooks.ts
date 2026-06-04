@@ -24,7 +24,7 @@ export const userCanDo = ({
 /**
  * helper to map our user to the isAuthorized user
  */
-export const webUserHasGlobalRole = ({
+const webUserHasGlobalRole = ({
   user,
   role,
 }: {

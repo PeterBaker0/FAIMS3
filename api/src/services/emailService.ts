@@ -122,7 +122,7 @@ interface SMTPEmailServiceParams {
 /**
  * SMTP-based email service implementation.
  */
-export class SMTPEmailService extends BaseEmailService {
+class SMTPEmailService extends BaseEmailService {
   private smtpConfig: SMTPEmailServiceConfig;
   private transporter: Transporter<SMTPTransport.SentMessageInfo> | null = null;
   private cache: NodeCache;

@@ -58,7 +58,7 @@ const multiSelectEditorRenderer: FieldEditorRenderer = ({fieldName}) => (
   />
 );
 
-export const fieldEditorRegistry: Record<string, FieldEditorRenderer> = {
+const fieldEditorRegistry: Record<string, FieldEditorRenderer> = {
   TextField: ({fieldName}) => <TextFieldEditor fieldName={fieldName} />,
   TakePhoto: ({fieldName}) => <TakePhotoFieldEditor fieldName={fieldName} />,
   DateTimePicker: ({fieldName}) => <DateTimeNowEditor fieldName={fieldName} />,

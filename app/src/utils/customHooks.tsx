@@ -288,7 +288,7 @@ export function useQueryParams<T extends Record<string, any>>(config: {
  *
  * Draft records are identified by the prefix `drf-` in their `record_id`.
  */
-export function filterOutDrafts<T extends MinimalRecordMetadata>(
+function filterOutDrafts<T extends MinimalRecordMetadata>(
   rows: T[]
 ): T[] {
   return rows.filter(record => !record.recordId.startsWith('drf-'));
@@ -300,7 +300,7 @@ export function filterOutDrafts<T extends MinimalRecordMetadata>(
  * @param rows - The dataset of records.
  * @param username - The active user's username.
  */
-export function filterByActiveUser<T extends MinimalRecordMetadata>(
+function filterByActiveUser<T extends MinimalRecordMetadata>(
   rows: T[],
   username: string
 ): T[] {
@@ -330,7 +330,7 @@ export function buildHydrateKeys({
  * data fetching component of the record listing which involves many AVP
  * fetches.
  */
-export function invalidateTargetRecordHydration({
+function invalidateTargetRecordHydration({
   recordId,
   projectId,
   revisionId,
@@ -623,7 +623,7 @@ export const useRecordList = ({
 };
 
 /** useQuery to fetch and hydrate individual targeted revision of record */
-export const useIndividualHydratedRecord = ({
+const useIndividualHydratedRecord = ({
   projectId,
   recordId,
   revisionId,
@@ -670,7 +670,7 @@ export const useIndividualHydratedRecord = ({
  * @param delay The delay in milliseconds for the debounce
  * @returns The debounced value
  */
-export function useDebounce<T>(value: T, delay = 500): T {
+function useDebounce<T>(value: T, delay = 500): T {
   // State to store the debounced value
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
 
@@ -701,7 +701,7 @@ interface LoadingDebounce {
  * @param options Configuration options
  * @returns Controlled loading state
  */
-export function useLoadingDebounce(
+function useLoadingDebounce(
   isLoading: boolean,
   {minDuration = 1000, delayExitBy = 0}: LoadingDebounce = {}
 ): boolean {

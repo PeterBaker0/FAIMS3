@@ -41,7 +41,7 @@ import {
 import {PouchDBWrapper} from '../context/slices/helpers/pouchDBWrapper';
 
 const LOCAL_AUTOINCREMENT_PREFIX = 'local-autoincrement-state';
-export const DEFAULT_NUM_DIGITS = 4;
+const DEFAULT_NUM_DIGITS = 4;
 
 // An auto-incrementer allocates numbers from a set of ranges
 // defined by the user.
@@ -343,7 +343,7 @@ async function getDisplayStatusForField(
 
 // return the status of all auto incrementers in a project so
 // that we can display them to the user
-export async function getDisplayStatusForProject(
+async function getDisplayStatusForProject(
   project_id: ProjectID
 ): Promise<UserFriendlyAutoincrementStatus[]> {
   const statuses: UserFriendlyAutoincrementStatus[] = [];

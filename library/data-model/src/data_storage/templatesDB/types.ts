@@ -141,9 +141,11 @@ export type TemplateV5Document = z.infer<typeof TemplateV5DocumentSchema>;
 // Current exports
 // =============
 
+/** @lintignore Intentional stable/versioned schema alias. */
 export const TemplateDBFieldsSchema = TemplateV5FieldsSchema;
 export type TemplateDBFields = z.infer<typeof TemplateDBFieldsSchema>;
 
+/** @lintignore Intentional stable/versioned schema alias. */
 export const TemplateDocumentSchema = TemplateV5DocumentSchema;
 export type TemplateDocument = z.infer<typeof TemplateDocumentSchema>;
 

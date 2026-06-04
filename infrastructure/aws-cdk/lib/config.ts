@@ -532,7 +532,7 @@ export const UiConfiguration = z
     }
   );
 
-export const SecurityConfigSchema = z.object({
+const SecurityConfigSchema = z.object({
   /** Maximum number of days for long lived tokens */
   maximumLongLivedTokenDurationDays: z.number().int().min(1).optional(),
 });
@@ -602,15 +602,15 @@ export const ConfigSchema = z.object({
 
 // Infer the types from the schemas
 export type Config = z.infer<typeof ConfigSchema>;
-export type CouchConfig = z.infer<typeof CouchConfigSchema>;
+type CouchConfig = z.infer<typeof CouchConfigSchema>;
 export type BackupConfig = z.infer<typeof BackupConfigSchema>;
 export type MonitoringConfig = z.infer<typeof MonitoringConfigSchema>;
-export type BugMonitoringConfiguration = z.infer<
+type BugMonitoringConfiguration = z.infer<
   typeof BugMonitoringConfigurationSchema
 >;
 export type ConductorConfig = z.infer<typeof ConductorConfigSchema>;
-export type DomainsConfig = z.infer<typeof DomainsConfigSchema>;
-export type SMTPConfig = z.infer<typeof SMTPConfigSchema>;
+type DomainsConfig = z.infer<typeof DomainsConfigSchema>;
+type SMTPConfig = z.infer<typeof SMTPConfigSchema>;
 export type OfflineMapsConfig = z.infer<typeof OfflineMapsConfigSchema>;
 export type AddressAutosuggestConfig = z.infer<
   typeof AddressAutosuggestConfigSchema

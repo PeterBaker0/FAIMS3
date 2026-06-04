@@ -38,7 +38,7 @@ interface EBState {
 
 // Define a fallback ErrorBoundary to use in case we don't use Bugsnag
 //
-export class FAIMSErrorBoundary extends React.Component<EBProps, EBState> {
+class FAIMSErrorBoundary extends React.Component<EBProps, EBState> {
   public state: EBState = {
     hasError: false,
   };

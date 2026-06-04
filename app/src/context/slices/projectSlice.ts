@@ -137,7 +137,7 @@ function shouldAccumulateRemoteCleanupStreak(
 // =====
 
 // Server info
-export interface ApiServerInfo {
+interface ApiServerInfo {
   // The identity of the server (which is the serverId)
   id: string;
   // The display name for the server
@@ -286,7 +286,7 @@ export interface ProjectsState {
 // SLICE
 // =====
 
-export const initialProjectState: ProjectsState = {
+const initialProjectState: ProjectsState = {
   // initial state is empty
   servers: {},
   // start out uninitialised
@@ -1199,7 +1199,7 @@ const projectsSlice = createSlice({
  * @param serverId Server ID
  * @returns Server if present or undefined
  */
-export const serverById = (
+const serverById = (
   state: ProjectsState,
   serverId: string
 ): Server | undefined => state.servers[serverId] ?? undefined;
@@ -1210,7 +1210,7 @@ export const serverById = (
  * @param serverId Server ID
  * @returns Server if present or undefined
  */
-export const projectByIdentity = (
+const projectByIdentity = (
   state: ProjectsState,
   identity: ProjectIdentity
 ): Project | undefined =>
@@ -1219,7 +1219,7 @@ export const projectByIdentity = (
 /**
  * Gets all active data DBs
  */
-export function getAllDataDbs(
+function getAllDataDbs(
   state: RootState
 ): PouchDBWrapper<ProjectDataObject>[] {
   const databases: PouchDBWrapper<ProjectDataObject>[] = [];
@@ -2363,7 +2363,7 @@ export const compileSpecs = (state: Readonly<ProjectsState>): void => {
  * @param dispatch Redux dispatch function
  * @returns Event handlers that dispatch sync state updates
  */
-export function createSyncStateHandlers(
+function createSyncStateHandlers(
   projectId: string,
   serverId: string
 ): SyncEventHandlers {

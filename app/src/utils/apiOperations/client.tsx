@@ -184,7 +184,7 @@ type CustomOptions = RequestInit & {useToken?: boolean};
 /**
  * Manages multiple API clients for different listing/user combinations
  */
-export class ListingFetchManager {
+class ListingFetchManager {
   private clients: Map<string, Map<string, ListingFetch>> = new Map();
   private serverMap: Map<string, Server> = new Map();
 

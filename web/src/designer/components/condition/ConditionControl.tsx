@@ -221,7 +221,7 @@ const BooleanConditionControl = (props: ConditionProps) => {
 };
 
 /** Leaf editor: pick compared field, operator, and value (with type-specific inputs). */
-export const FieldConditionControl = (props: ConditionProps) => {
+const FieldConditionControl = (props: ConditionProps) => {
   const initialValue = useMemo(
     () =>
       props.initial || {

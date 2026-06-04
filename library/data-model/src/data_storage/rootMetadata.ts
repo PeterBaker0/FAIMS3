@@ -19,6 +19,7 @@ export const PersistedRootDescriptionSchema =
   RootDescriptionInputSchema.optional();
 
 /** Optional description on POST /api/notebooks and POST /api/templates. */
+/** @lintignore Intentional stable/versioned schema alias. */
 export const CreateRootDescriptionSchema = PersistedRootDescriptionSchema;
 
 /** Normalize API/form description for Couch storage (omit when empty). */

@@ -25,7 +25,7 @@ export type NotificationContextType = {
  * Creates the notification context with undefined as initial value.
  * The actual value will be provided by NotificationProvider.
  */
-export const NotificationContext = createContext<
+const NotificationContext = createContext<
   NotificationContextType | undefined
 >(undefined);
 
