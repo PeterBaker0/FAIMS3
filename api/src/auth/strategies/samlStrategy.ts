@@ -255,4 +255,3 @@ export const buildSamlMetadataErrorUrl = (
   return `${base}/auth/${encodeURIComponent(providerId)}/sso-error`;
 };
 
-{injectSpSsoDescriptorErrorUrl} from './samlMetadataXml';
