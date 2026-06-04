@@ -105,6 +105,7 @@ export type ProjectV3Document = z.infer<typeof ProjectV3DocumentSchema>;
  * Projects DB v4 — extend this schema when adding new persisted project fields.
  * Update alongside {@link projectsV3toV4Migration}.
  */
+/** @lintignore Intentional stable/versioned schema alias. */
 export const ProjectV4FieldsSchema = z.object({
   // User metadata about projects - update with PUT /:id { ...name, ...description }
   name: z.string(),
@@ -131,6 +132,7 @@ export const ProjectV4FieldsSchema = z.object({
 });
 export type ProjectV4Fields = z.infer<typeof ProjectV4FieldsSchema>;
 
+/** @lintignore Intentional stable/versioned schema alias. */
 export const ProjectV4DocumentSchema = CouchDocumentSchema.extend(
   ProjectV4FieldsSchema.shape
 );

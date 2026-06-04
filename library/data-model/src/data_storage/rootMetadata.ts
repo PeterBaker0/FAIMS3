@@ -15,6 +15,7 @@ export const RootDescriptionInputSchema = z
   });
 
 /** Optional root description on persisted project/template documents (v4/v5). */
+/** @lintignore Intentional stable/versioned schema alias. */
 export const PersistedRootDescriptionSchema =
   RootDescriptionInputSchema.optional();
 

@@ -143,6 +143,7 @@ export type GetListAllUsersResponse = z.infer<
 export type GetListAllUsersItem = GetListAllUsersResponse[number];
 
 // Information about users and roles for a notebook
+/** @lintignore Intentional stable/versioned schema alias. */
 export const NotebookAuthSummarySchema = z.object({
   // What roles does the notebook have
   roles: z.array(z.nativeEnum(Role)),
@@ -249,6 +250,7 @@ export const APINotebookListSchema = ProjectListItemSchema.extend({
 export type APINotebookList = z.infer<typeof APINotebookListSchema>;
 
 /** GET /api/notebooks/:id — full project document plus optional record count. */
+/** @lintignore Intentional stable/versioned schema alias. */
 export const GetNotebookResponseSchema = ExistingProjectDocumentSchema.extend({
   recordCount: z.number().optional(),
 });
@@ -339,6 +341,7 @@ export type GetNotebookUsersResponse = z.infer<
  * PUT /api/notebooks/:id — merge inconsequential root fields only.
  * Requires `UPDATE_PROJECT_DETAILS` on the project.
  */
+/** @lintignore Intentional stable/versioned schema alias. */
 export const PutUpdateNotebookMetadataInputSchema = ProjectDBFieldsSchema.pick({
   name: true,
   description: true,
@@ -482,6 +485,7 @@ export type PutTemplateSetVisibilityInput = z.infer<
  * Full template document as returned by GET /templates/:id.
  * Extends the stored document with optional server-injected fields (not persisted in CouchDB).
  */
+/** @lintignore Intentional stable/versioned schema alias. */
 export const TemplateApiDocumentSchema = ExistingTemplateDocumentSchema.extend({
   /** Owning team's display name, looked up by the API when ownedByTeamId is set. */
   ownedByTeamDisplayName: z.string().optional(),
@@ -592,6 +596,7 @@ export const PutUpdateTeamInputSchema = z.object({
 /**
  * Basic team document schema
  */
+/** @lintignore Intentional stable/versioned schema alias. */
 export const TeamDocumentSchema = z.object({
   _id: z.string(),
   _rev: z.string(),
@@ -742,6 +747,7 @@ export const PostCreateGlobalInviteInputSchema = z.object({
 /**
  * Basic invite response schema
  */
+/** @lintignore Intentional stable/versioned schema alias. */
 export const InviteInfoResponseSchema = z.object({
   id: z.string(),
   inviteType: z.nativeEnum(RoleScope),
@@ -1034,6 +1040,7 @@ export const PutRevokeLongLivedTokenRequestSchema = z.object({
 });
 
 // Response Schemas
+/** @lintignore Intentional stable/versioned schema alias. */
 export const LongLivedTokenResponseSchema = z.object({
   id: z.string(),
   title: z.string(),

@@ -490,7 +490,6 @@ export const refreshAllUsers = createAsyncThunk<void, void>(
 export const {
   setActiveUser,
   removeServerConnection,
-  clearActiveConnection,
   refreshIsAuthenticated,
   assignServerConnection,
 } = authSlice.actions;

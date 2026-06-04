@@ -35,7 +35,7 @@ class HttpError extends Error {
  * Enhanced fetch utility for making authenticated HTTP requests which uses the
  * ListingObject to prepend the endpoint, add JSON headers, and auth from the auth store.
  */
-export class ListingFetch {
+class ListingFetch {
   private server: Server;
   private username: string;
 
