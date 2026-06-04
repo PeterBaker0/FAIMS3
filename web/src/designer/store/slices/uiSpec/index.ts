@@ -59,7 +59,6 @@ export const {
   fieldDeleted,
   fieldDuplicated,
   fieldConditionChanged,
-  toggleFieldProtection,
   toggleFieldHidden,
   sectionRenamed,
   sectionAdded,

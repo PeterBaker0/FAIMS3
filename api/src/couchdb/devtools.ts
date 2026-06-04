@@ -184,7 +184,7 @@ const generateValue = (field: any) => {
  * @param project_id Project id
  * @returns {errors: string[]} an array of error strings if any found
  */
-export const validateProjectDatabase = async (project_id: ProjectID) => {
+const validateProjectDatabase = async (project_id: ProjectID) => {
   const dataDB = await getDataDB(project_id);
 
   // get all docs and set up sets of each type that we'll use as a tally

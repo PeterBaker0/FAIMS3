@@ -133,4 +133,3 @@ api.put(
 );
 
 // Export the router
-export default api;

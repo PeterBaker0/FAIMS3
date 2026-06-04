@@ -75,7 +75,7 @@ let blockCounter = 0;
  *
  * @returns {string} A unique identifier string
  */
-export const generateBlockId = (): string => {
+const generateBlockId = (): string => {
   const timestamp = nowMs();
 
   // Increment counter
@@ -827,4 +827,3 @@ export const MustacheTemplateBuilder: React.FC<MustacheBuilderProps> = ({
   );
 };
 
-export default MustacheTemplateBuilder;

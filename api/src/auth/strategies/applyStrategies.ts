@@ -136,14 +136,14 @@ const AUTH_STRATEGIES: Record<string, StrategyGeneratorFunction> = {} as Record<
   StrategyGeneratorFunction
 >;
 
-export const registerAuthProvider = (
+const registerAuthProvider = (
   provider: string,
   generator: StrategyGeneratorFunction
 ) => {
   AUTH_STRATEGIES[provider] = generator;
 };
 
-export const getStrategyGenerator = (
+const getStrategyGenerator = (
   provider: string
 ): StrategyGeneratorFunction => {
   return AUTH_STRATEGIES[provider];

@@ -74,7 +74,7 @@ export const postDeleteArchivedTemplate = async ({
   throw new Error(errorMessageFromTemplateJsonBody(json, response.statusText));
 };
 
-export const createTemplateRequest = async ({
+const createTemplateRequest = async ({
   user,
   name,
   teamId,

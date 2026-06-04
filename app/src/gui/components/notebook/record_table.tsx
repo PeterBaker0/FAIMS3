@@ -150,7 +150,7 @@ const LARGE_COLUMNS = MANDATORY_COLUMNS.concat([
 ]);
 
 /** Default values for text display, record grid labels */
-export const RECORD_GRID_LABELS = {
+const RECORD_GRID_LABELS = {
   MISSING_DATA_PLACEHOLDER: '-',
   HRID_COLUMN_LABEL: 'ID',
   VERTICAL_STACK_COLUMN_LABEL: 'Details',
@@ -353,7 +353,7 @@ function getDataForColumn({
  * @param uiSpecification - The UI spec
  * @returns Array of column definitions for the DataGrid
  */
-export function buildColumnsFromSummaryFields({
+function buildColumnsFromSummaryFields({
   summaryFields,
   uiSpecification,
 }: {
@@ -389,7 +389,7 @@ export function buildColumnsFromSummaryFields({
  * @param uiSpecification - The UI specification
  * @returns Column definition for the DataGrid
  */
-export function buildColumnFromSystemField({
+function buildColumnFromSystemField({
   columnType,
   uiSpecification,
 }: {
@@ -566,7 +566,7 @@ function buildHridColumn(): GridColumnType {
  * @param hasConflict - Whether any record has a conflict (shows warning icon)
  * @returns A single column definition with vertical key-value layout
  */
-export function buildVerticalStackColumn({
+function buildVerticalStackColumn({
   summaryFields,
   columnLabel,
   uiSpecification,
@@ -814,7 +814,7 @@ function buildColumnDefinitions({
  * A simple display for key-value pair data.
  * Used in vertical summary stack layout for small screens.
  */
-export const KeyValueTable = ({
+const KeyValueTable = ({
   data,
 }: {
   data: {[key: string]: string | ReactNode};

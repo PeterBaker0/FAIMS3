@@ -36,7 +36,7 @@ import QRCode from 'qrcode';
  * @param {User | null} user - The user object.
  * @returns {Promise<any>} A promise that resolves to the response data.
  */
-export const post = async <TPayload, TResponse>({
+const post = async <TPayload, TResponse>({
   user,
   data,
   path,
@@ -66,7 +66,7 @@ export const post = async <TPayload, TResponse>({
  * @param {User | null} user - The user object.
  * @returns {Promise<any>} A promise that resolves to the response data.
  */
-export const get = async <T = any>(
+const get = async <T = any>(
   path: string,
   user: User | null,
   token: string | null = null
@@ -469,7 +469,7 @@ export const useGetGlobalInvites = ({
  * @param {string} projectId - The ID of the project.
  * @returns {Query} A query for fetching records.
  */
-export const useGetRecords = ({
+const useGetRecords = ({
   user,
   projectId,
 }: {

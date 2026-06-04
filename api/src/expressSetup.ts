@@ -120,7 +120,7 @@ if (bugsnagEnabled) {
 }
 
 // Setup rate limiter (first - as we want to limit all requests)
-export const RATE_LIMITER = RateLimit({
+const RATE_LIMITER = RateLimit({
   windowMs: RATE_LIMITER_WINDOW_MS,
   max: RATE_LIMITER_PER_WINDOW,
   message: 'Too many requests from this IP, please try again after 10 minutes',

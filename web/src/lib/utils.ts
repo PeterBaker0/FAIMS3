@@ -39,7 +39,7 @@ export const capitalize = (name: string) =>
  * @param {ZodObject<any>} schema - The Zod schema to extract field names from.
  * @returns {Array<keyof z.infer<T>>} An array of field names from the Zod schema.
  */
-export function schemaFields<T extends ZodObject<any>>(
+function schemaFields<T extends ZodObject<any>>(
   schema: T
 ): Array<keyof z.infer<T>> {
   return Object.keys(schema.shape) as Array<keyof z.infer<T>>;
@@ -69,7 +69,7 @@ export const readFileAsText = (file: File): Promise<string> =>
  * @param {number} ms - The number of milliseconds to sleep.
  * @returns {Promise<void>} A promise that resolves after the specified duration.
  */
-export async function sleep(ms: number) {
+async function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
@@ -79,7 +79,7 @@ export async function sleep(ms: number) {
  * @param {string} filename - The name of the file to download.
  * @param {Blob | MediaSource} obj - The object to download.
  */
-export const downloadFile = async (
+const downloadFile = async (
   obj: Blob | MediaSource,
   filename: string
 ) => {

@@ -18,7 +18,7 @@ import {EmailOptions} from '../services/emailService';
  * @param code The verification code to embed in the URL
  * @returns The complete verification URL
  */
-export function buildVerificationUrl({code}: {code: string}): string {
+function buildVerificationUrl({code}: {code: string}): string {
   return `${CONDUCTOR_PUBLIC_URL}/verify-email?code=${encodeURIComponent(
     code
   )}&redirect=${encodeURIComponent(WEBAPP_PUBLIC_URL)}`;

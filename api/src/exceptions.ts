@@ -1,5 +1,5 @@
 // Base class for custom exceptions
-export class CustomException extends Error {
+class CustomException extends Error {
   status: number;
 
   constructor(message: string, statusCode: number) {

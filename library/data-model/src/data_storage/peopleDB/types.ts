@@ -136,6 +136,7 @@ export type PeopleV4Fields = z.infer<typeof PeopleV4FieldsSchema>;
 export type PeopleV4Document = PouchDB.Core.ExistingDocument<PeopleV4Fields>;
 
 // V5: account can be disabled (soft-off) without deleting the document
+/** @lintignore Intentional stable/versioned schema alias. */
 export const PeopleV5FieldsSchema = PeopleV4FieldsSchema.extend({
   disabled: z.boolean().optional(),
 });
@@ -143,6 +144,7 @@ export type PeopleV5Fields = z.infer<typeof PeopleV5FieldsSchema>;
 export type PeopleV5Document = PouchDB.Core.ExistingDocument<PeopleV5Fields>;
 
 // Current version
+/** @lintignore Intentional stable/versioned schema alias. */
 export const PeopleDBFieldsSchema = PeopleV5FieldsSchema;
 export type PeopleDBFields = z.infer<typeof PeopleDBFieldsSchema>;
 

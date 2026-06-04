@@ -19,7 +19,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 }
 
 /** Thrown when uiSpecification cannot be migrated or validated for the designer. */
-export class UiSpecificationNormalizeError extends Error {
+class UiSpecificationNormalizeError extends Error {
   readonly cause?: unknown;
 
   constructor(message: string, options?: {cause?: unknown}) {
@@ -46,7 +46,7 @@ export type NormalizeApiUiSpecificationResult =
 /**
  * Read schema version from a loose payload (legacy or current paths) without migrating.
  */
-export function readUiSpecificationSchemaVersion(
+function readUiSpecificationSchemaVersion(
   raw: Record<string, unknown>
 ): string | undefined {
   return getNotebookSchemaVersion(raw);
@@ -121,7 +121,7 @@ export function normalizeApiUiSpecification(raw: unknown): NotebookDefinition {
 }
 
 /** User-facing message for display in the designer shell (dialogs, alerts). */
-export function formatUiSpecificationNormalizeError(error: unknown): string {
+function formatUiSpecificationNormalizeError(error: unknown): string {
   if (error instanceof UiSpecificationNormalizeError) {
     return error.message;
   }

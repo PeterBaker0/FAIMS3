@@ -36,7 +36,7 @@ interface ToolbarProps {
  * Custom search button with improved layout handling.
  * Provides a text input for searching record data with submit and clear actions.
  */
-export function GridToolbarSearchRecordDataButton({
+function GridToolbarSearchRecordDataButton({
   handleQueryFunction,
 }: {
   handleQueryFunction: (query: string) => void;

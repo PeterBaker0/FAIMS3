@@ -171,7 +171,7 @@ export function useRestoreTemplateFromArchive() {
 }
 
 /** Placeholder for team restore — implement when teams support archive listing. */
-export function useRestoreTeamFromArchive() {
+function useRestoreTeamFromArchive() {
   return useMutation({
     mutationFn: async (_args: {teamId: string}) => {
       await Promise.resolve();
@@ -181,7 +181,7 @@ export function useRestoreTeamFromArchive() {
 }
 
 /** Placeholder for user restore — implement when users support archive listing. */
-export function useRestoreUserFromArchive() {
+function useRestoreUserFromArchive() {
   return useMutation({
     mutationFn: async (_args: {userId: string}) => {
       await Promise.resolve();

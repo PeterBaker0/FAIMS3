@@ -577,7 +577,7 @@ function getAttachmentDocumentIdPrefix(): string | undefined {
  * uses MapTiler Search and Geocoding API (VITE_AUTOSUGGEST_MAPTILER_KEY, or
  * VITE_MAP_SOURCE_KEY when map source is maptiler).
  */
-export enum AutosuggestSource {
+enum AutosuggestSource {
   /** No address autosuggest; AddressField uses manual entry only. */
   NONE = 'NONE',
   /** Mapbox Search Box API (suggest + retrieve). */
@@ -745,19 +745,19 @@ export function getAddressAutosuggestService():
 
 export const ATTACHMENT_SERVICE_TYPE = getAttachmentServiceType();
 export const ATTACHMENT_DOCUMENT_ID_PREFIX = getAttachmentDocumentIdPrefix();
-export const AUTOSUGGEST_SOURCE = getAutosuggestSourceConfig();
-export const AUTOACTIVATE_LISTINGS = true;
+const AUTOSUGGEST_SOURCE = getAutosuggestSourceConfig();
+const AUTOACTIVATE_LISTINGS = true;
 export const CONDUCTOR_URLS = get_conductor_urls();
 export const DEBUG_POUCHDB = include_pouchdb_debugging();
 export const DEBUG_APP = include_app_debugging();
-export const DIRECTORY_AUTH = directory_auth();
+const DIRECTORY_AUTH = directory_auth();
 export const RUNNING_UNDER_TEST = is_testing();
 export const POUCH_BATCH_SIZE = pouch_batch_size();
 export const POUCH_BATCHES_LIMIT = pouch_batches_limit();
-export const CLUSTER_ADMIN_GROUP_NAME = cluster_admin_group_name();
+const CLUSTER_ADMIN_GROUP_NAME = cluster_admin_group_name();
 export const SHOW_POUCHDB_BROWSER = show_pouchdb_browser();
 export const SHOW_WIPE = show_wipe();
-export const SHOW_NEW_NOTEBOOK = show_new_notebook();
+const SHOW_NEW_NOTEBOOK = show_new_notebook();
 export const BUGSNAG_KEY = get_bugsnag_key();
 export const NOTEBOOK_LIST_TYPE = get_notebook_list_type();
 
@@ -778,7 +778,7 @@ export const LOGIN_BANNER_GRACE_MS = loginBannerGraceMs();
 export const IGNORE_TOKEN_EXP = ignoreTokenExp();
 export const OFFLINE_MAPS = offline_maps();
 export const NAVIGATION_STYLE = navigation_style();
-export const SHOW_RECORD_LINKS = showRecordLinks();
+const SHOW_RECORD_LINKS = showRecordLinks();
 export const SUPPORT_EMAIL = get_support_email();
 export const PRIVACY_POLICY_URL = get_app_privacy_policy_url();
 export const CONTACT_URL = get_app_contact_url();
@@ -789,7 +789,7 @@ export const CAPACITOR_PLATFORM = Capacitor.getPlatform() as
   | 'ios'
   | 'android'
   | 'web';
-export const IS_MOBILE_PLATFORM =
+const IS_MOBILE_PLATFORM =
   CAPACITOR_PLATFORM === 'ios' || CAPACITOR_PLATFORM === 'android';
 export const IS_WEB_PLATFORM = CAPACITOR_PLATFORM === 'web';
 

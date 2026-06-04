@@ -239,7 +239,7 @@ export const getTemplatesDb = (): TemplateDB => {
   return _templatesDb;
 };
 
-export const getMigrationDb = (): MigrationsDB => {
+const getMigrationDb = (): MigrationsDB => {
   if (!_migrationsDB) {
     const pouch_options = pouchOptions();
     const dbName = COUCHDB_INTERNAL_URL + '/' + MIGRATIONS_DB_NAME;
@@ -349,7 +349,7 @@ const openCouchDatabaseByName = (dbName: string): DatabaseInterface => {
  * - With {@link dbType}: {@link id} is interpreted per kind (e.g. project id for DATA).
  * - Without {@link dbType}: {@link id} is the Couch database name to open directly.
  */
-export const getDbById: GetDbById = async ({dbType, id}) => {
+const getDbById: GetDbById = async ({dbType, id}) => {
   if (dbType === undefined) {
     return openCouchDatabaseByName(id);
   }

@@ -143,6 +143,7 @@ export type GetListAllUsersResponse = z.infer<
 export type GetListAllUsersItem = GetListAllUsersResponse[number];
 
 // Information about users and roles for a notebook
+/** @lintignore Intentional stable/versioned schema alias. */
 export const NotebookAuthSummarySchema = z.object({
   // What roles does the notebook have
   roles: z.array(z.nativeEnum(Role)),
@@ -249,12 +250,14 @@ export const APINotebookListSchema = ProjectListItemSchema.extend({
 export type APINotebookList = z.infer<typeof APINotebookListSchema>;
 
 /** GET /api/notebooks/:id — full project document plus optional record count. */
+/** @lintignore Intentional stable/versioned schema alias. */
 export const GetNotebookResponseSchema = ExistingProjectDocumentSchema.extend({
   recordCount: z.number().optional(),
 });
 export type GetNotebookResponse = z.infer<typeof GetNotebookResponseSchema>;
 
 /** @deprecated Use {@link GetNotebookResponse} */
+/** @lintignore Intentional stable/versioned schema alias. */
 export const APINotebookGetSchema = GetNotebookResponseSchema;
 export type APINotebookGet = GetNotebookResponse;
 
@@ -328,6 +331,7 @@ export type PostCreateNotebookResponse = z.infer<
 >;
 
 // GET users for a notebook - no input
+/** @lintignore Intentional stable/versioned schema alias. */
 export const GetNotebookUsersResponseSchema = NotebookAuthSummarySchema;
 export type GetNotebookUsersResponse = z.infer<
   typeof GetNotebookUsersResponseSchema
@@ -337,6 +341,7 @@ export type GetNotebookUsersResponse = z.infer<
  * PUT /api/notebooks/:id — merge inconsequential root fields only.
  * Requires `UPDATE_PROJECT_DETAILS` on the project.
  */
+/** @lintignore Intentional stable/versioned schema alias. */
 export const PutUpdateNotebookMetadataInputSchema = ProjectDBFieldsSchema.pick({
   name: true,
   description: true,
@@ -346,6 +351,7 @@ export type PutUpdateNotebookMetadataInput = z.infer<
 >;
 
 /** @deprecated Use {@link PutUpdateNotebookMetadataInputSchema} */
+/** @lintignore Intentional stable/versioned schema alias. */
 export const PutUpdateNotebookInputSchema =
   PutUpdateNotebookMetadataInputSchema;
 export type PutUpdateNotebookInput = PutUpdateNotebookMetadataInput;
@@ -479,6 +485,7 @@ export type PutTemplateSetVisibilityInput = z.infer<
  * Full template document as returned by GET /templates/:id.
  * Extends the stored document with optional server-injected fields (not persisted in CouchDB).
  */
+/** @lintignore Intentional stable/versioned schema alias. */
 export const TemplateApiDocumentSchema = ExistingTemplateDocumentSchema.extend({
   /** Owning team's display name, looked up by the API when ownedByTeamId is set. */
   ownedByTeamDisplayName: z.string().optional(),
@@ -503,6 +510,7 @@ export type GetListTemplatesResponse = z.infer<
 >;
 
 // GET a specific template by _id response
+/** @lintignore Intentional stable/versioned schema alias. */
 export const GetTemplateByIdResponseSchema = TemplateApiDocumentSchema;
 export type GetTemplateByIdResponse = z.infer<
   typeof GetTemplateByIdResponseSchema
@@ -588,6 +596,7 @@ export const PutUpdateTeamInputSchema = z.object({
 /**
  * Basic team document schema
  */
+/** @lintignore Intentional stable/versioned schema alias. */
 export const TeamDocumentSchema = z.object({
   _id: z.string(),
   _rev: z.string(),
@@ -608,16 +617,19 @@ export const GetListTeamsResponseSchema = z.object({
 /**
  * GET /api/teams/:id response
  */
+/** @lintignore Intentional stable/versioned schema alias. */
 export const GetTeamByIdResponseSchema = TeamDocumentSchema;
 
 /**
  * POST /api/teams response
  */
+/** @lintignore Intentional stable/versioned schema alias. */
 export const PostCreateTeamResponseSchema = TeamDocumentSchema;
 
 /**
  * PUT /api/teams/:id response
  */
+/** @lintignore Intentional stable/versioned schema alias. */
 export const PutUpdateTeamResponseSchema = TeamDocumentSchema;
 
 // inferred types
@@ -735,6 +747,7 @@ export const PostCreateGlobalInviteInputSchema = z.object({
 /**
  * Basic invite response schema
  */
+/** @lintignore Intentional stable/versioned schema alias. */
 export const InviteInfoResponseSchema = z.object({
   id: z.string(),
   inviteType: z.nativeEnum(RoleScope),
@@ -777,6 +790,7 @@ const InviteDocumentSchema = z.object({
 /**
  * GET /api/invites/:inviteId response
  */
+/** @lintignore Intentional stable/versioned schema alias. */
 export const GetInviteByIdResponseSchema = InviteInfoResponseSchema;
 
 /**
@@ -1026,6 +1040,7 @@ export const PutRevokeLongLivedTokenRequestSchema = z.object({
 });
 
 // Response Schemas
+/** @lintignore Intentional stable/versioned schema alias. */
 export const LongLivedTokenResponseSchema = z.object({
   id: z.string(),
   title: z.string(),
@@ -1043,6 +1058,7 @@ export const PostCreateLongLivedTokenResponseSchema =
     token: z.string(), // Only included on creation
   });
 
+/** @lintignore Intentional stable/versioned schema alias. */
 export const PutUpdateLongLivedTokenResponseSchema =
   LongLivedTokenResponseSchema;
 

@@ -23,7 +23,7 @@ export interface UseCreateNotebookFromTemplateProps {
   // Other options to pass through to react query mutation
   options?: UseMutationOptions<PostCreateNotebookResponse>;
 }
-export const useCreateNotebookFromTemplate = (
+const useCreateNotebookFromTemplate = (
   props: UseCreateNotebookFromTemplateProps
 ) => {
   /**
@@ -103,7 +103,7 @@ export const useRecordAudit = ({
  * so not easy to use just now
  * TODO find where to call this when we save a record
  */
-export const invalidateRecordAudit = ({
+const invalidateRecordAudit = ({
   projectId,
   listingId,
   username,

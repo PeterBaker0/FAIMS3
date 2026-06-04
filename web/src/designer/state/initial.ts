@@ -185,18 +185,18 @@ export type NotebookWithHistory = {
   uiSpec: StateWithHistory<NotebookUISpec>;
 };
 
-export const defaultNotebookInformation = (): NotebookInformation => ({
+const defaultNotebookInformation = (): NotebookInformation => ({
   notebookVersion: '1.0',
   purposeMarkdown: '',
   projectLeadLabel: '',
   leadInstitution: '',
 });
 
-export const defaultNotebookMetadata = (): NotebookMetadata => ({
+const defaultNotebookMetadata = (): NotebookMetadata => ({
   information: defaultNotebookInformation(),
 });
 
-export const defaultNotebookUISpec = (): NotebookUISpec => ({
+const defaultNotebookUISpec = (): NotebookUISpec => ({
   fields: {},
   views: {},
   viewsets: {},

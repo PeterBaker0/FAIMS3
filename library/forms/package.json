@@ -43,7 +43,6 @@
     "@tanstack/react-form": "^1.23.8",
     "@tanstack/react-query": "^5.62.16",
     "buffer": "^6.0.3",
-    "clsx": "^2.1.1",
     "dompurify": "^3.4.0",
     "lodash": "^4.18.1",
     "markdown-it": "^14.1.1",
@@ -52,14 +51,12 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-dropzone": "14.2.3",
-    "react-router-dom": "^6.26.0",
     "react-zoom-pan-pinch": "^4.0.3",
     "zod": "^3.24.1"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "6.4.6",
     "@testing-library/react": "^16.3.0",
-    "@testing-library/user-event": "^14.6.1",
     "@types/lodash": "^4.17.21",
     "@types/markdown-it": "^14.1.2",
     "@types/mustache": "^4.2.6",
@@ -67,12 +64,14 @@
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react-swc": "^4.0.1",
+    "@vitest/coverage-v8": "^4.1.8",
+    "jsdom": "^22.1.0",
     "madge": "^8.0.0",
     "ol": "^10.3.1",
     "ol-mapbox-style": "^12.5.0",
     "typescript": "^5.9.2",
     "vite": "^7.3.2",
-    "vitest": "^4.0.6"
+    "vitest": "^4.1.8"
   },
   "peerDependencies": {
     "@capacitor-community/exif": "^7.0.0",

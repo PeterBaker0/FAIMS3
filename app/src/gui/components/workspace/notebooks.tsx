@@ -79,7 +79,7 @@ export const NOT_ACTIVATED_LABEL = 'Not Active';
 export const ACTIVATED_LABEL = 'Active';
 
 // E.g. "This notebook has been activated"
-export const ACTIVATED_VERB_PAST = 'Activated';
+const ACTIVATED_VERB_PAST = 'Activated';
 
 // E.g. "Please activate this notebook"
 export const ACTIVATE_VERB_LABEL = 'Activate';

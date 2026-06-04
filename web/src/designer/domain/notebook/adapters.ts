@@ -33,7 +33,7 @@ const cloneNotebook = (notebook: Notebook): Notebook =>
  * @param notebook - Notebook with flat `uiSpec`.
  * @returns Same data in `NotebookWithHistory` form with empty undo stacks.
  */
-export const toNotebookWithHistory = (
+const toNotebookWithHistory = (
   notebook: Notebook
 ): NotebookWithHistory => ({
   metadata: notebook.metadata,
@@ -59,7 +59,7 @@ export const toNotebook = (notebook: NotebookWithHistory): Notebook =>
  * @param notebook - Flat notebook to mutate (cloned first).
  * @returns Cloned notebook with UUIDs filled in where missing.
  */
-export const attachMissingDesignerIdentifiers = (
+const attachMissingDesignerIdentifiers = (
   notebook: Notebook
 ): Notebook => {
   const cloned = cloneNotebook(notebook);

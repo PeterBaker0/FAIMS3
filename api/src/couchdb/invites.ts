@@ -37,7 +37,7 @@ import {CONDUCTOR_SHORT_CODE_PREFIX} from '../buildconfig';
 import * as Exceptions from '../exceptions';
 
 // Default 30 days expiry
-export const DEFAULT_INVITE_EXPIRY = 30 * 24 * 60 * 60 * 1000;
+const DEFAULT_INVITE_EXPIRY = 30 * 24 * 60 * 60 * 1000;
 
 /**
  * Create an invite for a resource and role if one doesn't already exist.
@@ -153,7 +153,7 @@ function generateInviteId(): string {
  * @returns {Promise<ExistingInvitesDBDocument>} The saved invite document
  * @throws {Error} If maximum retry count is reached
  */
-export async function writeNewInvite(
+async function writeNewInvite(
   invite: InvitesDBFields
 ): Promise<ExistingInvitesDBDocument> {
   // Get the invites DB

@@ -11,7 +11,7 @@ import {
  * Template archive row actions (restore, delete) and copy for delete confirmations:
  * see `archived-templates.tsx` and `template-delete-warnings.ts` in this folder.
  */
-export const ARCHIVE_TAB_VALUES = [
+const ARCHIVE_TAB_VALUES = [
   NOTEBOOK_NAME_PLURAL,
   'templates',
   'users',
@@ -19,7 +19,7 @@ export const ARCHIVE_TAB_VALUES = [
 
 export type ArchiveTab = (typeof ARCHIVE_TAB_VALUES)[number];
 
-export const DEFAULT_ARCHIVE_TAB: ArchiveTab =
+const DEFAULT_ARCHIVE_TAB: ArchiveTab =
   NOTEBOOK_NAME_PLURAL as ArchiveTab;
 
 export const ARCHIVE_TAB_LABELS: Record<ArchiveTab, string> = {

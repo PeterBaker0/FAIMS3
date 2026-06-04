@@ -39,7 +39,7 @@ export const DEFAULT_FULL_EXPORT_CONFIG: FullExportConfig = {
 /**
  * Statistics for a single view's CSV export
  */
-export interface CSVExportStats {
+interface CSVExportStats {
   viewId: string;
   viewLabel: string;
   recordCount: number;
@@ -49,7 +49,7 @@ export interface CSVExportStats {
 /**
  * Statistics for attachment export
  */
-export interface AttachmentExportStats {
+interface AttachmentExportStats {
   viewId: string;
   viewLabel: string;
   fileCount: number;
@@ -59,7 +59,7 @@ export interface AttachmentExportStats {
 /**
  * Statistics for spatial exports (GeoJSON/KML)
  */
-export interface SpatialExportStats {
+interface SpatialExportStats {
   featureCount: number;
   filename: string;
   hasSpatialFields: boolean;
@@ -120,7 +120,7 @@ export interface FullExportMetadata {
 /**
  * Extended download token payload for full exports
  */
-export interface FullDownloadTokenPayload {
+interface FullDownloadTokenPayload {
   projectID: string;
   format: 'full';
   userID: string;

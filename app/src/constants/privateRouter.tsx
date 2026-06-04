@@ -30,7 +30,7 @@ interface PrivateRouteProps {
  * @returns Conditionally renders children if token is present (not necessarily
  * valid) for the first listing entry in the listings db
  */
-export const ActivePrivateRoute = (
+const ActivePrivateRoute = (
   props: PrivateRouteProps
 ): React.ReactElement => {
   // Check if the current active user is nicely logged in (i.e. valid, unexpired
@@ -282,7 +282,7 @@ export const TolerantPrivateRoute = (
  * fallback component otherwise. Can be stacked with other route wrappers.
  * @param props children to render
  */
-export const OnlineOnlyRoute = (
+const OnlineOnlyRoute = (
   props: PrivateRouteProps
 ): React.ReactElement => {
   // Offline/online?

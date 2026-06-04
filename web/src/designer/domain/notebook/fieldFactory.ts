@@ -33,7 +33,7 @@ export const cloneField = (field: FieldType): FieldType =>
  * @param field - Field to copy.
  * @returns Clone with new UUID.
  */
-export const cloneFieldWithDesignerIdentifier = (
+const cloneFieldWithDesignerIdentifier = (
   field: FieldType
 ): FieldType => {
   const cloned = cloneField(field);

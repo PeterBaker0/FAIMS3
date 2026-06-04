@@ -10,7 +10,7 @@ import {
 } from '@/hooks/template-hooks';
 import {prepareNotebookUiSpecificationInputForApi} from '@faims3/data-model';
 
-export const fields = [
+const fields = [
   {
     name: 'file',
     type: 'file',

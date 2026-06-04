@@ -19,7 +19,7 @@
 import {includeAction} from 'redux-undo';
 
 /** Action type strings that push a snapshot onto the undo stack (limit 10). */
-export const UNDOABLE_UI_SPEC_ACTIONS = [
+const UNDOABLE_UI_SPEC_ACTIONS = [
   // Field actions
   'uiSpec/fieldAdded',
   'uiSpec/fieldDeleted',

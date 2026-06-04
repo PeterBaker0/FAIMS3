@@ -37,7 +37,7 @@ import PouchDB from 'pouchdb-browser';
 type LocalDatabaseOptions = PouchDB.Configuration.DatabaseConfiguration;
 
 // Default local options is none
-export const LOCAL_POUCH_OPTIONS: LocalDatabaseOptions = {};
+const LOCAL_POUCH_OPTIONS: LocalDatabaseOptions = {};
 
 // enable memory adapter for testing
 if (RUNNING_UNDER_TEST) {

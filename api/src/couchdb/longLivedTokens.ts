@@ -37,7 +37,7 @@ const LONG_LIVED_TOKEN_LENGTH = 64;
  * @param expiryTimestampMs The expiry timestamp in milliseconds, or undefined for infinite
  * @returns boolean indicating if the expiry is valid
  */
-export function isValidExpiry(expiryTimestampMs: number | undefined): boolean {
+function isValidExpiry(expiryTimestampMs: number | undefined): boolean {
   // If no expiry specified (infinite), check if unlimited duration is allowed
   if (expiryTimestampMs === undefined) {
     return MAXIMUM_LONG_LIVED_DURATION_DAYS === undefined;
@@ -371,7 +371,7 @@ export const getAllTokens = async (): Promise<
  * @param identifier The value to search for using the specified index
  * @returns A Promise that resolves when the token is successfully deleted
  */
-export const deleteLongLivedToken = async (
+const deleteLongLivedToken = async (
   index: GetLongLivedTokenIndex,
   identifier: string
 ): Promise<void> => {

@@ -151,7 +151,7 @@ function removeNullFieldConditions(notebook: NotebookDefinitionV1) {
  *
  * @param notebook A notebook that might be out of date, modified
  */
-export const requireTemplatedStringFields = (
+const requireTemplatedStringFields = (
   notebook: NotebookDefinitionV1
 ) => {
   const fields: {[key: string]: any} = {};

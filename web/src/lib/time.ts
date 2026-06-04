@@ -9,7 +9,7 @@
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Current time as an ISO-8601 string (UTC). */
-export function nowIso(): string {
+function nowIso(): string {
   return new Date().toISOString();
 }
 
@@ -19,12 +19,12 @@ export function nowMs(): number {
 }
 
 /** Unix epoch milliseconds at {@link offsetMs} from now. */
-export function expiryMsFromNow(offsetMs: number): number {
+function expiryMsFromNow(offsetMs: number): number {
   return nowMs() + offsetMs;
 }
 
 /** Calendar date (YYYY-MM-DD) in UTC derived from an ISO string. */
-export function isoDateOnly(iso = nowIso()): string {
+function isoDateOnly(iso = nowIso()): string {
   return iso.split('T')[0];
 }
 

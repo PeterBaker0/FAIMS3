@@ -62,7 +62,7 @@ import {
 } from '../designer-style';
 
 /** `component-namespace::component-name` keys eligible for speech settings in the inspector. */
-export const SPEECH_ENABLED_FIELDS = ['faims-custom::TextField'];
+const SPEECH_ENABLED_FIELDS = ['faims-custom::TextField'];
 
 /** True if {@link SPEECH_ENABLED_FIELDS} includes this field's composite type key. */
 const checkSpeechEnabled = (field: FieldType) => {

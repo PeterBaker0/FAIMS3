@@ -22,7 +22,7 @@ import {
 } from './utils';
 
 // The set of headers which come first in CSV exports, and are always present
-export const CSV_PREFIX_HEADERS = [
+const CSV_PREFIX_HEADERS = [
   'identifier',
   'record_id',
   'revision_id',
@@ -127,7 +127,7 @@ function getHeaderGeneratorForComponent(
  * component header generators (by namespace + name) to produce the additional
  * headers for each field type.
  */
-export function getHeaderInfoFromUiSpecification({
+function getHeaderInfoFromUiSpecification({
   fields,
 }: {
   fields: FieldSummary[];
@@ -392,7 +392,7 @@ export const appendAllCSVsToArchive = async ({
  * @param pathPrefix - Path prefix in the archive (e.g., 'records/')
  * @returns Statistics about the exported CSV
  */
-export const appendCSVToArchive = async ({
+const appendCSVToArchive = async ({
   projectId,
   viewID,
   viewLabel,

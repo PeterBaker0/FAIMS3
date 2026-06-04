@@ -455,16 +455,16 @@ export const CONDUCTOR_SHORT_CODE_PREFIX = short_code_prefix();
 export const CONDUCTOR_DESCRIPTION = instance_description();
 export const COOKIE_SECRET = cookie_secret();
 export const WEBAPP_PUBLIC_URL = app_url();
-export const ANDROID_APP_URL = android_url();
-export const IOS_APP_URL = ios_url();
+const ANDROID_APP_URL = android_url();
+const IOS_APP_URL = ios_url();
 export const ACCESS_TOKEN_EXPIRY_MINUTES = accessTokenExpiryMinutes();
 export const REFRESH_TOKEN_EXPIRY_MINUTES = refreshTokenExpiryMinutes();
-export const DESIGNER_URL = designer_url();
+const DESIGNER_URL = designer_url();
 export const RATE_LIMITER_WINDOW_MS = rateLimiterWindowMs();
 export const RATE_LIMITER_PER_WINDOW = rateLimiterPerWindow();
 export const RATE_LIMITER_ENABLED = rateLimiterEnabled();
 export const EMAIL_CODE_EXPIRY_MINUTES = emailCodeExpiryMinutes();
-export const NEW_CONDUCTOR_URL = newConductorUrl();
+const NEW_CONDUCTOR_URL = newConductorUrl();
 export const LOCAL_LOGIN_ENABLED = enable_local_login();
 export const MIGRATE_NOTEBOOKS_ON_STARTUP = migrateNotebooks();
 export const PROVISION_SSO_USERS_POLICY = provision_sso_users_policy();
@@ -492,7 +492,7 @@ function getAwsSecretKeyArn(): string {
 }
 
 // Dependency injection pattern for key service
-export const KEY_SOURCE: KeySource = getKeySourceConfig();
+const KEY_SOURCE: KeySource = getKeySourceConfig();
 export const AWS_SECRET_KEY_ARN: string | undefined =
   KEY_SOURCE === KeySource.AWS_SM ? getAwsSecretKeyArn() : undefined;
 
@@ -606,7 +606,7 @@ function getSMTPConfig(): SMTPEmailServiceConfig {
 
 export const EMAIL_SERVICE_TYPE = getEmailServiceType();
 export const EMAIL_CONFIG = getEmailConfig();
-export const EMAIL_SERVICE_CONFIG =
+const EMAIL_SERVICE_CONFIG =
   EMAIL_SERVICE_TYPE === EmailServiceType.SMTP ? getSMTPConfig() : undefined;
 export const EMAIL_SERVICE: IEmailService = createEmailService({
   serviceType: EMAIL_SERVICE_TYPE,

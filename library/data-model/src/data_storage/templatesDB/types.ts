@@ -104,6 +104,7 @@ export type TemplateV4Document = z.infer<typeof TemplateV4DocumentSchema>;
  * Templates DB v5 — extend this schema when adding new persisted template fields.
  * Update alongside {@link templatesV4toV5Migration}.
  */
+/** @lintignore Intentional stable/versioned schema alias. */
 export const TemplateV5FieldsSchema = z.object({
   // User metadata about templates - update with PUT /:id { ...name, ...description }
   name: z.string(),
@@ -132,6 +133,7 @@ export const TemplateV5FieldsSchema = z.object({
 });
 export type TemplateV5Fields = z.infer<typeof TemplateV5FieldsSchema>;
 
+/** @lintignore Intentional stable/versioned schema alias. */
 export const TemplateV5DocumentSchema = CouchDocumentSchema.extend(
   TemplateV5FieldsSchema.shape
 );

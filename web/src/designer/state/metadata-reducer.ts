@@ -63,7 +63,6 @@ const metadataReducer = createSlice({
 });
 
 export const {
-  loaded,
   informationUpdated,
   customFieldUpdated,
   customFieldRemoved,

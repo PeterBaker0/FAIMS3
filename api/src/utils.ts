@@ -33,8 +33,8 @@ export const generateRandomString = (length = 4): string => {
 };
 
 // Configuration for verification codes
-export const VERIFICATION_CODE_LENGTH = 10;
-export const VERIFICATION_CODE_CHARSET =
+const VERIFICATION_CODE_LENGTH = 10;
+const VERIFICATION_CODE_CHARSET =
   '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
 
 /**

@@ -7,7 +7,7 @@
  * @param buffer - The ArrayBuffer to convert.
  * @returns A base64-encoded string.
  */
-export function arrayBufferToBase64(buffer: ArrayBuffer): string {
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
   let binary = '';
   for (let i = 0; i < bytes.byteLength; i++) {
@@ -46,7 +46,7 @@ export async function fileToBase64(file: File): Promise<string> {
  * @param blob - The Blob to convert.
  * @returns A Promise resolving to a base64-encoded string.
  */
-export async function blobToBase64(blob: Blob): Promise<string> {
+async function blobToBase64(blob: Blob): Promise<string> {
   const arrayBuffer = await blob.arrayBuffer();
   return arrayBufferToBase64(arrayBuffer);
 }

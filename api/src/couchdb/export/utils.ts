@@ -26,7 +26,7 @@ export const MAX_CSV_FILENAME_LENGTH = 40;
 /**
  * Length of the hash suffix used when truncating long identifiers.
  */
-export const HASH_SUFFIX_LENGTH = 6;
+const HASH_SUFFIX_LENGTH = 6;
 
 /** Build the full component key used for serialization lookup (namespace::name). */
 export function getComponentKey(namespace: string, name: string): string {
@@ -73,7 +73,7 @@ const RELATIONSHIP_COMPONENT = 'faims-custom::RelatedRecordSelector';
  *
  * @returns Object mapping column names to their serialized values.
  */
-export const csvFormatValue = ({
+const csvFormatValue = ({
   componentNamespace,
   componentName,
   fieldName,
@@ -232,7 +232,7 @@ export const csvFormatValue = ({
 /**
  * Convert annotations on a field to a format suitable for CSV export
  */
-export const csvFormatAnnotation = (
+const csvFormatAnnotation = (
   field: FieldSummary,
   {annotation, uncertainty}: Annotations
 ) => {
@@ -375,7 +375,7 @@ export const slugifyLabel = (label: string, maxLength = 50): string => {
 /**
  * Helper to ensure unique filenames in a list
  */
-export const ensureUniqueFilename = (
+const ensureUniqueFilename = (
   baseFilename: string,
   extension: string,
   existingFilenames: string[]

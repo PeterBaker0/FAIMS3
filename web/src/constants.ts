@@ -19,7 +19,7 @@ export const WEB_URL = getConfigValue('VITE_WEB_URL');
 export const API_URL = getConfigValue('VITE_API_URL');
 export const APP_URL = getConfigValue('VITE_APP_URL');
 export const DOCS_URL = import.meta.env.VITE_DOCS_URL || '';
-export const APP_THEME = import.meta.env.VITE_APP_THEME || 'default';
+const APP_THEME = import.meta.env.VITE_APP_THEME || 'default';
 
 export const NOTEBOOK_NAME_CAPITALIZED = import.meta.env.VITE_NOTEBOOK_NAME
   ? capitalize(import.meta.env.VITE_NOTEBOOK_NAME)
@@ -54,7 +54,7 @@ function parseForceRemoteDeletion(): ForceRemoteDeletionMode {
   return 'never';
 }
 
-export const FORCE_REMOTE_DELETION = parseForceRemoteDeletion();
+const FORCE_REMOTE_DELETION = parseForceRemoteDeletion();
 
 /**
  * When true, the mobile app destroys local Pouch data on manual notebook deactivation.
@@ -77,7 +77,7 @@ function parseDeleteOnDeactivation(): boolean {
   return false;
 }
 
-export const DELETE_ON_DEACTIVATION = parseDeleteOnDeactivation();
+const DELETE_ON_DEACTIVATION = parseDeleteOnDeactivation();
 
 export const SIGNIN_PATH = `${API_URL}/login?redirect=${WEB_URL}`;
 

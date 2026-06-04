@@ -21,6 +21,7 @@ export const RefreshRecordV1FieldsSchema = z.object({
 });
 
 // V1 - Email code schema
+/** @lintignore Intentional stable/versioned schema alias. */
 export const EmailCodeV1FieldsSchema = z.object({
   // When does it expire? unix timestamp in ms
   expiryTimestampMs: z.number(),
@@ -92,6 +93,7 @@ export type EmailCodeV1ExistingDocument = z.infer<
 // =============
 
 // Refresh token schema with new fields added only to refresh tokens
+/** @lintignore Intentional stable/versioned schema alias. */
 export const RefreshRecordV2FieldsSchema = RefreshRecordV1FieldsSchema.extend({
   // New fields for V2 - only for refresh tokens
   exchangeTokenHash: z.string(),
@@ -101,6 +103,7 @@ export const RefreshRecordV2FieldsSchema = RefreshRecordV1FieldsSchema.extend({
 });
 
 // V2 - Email code schema remains the same as V1
+/** @lintignore Intentional stable/versioned schema alias. */
 export const EmailCodeV2FieldsSchema = EmailCodeV1FieldsSchema;
 
 export const AuthRecordV2FieldsSchema = z.discriminatedUnion('documentType', [
@@ -160,12 +163,15 @@ export type EmailCodeV2ExistingDocument = z.infer<
 // =============
 
 // V3 - Refresh token schema remains the same as V2
+/** @lintignore Intentional stable/versioned schema alias. */
 export const RefreshRecordV3FieldsSchema = RefreshRecordV2FieldsSchema;
 
 // V3 - Email code schema remains the same as V2
+/** @lintignore Intentional stable/versioned schema alias. */
 export const EmailCodeV3FieldsSchema = EmailCodeV2FieldsSchema;
 
 // V3 - New Verification Challenge schema
+/** @lintignore Intentional stable/versioned schema alias. */
 export const VerificationChallengeV3FieldsSchema = z.object({
   // When was it created? unix timestamp in ms
   createdTimestampMs: z.number(),
@@ -262,15 +268,18 @@ export type VerificationChallengeV3ExistingDocument = z.infer<
 // =============
 
 // V4 - Refresh token schema remains the same as V2
+/** @lintignore Intentional stable/versioned schema alias. */
 export const RefreshRecordV4FieldsSchema = RefreshRecordV3FieldsSchema;
 
 // V4 - Email code schema extends V3 with creation
+/** @lintignore Intentional stable/versioned schema alias. */
 export const EmailCodeV4FieldsSchema = EmailCodeV3FieldsSchema.extend({
   // When was it created? unix timestamp in ms
   createdTimestampMs: z.number(),
 });
 
 // V4 - no change
+/** @lintignore Intentional stable/versioned schema alias. */
 export const VerificationChallengeV4FieldsSchema =
   VerificationChallengeV3FieldsSchema;
 
@@ -353,12 +362,15 @@ export type VerificationChallengeV4ExistingDocument = z.infer<
 // =============
 
 // V5 - Refresh token schema remains the same as V4
+/** @lintignore Intentional stable/versioned schema alias. */
 export const RefreshRecordV5FieldsSchema = RefreshRecordV4FieldsSchema;
 
 // V5 - Email code schema remains the same as V4
+/** @lintignore Intentional stable/versioned schema alias. */
 export const EmailCodeV5FieldsSchema = EmailCodeV4FieldsSchema;
 
 // V5 - Verification challenge schema remains the same as V4
+/** @lintignore Intentional stable/versioned schema alias. */
 export const VerificationChallengeV5FieldsSchema =
   VerificationChallengeV4FieldsSchema;
 
@@ -387,6 +399,7 @@ export const LongLivedTokenV5FieldsSchema = z.object({
   enabled: z.boolean(),
 });
 
+/** @lintignore Intentional stable/versioned schema alias. */
 export const AuthRecordV5FieldsSchema = z.discriminatedUnion('documentType', [
   RefreshRecordV5FieldsSchema,
   EmailCodeV5FieldsSchema,
@@ -394,6 +407,7 @@ export const AuthRecordV5FieldsSchema = z.discriminatedUnion('documentType', [
   LongLivedTokenV5FieldsSchema,
 ]);
 
+/** @lintignore Intentional stable/versioned schema alias. */
 export const AuthRecordV5DocumentSchema = z.discriminatedUnion('documentType', [
   CouchDocumentSchema.extend(RefreshRecordV5FieldsSchema.shape),
   CouchDocumentSchema.extend(EmailCodeV5FieldsSchema.shape),
@@ -402,6 +416,7 @@ export const AuthRecordV5DocumentSchema = z.discriminatedUnion('documentType', [
 ]);
 export type AuthRecordV5Document = z.infer<typeof AuthRecordV5DocumentSchema>;
 
+/** @lintignore Intentional stable/versioned schema alias. */
 export const AuthRecordV5ExistingDocumentSchema = z.discriminatedUnion(
   'documentType',
   [
@@ -428,6 +443,7 @@ export type LongLivedTokenV5Fields = z.infer<
 export type AuthRecordV5Fields = z.infer<typeof AuthRecordV5FieldsSchema>;
 
 // refresh token
+/** @lintignore Intentional stable/versioned schema alias. */
 export const RefreshRecordV5DocumentSchema = CouchDocumentSchema.extend(
   RefreshRecordV5FieldsSchema.shape
 );
@@ -435,6 +451,7 @@ export type RefreshRecordV5Document = z.infer<
   typeof RefreshRecordV5DocumentSchema
 >;
 
+/** @lintignore Intentional stable/versioned schema alias. */
 export const RefreshRecordV5ExistingDocumentSchema =
   CouchExistingDocumentSchema.extend(RefreshRecordV5FieldsSchema.shape);
 export type RefreshRecordV5ExistingDocument = z.infer<
@@ -442,11 +459,13 @@ export type RefreshRecordV5ExistingDocument = z.infer<
 >;
 
 // email code
+/** @lintignore Intentional stable/versioned schema alias. */
 export const EmailCodeV5DocumentSchema = CouchDocumentSchema.extend(
   EmailCodeV5FieldsSchema.shape
 );
 export type EmailCodeV5Document = z.infer<typeof EmailCodeV5DocumentSchema>;
 
+/** @lintignore Intentional stable/versioned schema alias. */
 export const EmailCodeV5ExistingDocumentSchema =
   CouchExistingDocumentSchema.extend(EmailCodeV5FieldsSchema.shape);
 export type EmailCodeV5ExistingDocument = z.infer<
@@ -454,6 +473,7 @@ export type EmailCodeV5ExistingDocument = z.infer<
 >;
 
 // verification challenge
+/** @lintignore Intentional stable/versioned schema alias. */
 export const VerificationChallengeV5DocumentSchema = CouchDocumentSchema.extend(
   VerificationChallengeV5FieldsSchema.shape
 );
@@ -461,6 +481,7 @@ export type VerificationChallengeV5Document = z.infer<
   typeof VerificationChallengeV5DocumentSchema
 >;
 
+/** @lintignore Intentional stable/versioned schema alias. */
 export const VerificationChallengeV5ExistingDocumentSchema =
   CouchExistingDocumentSchema.extend(VerificationChallengeV5FieldsSchema.shape);
 export type VerificationChallengeV5ExistingDocument = z.infer<
@@ -468,6 +489,7 @@ export type VerificationChallengeV5ExistingDocument = z.infer<
 >;
 
 // long lived token
+/** @lintignore Intentional stable/versioned schema alias. */
 export const LongLivedTokenV5DocumentSchema = CouchDocumentSchema.extend(
   LongLivedTokenV5FieldsSchema.shape
 );
@@ -475,6 +497,7 @@ export type LongLivedTokenV5Document = z.infer<
   typeof LongLivedTokenV5DocumentSchema
 >;
 
+/** @lintignore Intentional stable/versioned schema alias. */
 export const LongLivedTokenV5ExistingDocumentSchema =
   CouchExistingDocumentSchema.extend(LongLivedTokenV5FieldsSchema.shape);
 export type LongLivedTokenV5ExistingDocument = z.infer<
@@ -485,14 +508,17 @@ export type LongLivedTokenV5ExistingDocument = z.infer<
 // ===============
 
 // Fields
+/** @lintignore Intentional stable/versioned schema alias. */
 export const AuthRecordFieldsSchema = AuthRecordV5FieldsSchema;
 export type AuthRecordFields = AuthRecordV5Fields;
 
 // possibly existing document schemas
+/** @lintignore Intentional stable/versioned schema alias. */
 export const AuthRecordDocumentSchema = AuthRecordV5DocumentSchema;
 export type AuthRecordDocument = AuthRecordV5Document;
 
 // existing document schemas
+/** @lintignore Intentional stable/versioned schema alias. */
 export const AuthRecordExistingDocumentSchema =
   AuthRecordV5ExistingDocumentSchema;
 export type AuthRecordExistingDocument = AuthRecordV5ExistingDocument;
@@ -504,31 +530,39 @@ export type VerificationChallengeFields = VerificationChallengeV5Fields;
 export type LongLivedTokenFields = LongLivedTokenV5Fields;
 
 // refresh token
+/** @lintignore Intentional stable/versioned schema alias. */
 export const RefreshRecordDocumentSchema = RefreshRecordV5DocumentSchema;
 export type RefreshRecordDocument = RefreshRecordV5Document;
+/** @lintignore Intentional stable/versioned schema alias. */
 export const RefreshRecordExistingDocumentSchema =
   RefreshRecordV5ExistingDocumentSchema;
 export type RefreshRecordExistingDocument = RefreshRecordV5ExistingDocument;
 
 // email code
+/** @lintignore Intentional stable/versioned schema alias. */
 export const EmailCodeDocumentSchema = EmailCodeV5DocumentSchema;
 export type EmailCodeDocument = EmailCodeV5Document;
+/** @lintignore Intentional stable/versioned schema alias. */
 export const EmailCodeExistingDocumentSchema =
   EmailCodeV5ExistingDocumentSchema;
 export type EmailCodeExistingDocument = EmailCodeV5ExistingDocument;
 
 // verification challenge
+/** @lintignore Intentional stable/versioned schema alias. */
 export const VerificationChallengeDocumentSchema =
   VerificationChallengeV5DocumentSchema;
 export type VerificationChallengeDocument = VerificationChallengeV5Document;
+/** @lintignore Intentional stable/versioned schema alias. */
 export const VerificationChallengeExistingDocumentSchema =
   VerificationChallengeV5ExistingDocumentSchema;
 export type VerificationChallengeExistingDocument =
   VerificationChallengeV5ExistingDocument;
 
 // long lived token
+/** @lintignore Intentional stable/versioned schema alias. */
 export const LongLivedTokenDocumentSchema = LongLivedTokenV5DocumentSchema;
 export type LongLivedTokenDocument = LongLivedTokenV5Document;
+/** @lintignore Intentional stable/versioned schema alias. */
 export const LongLivedTokenExistingDocumentSchema =
   LongLivedTokenV5ExistingDocumentSchema;
 export type LongLivedTokenExistingDocument = LongLivedTokenV5ExistingDocument;

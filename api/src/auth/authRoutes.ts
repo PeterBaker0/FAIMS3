@@ -89,7 +89,7 @@ patch();
 export const DEFAULT_REDIRECT_URL = WEBAPP_PUBLIC_URL + '/auth-return';
 
 // Generate the URLs for auth and auth return for different auth providers
-export const providerAuthUrl = (provider: string) => {
+const providerAuthUrl = (provider: string) => {
   return `/auth/${provider}`;
 };
 export const providerAuthReturnUrl = (provider: string) => {
@@ -97,7 +97,7 @@ export const providerAuthReturnUrl = (provider: string) => {
 };
 
 /** HTML error page path for SAML (and future SSO) sign-in failures; used in metadata errorURL. */
-export const providerSsoErrorPath = (provider: string) => {
+const providerSsoErrorPath = (provider: string) => {
   return `/auth/${provider}/sso-error`;
 };
 
