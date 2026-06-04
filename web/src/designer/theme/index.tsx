@@ -34,9 +34,6 @@ import {defaultTokens} from './default-tokens';
 
 // ── Re-export token types so consumers don't need a deep import ────────────
 export type {DesignerThemeTokens} from './tokens';
-{faimsTokens} from './faims-tokens';
-{bssTokens} from './bss-tokens';
-{defaultTokens} from './default-tokens';
 
 // ── MUI theme augmentation ────────────────────────────────────────────────
 declare module '@mui/material/styles' {
