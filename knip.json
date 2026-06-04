@@ -33,27 +33,26 @@
       ],
       "ignoreDependencies": [
         "@bugsnag/source-maps",
-        "@capacitor-community/exif",
         "@capacitor-mlkit/barcode-scanning",
-        "@capacitor/android",
         "@capacitor/app-launcher",
         "@capacitor/device",
-        "@capacitor/ios",
         "@capacitor/status-bar",
         "@capgo/capacitor-audio-recorder",
         "@capgo/capacitor-speech-recognition",
         "@capacitor/assets",
+        "node-gyp",
         "rollup-plugin-node-polyfills"
       ]
     },
     "web": {
       "entry": ["src/main.tsx"],
       "project": ["src/**/*.{js,ts,tsx}"],
-      "ignoreDependencies": ["@emotion/styled", "webdriverio"]
+      "ignoreDependencies": ["webdriverio"]
     },
     "library/forms": {
       "entry": ["lib/index.ts", "src/main.tsx"],
-      "project": ["lib/**/*.{js,ts,tsx}", "src/**/*.{js,ts,tsx}"]
+      "project": ["lib/**/*.{js,ts,tsx}", "src/**/*.{js,ts,tsx}"],
+      "ignoreDependencies": ["buffer"]
     },
     "library/data-model": {
       "entry": ["src/index.ts", "src/databaseEngine/check.ts"],
