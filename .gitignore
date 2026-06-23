@@ -3,6 +3,8 @@ keys
 build
 .turbo
 out
+target
+export-service/target
 app/public/manifest.json
 .env
 .pnpm-store
