@@ -78,4 +78,24 @@ RUN corepack enable
 WORKDIR /usr/src
 COPY --from=builder /usr/src .
 EXPOSE 3001
-CMD [pnpm", "run", "web-dev"]
+CMD ["pnpm", "run", "web-dev"]
+
+# Rust export microservice
+FROM rust:1.83-slim AS export-service-builder
+
+WORKDIR /usr/src
+COPY proto ./proto
+COPY export-service ./export-service
+WORKDIR /usr/src/export-service
+RUN cargo build --release
+
+FROM debian:bookworm-slim AS export-service
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
+COPY --from=export-service-builder /usr/src/export-service/target/release/faims-export-service /usr/local/bin/faims-export-service
+
+EXPOSE 50051
+CMD ["/usr/local/bin/faims-export-service"]

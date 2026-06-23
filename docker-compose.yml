@@ -5,6 +5,7 @@ services:
     environment:
       # Override this so that the API refers to the internal DNS name
       - COUCHDB_INTERNAL_URL=http://couchdb:5984
+      - EXPORT_SERVICE_GRPC_URL=export-service:50051
     build:
       context: .
       dockerfile: Dockerfile
@@ -25,6 +26,7 @@ services:
     command: pnpm run watch-api
     depends_on:
       - couchdb
+      - export-service
     healthcheck:
       test:
         ['CMD', 'curl', '-f', 'http://localhost:${CONDUCTOR_INTERNAL_PORT}/']
@@ -32,6 +34,20 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+  export-service:
+    env_file:
+      - ./api/.env
+    environment:
+      - COUCHDB_INTERNAL_URL=http://couchdb:5984
+      - EXPORT_SERVICE_BIND_ADDR=0.0.0.0:50051
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: export-service
+    ports:
+      - '50051:50051'
+    depends_on:
+      - couchdb
   web:
     env_file:
       - ./web/.env
