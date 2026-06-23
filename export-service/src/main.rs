@@ -1,6 +1,11 @@
 mod config;
+mod couch;
 mod error;
+mod exporters;
+mod format;
 mod grpc;
+mod model;
+mod notebook;
 mod proto;
 
 use config::Config;

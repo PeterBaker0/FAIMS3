@@ -5,7 +5,7 @@ use tokio_stream::{wrappers::ReceiverStream, Stream};
 use tonic::{Request, Response, Status};
 
 use crate::config::Config;
-use crate::error::ExportError;
+use crate::exporters::run_export;
 use crate::proto::export::v1::export_service_server::ExportService;
 use crate::proto::export::v1::{
     ExportFormat, ExportRequest, FileChunk, HealthRequest, HealthResponse,
@@ -69,10 +69,10 @@ impl ExportService for ExportGrpcService {
         }
 
         let (tx, rx) = mpsc::channel::<ChunkResult>(32);
-        let chunk_bytes = self.config.chunk_bytes;
+        let config = self.config.clone();
 
         tokio::spawn(async move {
-            let result = send_scaffold_export(request, chunk_bytes, tx.clone()).await;
+            let result = run_export(config, request, tx.clone()).await;
             if let Err(error) = result {
                 let _ = tx.send(Err(error.into_status())).await;
             }
@@ -92,28 +92,6 @@ impl ExportService for ExportGrpcService {
             status: "ok".to_string(),
         }))
     }
-}
-
-async fn send_scaffold_export(
-    request: ExportRequest,
-    _chunk_bytes: usize,
-    tx: mpsc::Sender<ChunkResult>,
-) -> crate::error::Result<()> {
-    let format = ExportFormat::try_from(request.format)
-        .map_err(|_| ExportError::InvalidRequest("Invalid export format".to_string()))?;
-    let message = format!(
-        "FAIMS Rust export service scaffold is running for project {} format {:?}\n",
-        request.project_id, format
-    );
-    tx.send(Ok(FileChunk {
-        data: message.into_bytes(),
-        sequence: 0,
-        filename: String::new(),
-        content_type: String::new(),
-    }))
-    .await
-    .map_err(|_| ExportError::Cancelled)?;
-    Ok(())
 }
 
 #[cfg(test)]
