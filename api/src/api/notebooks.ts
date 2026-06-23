@@ -112,6 +112,7 @@ import {
   requireAuthenticationAPI,
   userCanDo,
 } from '../middleware';
+import {streamExportResponse} from '../services/exportHttpStreamer';
 import {mockTokenContentsForUser} from '../utils';
 import patch from '../utils/patchExpressAsync';
 import {recordsRouter} from './records';
@@ -873,17 +874,39 @@ api.get(
         'Content-Disposition',
         `attachment; filename="${exportLabel}-export.csv"`
       );
-      streamNotebookRecordsAsCSV(payload.projectID, payload.viewID!, res);
+      await streamExportResponse({
+        req,
+        res,
+        payload: {
+          projectId: payload.projectID,
+          format: 'csv',
+          viewId: payload.viewID!,
+          userId: payload.userID,
+        },
+        legacy: () =>
+          streamNotebookRecordsAsCSV(payload.projectID, payload.viewID!, res),
+      });
     } else if (payload.format === 'zip') {
       res.setHeader(
         'Content-Disposition',
         `attachment; filename="${exportLabel}-photos.zip"`
       );
       res.setHeader('Content-Type', 'application/zip');
-      streamNotebookFilesAsZip({
-        projectId: payload.projectID,
-        targetViewID: payload.viewID,
+      await streamExportResponse({
+        req,
         res,
+        payload: {
+          projectId: payload.projectID,
+          format: 'zip',
+          viewId: payload.viewID,
+          userId: payload.userID,
+        },
+        legacy: () =>
+          streamNotebookFilesAsZip({
+            projectId: payload.projectID,
+            targetViewID: payload.viewID,
+            res,
+          }),
       });
     } else if (payload.format === 'geojson') {
       res.setHeader('Content-Type', 'application/geo+json');
@@ -891,14 +914,32 @@ api.get(
         'Content-Disposition',
         `attachment; filename="${slugify(payload.projectID)}-export.geojson"`
       );
-      streamNotebookRecordsAsGeoJSON(payload.projectID, res);
+      await streamExportResponse({
+        req,
+        res,
+        payload: {
+          projectId: payload.projectID,
+          format: 'geojson',
+          userId: payload.userID,
+        },
+        legacy: () => streamNotebookRecordsAsGeoJSON(payload.projectID, res),
+      });
     } else if (payload.format === 'kml') {
       res.setHeader('Content-Type', 'application/vnd.google-earth.kml+xml');
       res.setHeader(
         'Content-Disposition',
         `attachment; filename="${slugify(payload.projectID)}-export.kml"`
       );
-      streamNotebookRecordsAsKML(payload.projectID, res);
+      await streamExportResponse({
+        req,
+        res,
+        payload: {
+          projectId: payload.projectID,
+          format: 'kml',
+          userId: payload.userID,
+        },
+        legacy: () => streamNotebookRecordsAsKML(payload.projectID, res),
+      });
     } else if (payload.format === 'full') {
       const fullFilename = generateFullExportFilename(payload.projectID);
       res.setHeader('Content-Type', 'application/zip');
@@ -906,11 +947,22 @@ api.get(
         'Content-Disposition',
         `attachment; filename="${fullFilename}"`
       );
-      await streamFullExport({
-        projectId: payload.projectID,
-        userId: payload.userID,
-        config: payload.fullConfig,
+      await streamExportResponse({
+        req,
         res,
+        payload: {
+          projectId: payload.projectID,
+          format: 'full',
+          userId: payload.userID,
+          fullConfig: payload.fullConfig,
+        },
+        legacy: () =>
+          streamFullExport({
+            projectId: payload.projectID,
+            userId: payload.userID,
+            config: payload.fullConfig,
+            res,
+          }),
       });
     } else {
       throw new Exceptions.InvalidRequestException(

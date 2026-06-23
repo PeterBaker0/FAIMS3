@@ -442,6 +442,35 @@ function migrateNotebooks(): boolean {
   }
 }
 
+export type ExportServiceMode = 'auto' | 'grpc' | 'legacy';
+
+export function exportServiceGrpcUrl(): string | undefined {
+  const value = process.env.EXPORT_SERVICE_GRPC_URL;
+  return value && value.trim() !== '' ? value.trim() : undefined;
+}
+
+export function exportServiceMode(): ExportServiceMode {
+  const value = process.env.EXPORT_SERVICE_MODE;
+  if (value === 'grpc' || value === 'legacy' || value === 'auto') {
+    return value;
+  }
+  return 'auto';
+}
+
+export function exportServiceSharedSecret(): string | undefined {
+  const value = process.env.EXPORT_SERVICE_SHARED_SECRET;
+  return value && value.trim() !== '' ? value : undefined;
+}
+
+export function exportServiceGrpcDeadlineMs(): number | undefined {
+  const value = process.env.EXPORT_SERVICE_GRPC_DEADLINE_MS;
+  if (!value) {
+    return undefined;
+  }
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
 export const DEVELOPER_MODE = developer_mode();
 export const COUCHDB_INTERNAL_URL = couchdb_internal_url();
 export const COUCHDB_PUBLIC_URL = couchdb_public_url();
