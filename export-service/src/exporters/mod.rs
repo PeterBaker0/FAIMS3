@@ -1,10 +1,10 @@
-use std::io::{Cursor, Write};
-
+use async_zip::tokio::write::ZipFileWriter;
+use async_zip::{Compression, ZipEntryBuilder};
 use serde_json::{json, Value};
+use tokio::io::{duplex, AsyncReadExt, DuplexStream};
 use tokio::sync::mpsc;
+use tokio::task::JoinHandle;
 use tonic::Status;
-use zip::write::FileOptions;
-use zip::{CompressionMethod, ZipWriter};
 
 use crate::config::Config;
 use crate::couch::CouchClient;
@@ -31,21 +31,35 @@ pub async fn run_export(
     let format = ExportFormat::try_from(request.format)
         .map_err(|_| ExportError::InvalidRequest("Invalid export format".to_string()))?;
 
-    let bytes = match format {
-        ExportFormat::Csv => export_csv(&couch, &request).await?,
-        ExportFormat::Zip => export_attachments_zip(&couch, &request).await?,
-        ExportFormat::Geojson => export_geojson(&couch, &request).await?,
-        ExportFormat::Kml => export_kml(&couch, &request).await?,
-        ExportFormat::Full => export_full_zip(&couch, &request).await?,
-        ExportFormat::JsonRecords => export_json_records(&couch, &request).await?,
-        ExportFormat::Unspecified => {
-            return Err(ExportError::InvalidRequest(
-                "format is required".to_string(),
-            ));
+    match format {
+        ExportFormat::Csv => {
+            send_bytes(export_csv(&couch, &request).await?, config.chunk_bytes, tx).await
         }
-    };
-
-    send_bytes(bytes, config.chunk_bytes, tx).await
+        ExportFormat::Zip => export_attachments_zip(&couch, &request, tx, config.chunk_bytes).await,
+        ExportFormat::Geojson => {
+            send_bytes(
+                export_geojson(&couch, &request).await?,
+                config.chunk_bytes,
+                tx,
+            )
+            .await
+        }
+        ExportFormat::Kml => {
+            send_bytes(export_kml(&couch, &request).await?, config.chunk_bytes, tx).await
+        }
+        ExportFormat::Full => export_full_zip(&couch, &request, tx, config.chunk_bytes).await,
+        ExportFormat::JsonRecords => {
+            send_bytes(
+                export_json_records(&couch, &request).await?,
+                config.chunk_bytes,
+                tx,
+            )
+            .await
+        }
+        ExportFormat::Unspecified => Err(ExportError::InvalidRequest(
+            "format is required".to_string(),
+        )),
+    }
 }
 
 async fn export_csv(couch: &CouchClient, request: &ExportRequest) -> Result<Vec<u8>> {
@@ -179,7 +193,12 @@ async fn export_json_records(couch: &CouchClient, request: &ExportRequest) -> Re
     Ok(serde_json::to_vec(&json!({ "records": output }))?)
 }
 
-async fn export_attachments_zip(couch: &CouchClient, request: &ExportRequest) -> Result<Vec<u8>> {
+async fn export_attachments_zip(
+    couch: &CouchClient,
+    request: &ExportRequest,
+    tx: mpsc::Sender<ChunkResult>,
+    chunk_bytes: usize,
+) -> Result<()> {
     let project = couch.project(&request.project_id).await?;
     let ui_spec = project.ui_specification.ui_spec;
     let records = couch
@@ -190,12 +209,17 @@ async fn export_attachments_zip(couch: &CouchClient, request: &ExportRequest) ->
             request.view_id.as_deref(),
         )
         .await?;
-    let mut zip = ZipArchiveBuilder::new();
+    let mut zip = StreamingZipArchiveBuilder::new(tx, chunk_bytes);
     add_attachments_to_zip(couch, &project.data_db.db_name, &records, "", &mut zip).await?;
-    zip.finish()
+    zip.finish().await
 }
 
-async fn export_full_zip(couch: &CouchClient, request: &ExportRequest) -> Result<Vec<u8>> {
+async fn export_full_zip(
+    couch: &CouchClient,
+    request: &ExportRequest,
+    tx: mpsc::Sender<ChunkResult>,
+    chunk_bytes: usize,
+) -> Result<()> {
     let project = couch.project(&request.project_id).await?;
     let ui_spec = project.ui_specification.ui_spec;
     let config = request.full_config.unwrap_or_default();
@@ -227,7 +251,7 @@ async fn export_full_zip(couch: &CouchClient, request: &ExportRequest) -> Result
         }
     }
 
-    let mut zip = ZipArchiveBuilder::new();
+    let mut zip = StreamingZipArchiveBuilder::new(tx, chunk_bytes);
     let mut included_files = Vec::new();
     let mut warnings = Vec::new();
 
@@ -244,7 +268,8 @@ async fn export_full_zip(couch: &CouchClient, request: &ExportRequest) -> Result
                 .cloned()
                 .collect();
             let filename = format!("records/{}.csv", safe_csv_filename(&label));
-            zip.add_file(&filename, csv_bytes(&view_records, fields, view_id)?)?;
+            zip.add_file(&filename, csv_bytes(&view_records, fields, view_id)?)
+                .await?;
             included_files.push(filename);
         }
     }
@@ -288,12 +313,14 @@ async fn export_full_zip(couch: &CouchClient, request: &ExportRequest) -> Result
             zip.add_file(
                 filename,
                 serde_json::to_vec(&json!({"type": "FeatureCollection", "features": features}))?,
-            )?;
+            )
+            .await?;
             included_files.push(filename.to_string());
         }
         if include_kml && spatial_feature_count > 0 {
             let filename = "spatial/export.kml";
-            zip.add_file(filename, kml_document(&spatial).into_bytes())?;
+            zip.add_file(filename, kml_document(&spatial).into_bytes())
+                .await?;
             included_files.push(filename.to_string());
         }
     }
@@ -330,10 +357,11 @@ async fn export_full_zip(couch: &CouchClient, request: &ExportRequest) -> Result
         zip.add_file(
             "ro-crate-metadata.json",
             serde_json::to_vec_pretty(&metadata)?,
-        )?;
+        )
+        .await?;
     }
 
-    zip.finish()
+    zip.finish().await
 }
 
 fn csv_bytes(
@@ -380,7 +408,7 @@ async fn add_attachments_to_zip(
     db_name: &str,
     records: &[HydratedRecord],
     path_prefix: &str,
-    zip: &mut ZipArchiveBuilder,
+    zip: &mut StreamingZipArchiveBuilder,
 ) -> Result<usize> {
     let mut filenames = Vec::new();
     let mut count = 0usize;
@@ -408,7 +436,7 @@ async fn add_attachments_to_zip(
                 filenames.push(base.clone());
                 let filename = format!("{path_prefix}{base}");
                 let bytes = couch.attachment_bytes(db_name, attachment_id).await?;
-                zip.add_file(&filename, bytes)?;
+                zip.add_file(&filename, bytes).await?;
                 count += 1;
             }
         }
@@ -473,31 +501,62 @@ fn record_to_json(record: &HydratedRecord) -> Value {
     })
 }
 
-struct ZipArchiveBuilder {
-    writer: ZipWriter<Cursor<Vec<u8>>>,
+struct StreamingZipArchiveBuilder {
+    writer: ZipFileWriter<DuplexStream>,
+    reader_task: JoinHandle<Result<()>>,
 }
 
-impl ZipArchiveBuilder {
-    fn new() -> Self {
+impl StreamingZipArchiveBuilder {
+    fn new(tx: mpsc::Sender<ChunkResult>, chunk_bytes: usize) -> Self {
+        let (reader, writer) = duplex(chunk_bytes.max(1024) * 2);
+        let reader_task = tokio::spawn(forward_zip_reader(reader, tx, chunk_bytes));
         Self {
-            writer: ZipWriter::new(Cursor::new(Vec::new())),
+            writer: ZipFileWriter::with_tokio(writer),
+            reader_task,
         }
     }
 
-    fn add_file(&mut self, name: &str, bytes: Vec<u8>) -> Result<()> {
-        let options = FileOptions::default().compression_method(CompressionMethod::Deflated);
+    async fn add_file(&mut self, name: &str, bytes: Vec<u8>) -> Result<()> {
+        let entry = ZipEntryBuilder::new(name.to_string().into(), Compression::Deflate);
         self.writer
-            .start_file(name, options)
+            .write_entry_whole(entry, &bytes)
+            .await
             .map_err(|error| ExportError::Zip(error.to_string()))?;
-        self.writer.write_all(&bytes)?;
         Ok(())
     }
 
-    fn finish(mut self) -> Result<Vec<u8>> {
+    async fn finish(self) -> Result<()> {
         self.writer
-            .finish()
-            .map(|cursor| cursor.into_inner())
-            .map_err(|error| ExportError::Zip(error.to_string()))
+            .close()
+            .await
+            .map_err(|error| ExportError::Zip(error.to_string()))?;
+        self.reader_task
+            .await
+            .map_err(|error| ExportError::Internal(error.to_string()))?
+    }
+}
+
+async fn forward_zip_reader(
+    mut reader: DuplexStream,
+    tx: mpsc::Sender<ChunkResult>,
+    chunk_bytes: usize,
+) -> Result<()> {
+    let mut sequence = 0u64;
+    let mut buffer = vec![0; chunk_bytes.max(1024)];
+    loop {
+        let read = reader.read(&mut buffer).await?;
+        if read == 0 {
+            return Ok(());
+        }
+        tx.send(Ok(FileChunk {
+            data: buffer[..read].to_vec(),
+            sequence,
+            filename: String::new(),
+            content_type: String::new(),
+        }))
+        .await
+        .map_err(|_| ExportError::Cancelled)?;
+        sequence += 1;
     }
 }
 
