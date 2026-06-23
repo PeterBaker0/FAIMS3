@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
@@ -178,21 +180,12 @@ pub struct AttachmentReference {
     pub file_type: String,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct Annotations {
     #[serde(default)]
     pub annotation: String,
     #[serde(default)]
     pub uncertainty: bool,
-}
-
-impl Default for Annotations {
-    fn default() -> Self {
-        Self {
-            annotation: String::new(),
-            uncertainty: false,
-        }
-    }
 }
 
 #[derive(Debug, Clone)]

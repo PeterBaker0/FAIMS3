@@ -198,7 +198,7 @@ async fn export_attachments_zip(couch: &CouchClient, request: &ExportRequest) ->
 async fn export_full_zip(couch: &CouchClient, request: &ExportRequest) -> Result<Vec<u8>> {
     let project = couch.project(&request.project_id).await?;
     let ui_spec = project.ui_specification.ui_spec;
-    let config = request.full_config.clone().unwrap_or_default();
+    let config = request.full_config.unwrap_or_default();
     let include_tabular = config.include_tabular;
     let include_attachments = config.include_attachments;
     let include_geojson = config.include_geojson;

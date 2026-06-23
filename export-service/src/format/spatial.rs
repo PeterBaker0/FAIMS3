@@ -1,3 +1,5 @@
+#![allow(clippy::format_collect)]
+
 use serde_json::{json, Map, Value};
 
 use crate::format::csv::data_for_output;

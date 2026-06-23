@@ -398,7 +398,7 @@ async fn couch_status_error(response: reqwest::Response) -> ExportError {
 fn encode_path(value: &str) -> String {
     value
         .split('/')
-        .map(|part| percent_encode(part))
+        .map(percent_encode)
         .collect::<Vec<_>>()
         .join("/")
 }
