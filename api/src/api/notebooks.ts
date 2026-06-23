@@ -717,112 +717,124 @@ api.get(
     if (!req.user) {
       throw new Exceptions.UnauthorizedException();
     }
-    const tokenContents = mockTokenContentsForUser(req.user);
     const {id: projectId} = req.params;
-    const uiSpecification = await getCompiledUiSpecModel(req.params.id);
-    compileUiSpecConditionals(uiSpecification);
-    const dataDb = await getDataDb(projectId);
-    const records = await getRecordsWithRegex({
-      dataDb,
-      filterDeleted: true,
-      projectId,
-      regex: '.*',
-      tokenContents,
-      uiSpecification,
-    });
-    if (records) {
-      const filenames: string[] = [];
-      const viewIdsNeedingFieldTypes = new Set(
-        records.filter(r => r.data && r.type).map(r => r.type)
-      );
 
-      const fieldTypesByViewId: Partial<
-        Record<string, ReturnType<typeof getNotebookFieldTypes>>
-      > = {};
-      for (const viewID of viewIdsNeedingFieldTypes) {
-        try {
-          fieldTypesByViewId[viewID] = getNotebookFieldTypes({
-            uiSpecification,
-            viewID,
-          });
-        } catch (e) {
-          console.error(
-            'Failed to get notebook field types for export',
-            viewID,
-            e
+    await streamExportResponse({
+      req,
+      res,
+      payload: {
+        projectId,
+        format: 'json-records',
+        userId: req.user.user_id,
+      },
+      legacy: async () => {
+        const tokenContents = mockTokenContentsForUser(req.user!);
+        const uiSpecification = await getCompiledUiSpecModel(req.params.id);
+        compileUiSpecConditionals(uiSpecification);
+        const dataDb = await getDataDb(projectId);
+        const records = await getRecordsWithRegex({
+          dataDb,
+          filterDeleted: true,
+          projectId,
+          regex: '.*',
+          tokenContents,
+          uiSpecification,
+        });
+        if (records) {
+          const filenames: string[] = [];
+          const viewIdsNeedingFieldTypes = new Set(
+            records.filter(r => r.data && r.type).map(r => r.type)
           );
-        }
-      }
-      // Process any file fields to give the file name in the zip download
-      for (const record of records) {
-        if (record.data) {
-          const fields = fieldTypesByViewId[record.type];
-          if (fields) {
+
+          const fieldTypesByViewId: Partial<
+            Record<string, ReturnType<typeof getNotebookFieldTypes>>
+          > = {};
+          for (const viewID of viewIdsNeedingFieldTypes) {
             try {
-              const dataCopy = {...record.data};
-              await stripDeletedRelatedRefsFromRecordData({
-                fields,
-                data: dataCopy,
-                dataDb,
+              fieldTypesByViewId[viewID] = getNotebookFieldTypes({
                 uiSpecification,
+                viewID,
               });
-              record.data = dataCopy;
             } catch (e) {
               console.error(
-                'Failed to strip deleted related record refs for export',
+                'Failed to get notebook field types for export',
+                viewID,
                 e
               );
             }
           }
-        }
-        const exportData = record.data;
-        if (!exportData) {
-          continue;
-        }
-        const hrid = record.hrid || record.record_id;
-        for (const fieldName in exportData) {
-          const values = exportData[fieldName];
-          if (values instanceof Array) {
-            const names = values.map((v: any) => {
-              if (v instanceof File) {
-                let viewID = record.type;
+          // Process any file fields to give the file name in the zip download
+          for (const record of records) {
+            if (record.data) {
+              const fields = fieldTypesByViewId[record.type];
+              if (fields) {
                 try {
-                  const viewsetId = getIdsByFieldName({
-                    fieldName,
+                  const dataCopy = {...record.data};
+                  await stripDeletedRelatedRefsFromRecordData({
+                    fields,
+                    data: dataCopy,
+                    dataDb,
                     uiSpecification,
-                  }).viewSetId;
-                  viewID = viewsetId;
+                  });
+                  record.data = dataCopy;
                 } catch (e) {
                   console.error(
-                    'missing viewset for field',
-                    fieldName,
-                    'falling back to type'
+                    'Failed to strip deleted related record refs for export',
+                    e
                   );
                 }
-                const filename = generateFilenameForAttachment({
-                  file: v,
-                  fieldId: fieldName,
-                  hrid,
-                  // The view ID is the viewset ID - which is the 'type'
-                  viewID,
-                  filenames,
-                });
-                filenames.push(filename);
-                return filename;
-              } else {
-                return v;
               }
-            });
-            if (names.length > 0) {
-              exportData[fieldName] = names;
+            }
+            const exportData = record.data;
+            if (!exportData) {
+              continue;
+            }
+            const hrid = record.hrid || record.record_id;
+            for (const fieldName in exportData) {
+              const values = exportData[fieldName];
+              if (values instanceof Array) {
+                const names = values.map((v: any) => {
+                  if (v instanceof File) {
+                    let viewID = record.type;
+                    try {
+                      const viewsetId = getIdsByFieldName({
+                        fieldName,
+                        uiSpecification,
+                      }).viewSetId;
+                      viewID = viewsetId;
+                    } catch (e) {
+                      console.error(
+                        'missing viewset for field',
+                        fieldName,
+                        'falling back to type'
+                      );
+                    }
+                    const filename = generateFilenameForAttachment({
+                      file: v,
+                      fieldId: fieldName,
+                      hrid,
+                      // The view ID is the viewset ID - which is the 'type'
+                      viewID,
+                      filenames,
+                    });
+                    filenames.push(filename);
+                    return filename;
+                  } else {
+                    return v;
+                  }
+                });
+                if (names.length > 0) {
+                  exportData[fieldName] = names;
+                }
+              }
             }
           }
+          res.json({records});
+        } else {
+          throw new Exceptions.ItemNotFoundException('Notebook not found');
         }
-      }
-      res.json({records});
-    } else {
-      throw new Exceptions.ItemNotFoundException('Notebook not found');
-    }
+      },
+    });
   }
 );
 
