@@ -565,9 +565,7 @@ export const startImpersonation = createAsyncThunk<
       );
 
       // Make it the active user.
-      appDispatch(
-        setActiveUser({serverId, username: parsedToken.username})
-      );
+      appDispatch(setActiveUser({serverId, username: parsedToken.username}));
 
       return {status: 'success', message: ''};
     } catch (error) {
