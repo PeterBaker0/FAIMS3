@@ -229,7 +229,10 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
 
     const admin = user;
     if (!admin) {
-      return {status: 'error', message: 'No active session to impersonate from'};
+      return {
+        status: 'error',
+        message: 'No active session to impersonate from',
+      };
     }
 
     // Stash the admin session first so it can be restored.

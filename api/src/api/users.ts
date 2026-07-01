@@ -282,7 +282,9 @@ api.post(
     }
 
     if (target.user_id === user.user_id) {
-      throw new Exceptions.ForbiddenException('You cannot impersonate yourself.');
+      throw new Exceptions.ForbiddenException(
+        'You cannot impersonate yourself.'
+      );
     }
 
     if (isPeopleUserAccountDisabled(target)) {

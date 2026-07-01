@@ -46,8 +46,7 @@ export function ImpersonateUserDialog({
     return null;
   }
 
-  const displayName =
-    rowUser.name || rowUser.emails[0]?.email || rowUser._id;
+  const displayName = rowUser.name || rowUser.emails[0]?.email || rowUser._id;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

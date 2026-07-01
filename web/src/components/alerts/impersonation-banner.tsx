@@ -7,7 +7,8 @@ import {VenetianMask} from 'lucide-react';
  * session. Provides a clear way to return to the admin's own account.
  */
 export function ImpersonationBanner() {
-  const {isImpersonating, user, impersonatorName, stopImpersonation} = useAuth();
+  const {isImpersonating, user, impersonatorName, stopImpersonation} =
+    useAuth();
 
   if (!isImpersonating) {
     return null;
