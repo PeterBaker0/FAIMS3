@@ -3,6 +3,8 @@ import * as path from 'path';
 import PouchDB from 'pouchdb';
 import PouchDBFind from 'pouchdb-find';
 import {
+  CompiledNotebookUiSpec,
+  couchInitialiser,
   DatabaseInterface,
   DataDocument,
   DataEngine,
@@ -31,10 +33,11 @@ describe('Form Operations', () => {
       adapter: 'memory',
     }) as DatabaseInterface<DataDocument>;
 
-    // Initialize engine
+    // Initialize engine. The test spec is the raw (uncompiled) form, which is
+    // sufficient for these tests; cast it to the compiled type the engine expects.
     engine = new DataEngine({
       dataDb: db,
-      uiSpec: uiSpec,
+      uiSpec: uiSpec as unknown as CompiledNotebookUiSpec,
     });
   });
 
@@ -56,12 +59,15 @@ describe('Form Operations', () => {
       expect(result.record._rev).toBeDefined();
       expect(result.record.type).toBe('A');
       expect(result.record.created_by).toBe('test-user');
+      expect(result.record.creator).toBe('test-user');
       expect(result.record.created).toBeDefined();
 
       expect(result.revision._id).toBeDefined();
       expect(result.revision._rev).toBeDefined();
       expect(result.revision.type).toBe('A');
       expect(result.revision.created_by).toBe('test-user');
+      expect(result.revision.creator).toBe('test-user');
+      expect(result.revision.parent).toBe(result.record._id);
       expect(result.revision.record_id).toBe(result.record._id);
     });
 
@@ -1215,6 +1221,38 @@ describe('Form Operations', () => {
       expect(formData.data['Fourth-1'].data).toBe('complete');
       expect(formData.data['Fourth-1'].annotation?.annotation).toBe('full');
       expect(formData.data['Fourth-1'].attachments).toHaveLength(1);
+    });
+  });
+
+  describe('getHistoryData', () => {
+    test('should return revision authorship and changed fields', async () => {
+      const initialResult = await engine.form.createRecord({
+        formId: 'A',
+        createdBy: 'user-1',
+      });
+
+      // Set a field so the revision has a change to report
+      await engine.form.updateRevision({
+        revisionId: initialResult.revision._id,
+        recordId: initialResult.record._id,
+        update: {
+          'First-1': {data: 'test value'},
+        },
+        mode: 'new',
+        updatedBy: 'user-1',
+      });
+
+      const history = await engine.form.getHistoryData({
+        recordId: initialResult.record._id,
+      });
+
+      expect(history).toHaveLength(1);
+      expect(history[0].revisionId).toBe(initialResult.revision._id);
+      expect(history[0].createdBy).toBe('user-1');
+      // The first revision has no parent, so every field it set is reported
+      expect(Object.values(history[0].changedFields).flat()).toContain(
+        'First-1'
+      );
     });
   });
 });

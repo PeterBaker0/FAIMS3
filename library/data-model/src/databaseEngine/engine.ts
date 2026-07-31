@@ -49,6 +49,8 @@ import {
   recordDocumentSchema,
   RecordQueryResult,
   RecordSearchResult,
+  revisionHistoryEntry,
+  RevisionHistoryEntry,
   RevisionMetadataQueryResult,
   toMinimalRevisionMetadata,
 } from './types';
@@ -56,6 +58,7 @@ import {
   normalizeRelationshipInstances,
   toDbRelationshipInstances,
 } from './utils';
+import {stampChildAcl, stampRecordAcl} from '../data_storage/dataDB/acl';
 
 // =======
 // HELPERS
@@ -960,6 +963,11 @@ class HydratedOperations {
       created: revision.created,
       deleted: revision.deleted,
       created_by: revision.createdBy,
+      // Always stamp ACL on the clean write path (do not preserve missing/wrong).
+      ...stampChildAcl({
+        createdBy: revision.createdBy,
+        recordId: revision.recordId,
+      }),
       parents: revision.parents,
       record_id: revision.recordId,
       revision_format_version: 1,
@@ -1098,6 +1106,7 @@ class FormOperations {
       record_format_version: 1,
       created: getCurrentTimestamp(),
       created_by: validated.createdBy,
+      ...stampRecordAcl(validated.createdBy),
       // Track a single revision and this is the active head
       revisions: [revisionId],
       heads: [revisionId],
@@ -1129,6 +1138,7 @@ class FormOperations {
       parents: [],
       created: getCurrentTimestamp(),
       created_by: validated.createdBy,
+      ...stampChildAcl({createdBy: validated.createdBy, recordId}),
       type: validated.formId,
       // This is about annotating documents with issues - but is unused
       ugc_comment: '',
@@ -1196,6 +1206,7 @@ class FormOperations {
       avps: parentRevision.avps,
       created: getCurrentTimestamp(),
       created_by: createdBy,
+      ...stampChildAcl({createdBy, recordId}),
       // Mark the parent revision ID as the parent
       parents: [revisionId],
       record_id: recordId,
@@ -1245,6 +1256,7 @@ class FormOperations {
       avps: baseRevision.avps,
       created: getCurrentTimestamp(),
       created_by: userId,
+      ...stampChildAcl({createdBy: userId, recordId}),
       parents: [baseRevisionId],
       record_id: recordId,
       revision_format_version: 1,
@@ -1367,6 +1379,11 @@ class FormOperations {
         parents: currentRevision.parents,
         created: currentRevision.created,
         created_by: currentRevision.created_by,
+        // Re-stamp ACL so restore/legacy orphans cannot linger on update.
+        ...stampChildAcl({
+          createdBy: currentRevision.created_by,
+          recordId: currentRevision.record_id,
+        }),
         type: currentRevision.type,
         ugc_comment: currentRevision.ugc_comment,
         relationship: currentRevision.relationship,
@@ -1427,6 +1444,66 @@ class FormOperations {
         hrid: hydrated.hrid,
       },
     };
+  }
+
+  /**
+   * Given a record ID, return its revision history: who created each revision,
+   * when, and which fields changed in each revision. Useful for showing an
+   * audit trail of changes to a record.
+   *
+   * The changed fields are computed by diffing each revision's AVP map against
+   * its parent's: unchanged fields reuse the parent's AVP ID, so any field
+   * whose AVP ID differs (or which was added or removed) is a changed field.
+   *
+   * @param recordId The record ID to query
+   * @returns Array of revision history entries (revisionId, created,
+   * createdBy, changedFields)
+   */
+  async getHistoryData({
+    recordId,
+  }: {
+    recordId: string;
+  }): Promise<RevisionHistoryEntry[]> {
+    const record = await this.core.getRecord(recordId);
+    const revisions = await Promise.all(
+      record.revisions.map(revisionId => this.core.getRevision(revisionId))
+    );
+
+    // Index by revision ID so each revision can look up its parent's AVPs.
+    const revisionsById = new Map(revisions.map(rev => [rev._id, rev]));
+
+    const history = revisions.map((revision): RevisionHistoryEntry => {
+      return {
+        revisionId: revision._id,
+        created: revision.created,
+        createdBy: revision.created_by,
+        deleted: revision.deleted,
+        changedFields:
+          revision.parents.length === 0
+            ? {root: Object.keys(revision.avps).sort()}
+            : Object.fromEntries(
+                revision.parents.map(parentId => {
+                  const parent = revisionsById.get(parentId);
+                  const parentAvps = parent?.avps ?? {};
+
+                  const changed = new Set<string>();
+                  for (const [field, avpId] of Object.entries(revision.avps)) {
+                    if (parentAvps[field] !== avpId) {
+                      changed.add(field);
+                    }
+                  }
+                  for (const field of Object.keys(parentAvps)) {
+                    if (!(field in revision.avps)) {
+                      changed.add(field);
+                    }
+                  }
+                  return [parentId, Array.from(changed).sort()];
+                })
+              ),
+      };
+    });
+
+    return revisionHistoryEntry.array().parse(history);
   }
 
   /**
@@ -1814,6 +1891,10 @@ class FormOperations {
       avp_format_version: 1,
       created: getCurrentTimestamp(),
       created_by: updatedBy,
+      ...stampChildAcl({
+        createdBy: updatedBy,
+        recordId: currentRevision.record_id,
+      }),
       record_id: currentRevision.record_id,
       revision_id: currentRevision._id,
       type: fieldType,
@@ -1838,6 +1919,11 @@ class FormOperations {
 
     return {
       ...currentAvp,
+      // Re-stamp ACL on in-place AVP updates (clean path; repairs orphans).
+      ...stampChildAcl({
+        createdBy: currentAvp.created_by,
+        recordId: currentAvp.record_id,
+      }),
       annotations: newData.annotation,
       data: newData.data,
       faims_attachments: newData.attachments?.map(a => ({

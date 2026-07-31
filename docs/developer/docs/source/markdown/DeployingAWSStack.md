@@ -358,13 +358,13 @@ aws backup delete-backup-vault \
 
 ### Conductor (API) Configuration
 
-The following section configures the API
+The following section configures the API.
 
 ```json
   "conductor": {
     "name": "FAIMS Server",
     "description": "FAIMS Conductor instance deployment.",
-    "conductorDockerImage": "org/faims3-api",
+    "conductorDockerImage": "see-below",
     "conductorDockerImageTag": "latest",
     "shortCodePrefix": "FAIMS",
     "cpu": 1024,
@@ -383,8 +383,17 @@ The following section configures the API
 
 You need to update the following
 
-- `conductorDockerImage`: you can either use `ghcr.io/faims/faims3-api` OR you can fork the repo, and deploy your own container to GHCR, which will allow you more control over the lifecycle. I think by default use a tagged version of the FAIMS upstream container image.
-- `conductorDockerImageTag`: I don't recommend using latest, as you may get out of sync, instead, specify the specific commit e.g. `sha-522bb4b`
+- `conductorDockerImage`: you can either use `ghcr.io/faims/faims3-api` OR you
+  can fork the repo, and deploy your own container to GHCR, which will allow you
+  more control over the lifecycle. I think by default use a tagged version of the
+  FAIMS upstream container image.
+  If you fork the repository, the image name will be `ghcr.io/org/reponame-api`
+  where `org` will be the organisation owning
+  your repository, `reponame` is the lowercase version of the repository name.  
+  You should see the package listed in your repository packages list.
+
+- `conductorDockerImageTag`: I don't recommend using latest, as you may get out
+  of sync, instead, specify the specific commit e.g. `sha-522bb4b`
 
 The remaining options are for your consideration. They are largely performance, the below is a suitable production profile:
 
@@ -755,8 +764,15 @@ Then add the following values to the bottom of the .env file:
 COUCHDB_USER=admin
 COUCHDB_PASSWORD="<YOUR DB PASSWORD>"
 COUCHDB_EXTERNAL_PORT=443
-COUCHDB_INTERNAL_URL=https://db.<your domain>:443/
-COUCHDB_PUBLIC_URL=https://db.<your domain>:443/
+# The CDK stack always sets these on Conductor:
+#   PUBLIC  → https://<couch subdomain>.<domain>:443  (ALB → proxy)
+#   INTERNAL → http://<couch-private-ip>:5984         (VPC, admin Basic)
+# For local migrate against a deployed stack, INTERNAL must reach Couch
+# directly (SSM port-forward / VPN / ssh -L) — never the public proxy URL.
+# See infrastructure/aws-cdk/README.md and Authorisation/CouchAuthProxyCutover.md.
+COUCHDB_INTERNAL_URL=http://<couch-private-ip>:5984
+# Public sync URL advertised to the app as dataDb.base_url (proxy hostname).
+COUCHDB_PUBLIC_URL=https://couch.<your domain>:443
 AWS_DEFAULT_REGION=<your deployment region e.g. ap-southeast-2>
 KEY_SOURCE=AWS_SM
 AWS_SECRET_KEY_ARN=<secret ARN of the private key in AWS SM>
@@ -809,6 +825,47 @@ I don't recommend using the CouchDB admin user/password to manage the system. In
 5. logout of the CouchDB admin account, and sign in with your personal account
 
 You can now manage the deployment with your personal login.
+
+## couch-auth-proxy (per-document sync ACL)
+
+Public Pouch↔Couch sync goes through couch-auth-proxy when
+`couchAuthProxy.enabled` is **`true`** (default **`false`** keeps legacy
+ALB → Couch). Tune via `couchAuthProxy` in your config JSON (see
+[infrastructure/aws-cdk/README.md](../../../../infrastructure/aws-cdk/README.md)):
+
+```json
+"couchAuthProxy": {
+  "enabled": true,
+  "image": "ghcr.io/peterbaker0/couch-auth-proxy",
+  "imageTag": "1.7.0",
+  "cpu": 512,
+  "memory": 1024,
+  "desiredCount": 2
+}
+```
+
+When enabled:
+
+- public `couch.*` / `db.*` hostname on the shared ALB → **couch-auth-proxy** ECS
+- Conductor `COUCH_AUTH_PROXY_ENABLED=true`, `COUCHDB_PUBLIC_URL` → that hostname;
+  `COUCHDB_INTERNAL_URL` → VPC Couch
+- Couch `:5984` is **not** registered on the internet-facing ALB (SG: proxy + Conductor only)
+
+When disabled: ALB → Couch; Conductor `COUCH_AUTH_PROXY_ENABLED=false` (no proxy
+HTTP); creator stamps and DATA migrations still run.
+
+**After enabling:** migrate DATA DBs to target version **2** promptly, then
+**check** ACL overlays with
+`pnpm --filter=@faims3/api run repair-data-db-acl -- --check`. Normal migrate /
+Conductor startup init already warms the proxy and patches `dbacl`; use
+`--write` only if check reports missing/mismatched overlays. Unstamped legacy
+docs stay member-readable (`r-*`) until migrate — the same effective access as
+today’s public Couch, not a new regression.
+
+Ownership / validate_doc_update layering:
+[AclValidationLayering](Authorisation/AclValidationLayering.md).  
+Design / CDK details: [infrastructure/aws-cdk/README.md](../../../../../infrastructure/aws-cdk/README.md).  
+Operator runbook: [CouchAuthProxyCutover](Authorisation/CouchAuthProxyCutover.md).
 
 ## Additional configurations
 
