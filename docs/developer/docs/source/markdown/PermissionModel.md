@@ -36,6 +36,12 @@ Authorization is managed through tokens that encode:
 
 CouchDB uses these roles in the `validate_doc_update` design document function and `member` array of the security document to enforce permissions.
 
+> **Sync read enforcement:** CouchDB `_security` membership alone cannot enforce
+> per-document reads (e.g. guest = own records only). Closing that gap is
+> specified in
+> [CouchAuthProxyHandover](Authorisation/CouchAuthProxyHandover.md)
+> (integration of `couch-auth-proxy` on the public sync path).
+
 ## Usage Examples
 
 ### Checking User Permissions
