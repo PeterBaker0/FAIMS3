@@ -15,6 +15,8 @@ Includes:
 
 The system maintains a separate migration metadata database that tracks the version and migration history of each application database, ensuring that migrations are applied exactly once and in the correct sequence.
 
+**Concurrency:** there is **no lock** today. Several API tasks (or overlapping `pnpm run migrate` runs) can create duplicate status documents and apply the same version step twice. The design for compare-and-swap lock documents in the migrations DB is in [Migration locking](./MigrationLocking.md).
+
 ## Core Concepts
 
 ### Database Types
