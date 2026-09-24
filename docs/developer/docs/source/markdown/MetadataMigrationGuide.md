@@ -73,6 +73,8 @@ The app behaviour is likely to be unstable or completely broken when the app is 
 
 Couch migrations for **projects** and **templates** are **not** applied automatically when the API process starts listening. Run the migration script explicitly against the target Couch instance.
 
+Do **not** run two migrators at once (two CLI processes, or CLI overlapping a deploy). There is no distributed lock yet; overlapping runs can duplicate migration status documents and apply the same version step twice. See [Migration locking](./MigrationLocking.md).
+
 From the repository root (with env pointing at the deployment CouchDB):
 
 ```bash
