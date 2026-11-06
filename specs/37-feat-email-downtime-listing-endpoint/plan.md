@@ -29,7 +29,7 @@ tasks:
       - 12
     risk: low
     size: s
-    tier: 1
+    tier: cheap
   - key: email-listing-helper
     title: Extract shared dump-user-emails listing helper
     description: >
@@ -58,7 +58,7 @@ tasks:
       - 11
     risk: low
     size: s
-    tier: 1
+    tier: cheap
   - key: email-listing-api
     title: Add GET /api/users/emails JSON endpoint
     description: >
@@ -86,7 +86,7 @@ tasks:
       - 10
     risk: low
     size: s
-    tier: 2
+    tier: mid
   - key: email-listing-ui
     title: Add Control Centre downtime email dump control
     description: >
@@ -110,7 +110,7 @@ tasks:
       - 13
     risk: low
     size: s
-    tier: 3
+    tier: mid
   - key: email-listing-docs
     title: Document the JSON dump endpoint in swagger and README
     description: >
@@ -129,5 +129,5 @@ tasks:
       - 14
     risk: low
     size: s
-    tier: 3
+    tier: cheap
 ```
