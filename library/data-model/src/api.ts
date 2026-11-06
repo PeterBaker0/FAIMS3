@@ -177,6 +177,40 @@ export type GetListAllUsersResponse = z.infer<
 /** One row from GET /api/users (admin list). Includes `profiles`; unlike {@link GetCurrentUserResponse}. */
 export type GetListAllUsersItem = GetListAllUsersResponse[number];
 
+/**
+ * Query string for GET /api/users/emails. Values are `'true'|'false'` strings
+ * (same pattern as `includeArchived` on GET /api/users). JSON only — no
+ * `format=` variants.
+ */
+export const GetDumpUserEmailsQuerySchema = z.object({
+  includeArchived: z.enum(['true', 'false']).optional(),
+  includeSkipped: z.enum(['true', 'false']).optional(),
+});
+export type GetDumpUserEmailsQuery = z.infer<
+  typeof GetDumpUserEmailsQuerySchema
+>;
+
+/**
+ * One row in GET /api/users/emails. Same columns as the dump-user-emails CLI
+ * CSV (`name,email,user_id,disabled,verified`). Extra people-db fields
+ * (profiles, roles, salts) are stripped.
+ */
+export const DumpUserEmailRowSchema = z
+  .object({
+    email: z.string(),
+    name: z.string(),
+    userId: z.string(),
+    disabled: z.boolean(),
+    verified: z.boolean(),
+  })
+  .strip();
+export type DumpUserEmailRow = z.infer<typeof DumpUserEmailRowSchema>;
+
+export const GetDumpUserEmailsResponseSchema = z.array(DumpUserEmailRowSchema);
+export type GetDumpUserEmailsResponse = z.infer<
+  typeof GetDumpUserEmailsResponseSchema
+>;
+
 // Information about users and roles for a notebook
 export const NotebookAuthSummarySchema = z.object({
   // What roles does the notebook have

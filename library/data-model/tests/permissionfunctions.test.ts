@@ -13,7 +13,14 @@ import {
   drillRoles,
   roleGrantsAction,
 } from '../src/permission/helpers';
-import {Action, actionDetails, Resource, Role} from '../src/permission/model';
+import {
+  Action,
+  actionDetails,
+  Resource,
+  Role,
+  roleDetails,
+  RoleScope,
+} from '../src/permission/model';
 import {
   DecodedTokenPermissions,
   TokenPermissions,
@@ -1115,6 +1122,68 @@ describe('IMPERSONATE_USER permission', () => {
     expect(details).toBeDefined();
     expect(details.resource).toBe(Resource.USER);
     expect(details.resourceSpecific).toBe(true);
+  });
+});
+
+describe('DUMP_USER_EMAILS permission', () => {
+  it('is granted to OPERATIONS_ADMIN', () => {
+    expect(
+      roleGrantsAction({
+        roles: [Role.OPERATIONS_ADMIN],
+        action: Action.DUMP_USER_EMAILS,
+      })
+    ).toBe(true);
+  });
+
+  it('is granted to GENERAL_ADMIN (via inheritance)', () => {
+    expect(
+      roleGrantsAction({
+        roles: [Role.GENERAL_ADMIN],
+        action: Action.DUMP_USER_EMAILS,
+      })
+    ).toBe(true);
+  });
+
+  it('is NOT granted to GENERAL_USER', () => {
+    expect(
+      roleGrantsAction({
+        roles: [Role.GENERAL_USER],
+        action: Action.DUMP_USER_EMAILS,
+      })
+    ).toBe(false);
+  });
+
+  it('is NOT granted to GENERAL_CREATOR', () => {
+    expect(
+      roleGrantsAction({
+        roles: [Role.GENERAL_CREATOR],
+        action: Action.DUMP_USER_EMAILS,
+      })
+    ).toBe(false);
+  });
+
+  it('is NOT granted to resource-specific roles', () => {
+    const resourceSpecificRoles = Object.values(Role).filter(
+      role => roleDetails[role].scope === RoleScope.RESOURCE_SPECIFIC
+    );
+    expect(resourceSpecificRoles.length).toBeGreaterThan(0);
+    for (const role of resourceSpecificRoles) {
+      expect(
+        roleGrantsAction({
+          roles: [role],
+          action: Action.DUMP_USER_EMAILS,
+        })
+      ).toBe(false);
+    }
+  });
+
+  it('is a non-resource-specific USER action', () => {
+    const details = actionDetails[Action.DUMP_USER_EMAILS];
+    expect(details).toBeDefined();
+    expect(details.name).toBeDefined();
+    expect(details.description).toBeDefined();
+    expect(details.resource).toBe(Resource.USER);
+    expect(details.resourceSpecific).toBe(false);
   });
 });
 

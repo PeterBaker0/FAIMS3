@@ -246,6 +246,8 @@ export enum Action {
   ENABLE_USER_ACCOUNT = 'ENABLE_USER_ACCOUNT',
   // Impersonate a user (obtain a session that authenticates as them)
   IMPERSONATE_USER = 'IMPERSONATE_USER',
+  // Dump user email addresses for maintenance / downtime notices
+  DUMP_USER_EMAILS = 'DUMP_USER_EMAILS',
 
   // ============================================================
   // LONG LIVED TOKEN ACTIONS
@@ -908,6 +910,13 @@ export const actionDetails: Record<Action, ActionDetails> = {
     resourceSpecific: true,
     resource: Resource.USER,
   },
+  [Action.DUMP_USER_EMAILS]: {
+    name: 'Dump User Emails',
+    description:
+      'Export a listing of user email addresses for maintenance notices. Restricted to system operations administrators.',
+    resourceSpecific: false,
+    resource: Resource.USER,
+  },
 
   // ============================================================
   // GLOBAL ACTIONS
@@ -1398,6 +1407,7 @@ export const roleActions: Record<
       Action.DISABLE_USER_ACCOUNT,
       Action.ENABLE_USER_ACCOUNT,
       Action.IMPERSONATE_USER,
+      Action.DUMP_USER_EMAILS,
 
       // Irreversible survey destruction (also on PROJECT_ADMIN for owned surveys)
       Action.DELETE_PROJECT,
