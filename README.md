@@ -1,3 +1,5 @@
+Factory trial: this sentence was added by the control plane.
+
 Factory trial.
 
 # FAIMS3
