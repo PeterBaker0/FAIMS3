@@ -14,6 +14,7 @@ import DashboardIcon from '@mui/icons-material/Dashboard';
 import DescriptionIcon from '@mui/icons-material/Description';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
+import FeedbackIcon from '@mui/icons-material/Feedback';
 import MenuIcon from '@mui/icons-material/Menu';
 import SettingsIcon from '@mui/icons-material/Settings';
 import MapIcon from '@mui/icons-material/Map';
@@ -46,6 +47,7 @@ import {useAppSelector} from '../../context/store';
 import SystemAlert from '../components/alert';
 import {AppBarHeading} from '../components/app-bar/app-bar-heading';
 import AppBarAuth from '../components/authentication/appbarAuth';
+import {FeedbackDialog} from '../components/feedback/FeedbackDialog';
 import SyncStatus from '../../sync/sync-state';
 
 const drawerWidth = 240;
@@ -72,9 +74,11 @@ type IconType =
 type MenuItemProps = {
   nested?: any;
   title: string;
-  to: string;
+  to?: string;
   disabled: boolean;
   icon: IconType;
+  onClick?: () => void;
+  testId?: string;
 };
 
 /**
@@ -117,6 +121,7 @@ export default function MainAppBar() {
   const projectList = useAppSelector(selectActiveServerProjects);
 
   const [isOpen, setIsOpen] = useState<boolean>(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const toggle = () => setIsOpen(!isOpen);
 
   const topMenuItems: Array<MenuItemProps> = [
@@ -151,6 +156,15 @@ export default function MainAppBar() {
       disabled: false,
     },
   ];
+  if (isAuthenticated) {
+    bottomMenuItems.push({
+      title: 'Feedback',
+      icon: <FeedbackIcon />,
+      disabled: false,
+      testId: 'app-feedback-button',
+      onClick: () => setFeedbackOpen(true),
+    });
+  }
   if (config.offlineMaps)
     bottomMenuItems.push({
       title: 'Manage Maps',
@@ -368,39 +382,41 @@ export default function MainAppBar() {
                 py: 2,
               })}
             >
-              {bottomMenuItems.map(
-                (item: {
-                  title: string;
-                  icon: IconType;
-                  disabled: boolean;
-                  to: any;
-                }) => (
-                  <ListItemButton
-                    key={item.title}
-                    disabled={item.disabled}
-                    to={item.to}
-                    component={RouterLink}
-                    onClick={toggle}
-                  >
-                    <ListItemIcon>{item.icon}</ListItemIcon>
-                    <ListItemText
-                      sx={{
-                        '& .MuiListItemText-primary': {
-                          fontSize: '1.1rem',
-                          fontWeight: 'bold',
-                          color: 'rgba(0, 0, 0, 0.54)',
-                        },
-                      }}
-                      primary={item.title}
-                    />
-                  </ListItemButton>
-                )
-              )}
+              {bottomMenuItems.map((item: MenuItemProps) => (
+                <ListItemButton
+                  key={item.title}
+                  disabled={item.disabled}
+                  data-testid={item.testId}
+                  {...(item.to ? {to: item.to, component: RouterLink} : {})}
+                  onClick={() => {
+                    item.onClick?.();
+                    toggle();
+                  }}
+                >
+                  <ListItemIcon>{item.icon}</ListItemIcon>
+                  <ListItemText
+                    sx={{
+                      '& .MuiListItemText-primary': {
+                        fontSize: '1.1rem',
+                        fontWeight: 'bold',
+                        color: 'rgba(0, 0, 0, 0.54)',
+                      },
+                    }}
+                    primary={item.title}
+                  />
+                </ListItemButton>
+              ))}
             </List>
           </Box>
         </Drawer>
       </div>
       <SystemAlert />
+      {isAuthenticated ? (
+        <FeedbackDialog
+          open={feedbackOpen}
+          onClose={() => setFeedbackOpen(false)}
+        />
+      ) : null}
     </React.Fragment>
   );
 }

@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
+import type {
+  PostFeedbackRequest,
+  PostFeedbackResponse,
+} from '@faims3/data-model';
 import {Server} from '../../context/slices/projectSlice';
 import {store} from '../../context/store';
 
@@ -413,3 +417,21 @@ export class ListingFetchManager {
 // Export fetch manager singleton
 const FetchManager = new ListingFetchManager();
 export default FetchManager;
+
+/** POST /api/feedback on the active listing with the signed-in bearer token. */
+export async function postFeedback({
+  listingId,
+  username,
+  body,
+}: {
+  listingId: string;
+  username: string;
+  body: PostFeedbackRequest;
+}): Promise<PostFeedbackResponse> {
+  return FetchManager.post<PostFeedbackResponse>(
+    listingId,
+    username,
+    '/api/feedback',
+    body
+  );
+}
