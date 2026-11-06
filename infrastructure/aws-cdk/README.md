@@ -411,6 +411,10 @@ The **`aws`** fields are documented below.
   - `exportRateLimiterEnabled` (`core.limits`): (default `true`) Dedicated limiter for notebook export mint/redeem (`EXPORT_RATE_LIMITER_ENABLED`). Independent of `rateLimiterEnabled` so ZIP/GDAL work stays capped when the global IP limiter is off.
   - `exportRateLimiterWindowMs` (`core.limits`): (default `600000`) Export-limiter window in milliseconds (`EXPORT_RATE_LIMITER_WINDOW_MS`).
   - `exportRateLimiterPerWindow` (`core.limits`): (default `20`) Export mint/redeem requests allowed per window (`EXPORT_RATE_LIMITER_PER_WINDOW`). Raise for bulk scripted dumps.
+  - `supportEmail` (`core.support`): Inbox for in-app feedback (`SUPPORT_EMAIL`, default `support@fieldmark.au`). Not `EMAIL_REPLY_TO` or `TEST_EMAIL_ADDRESS`.
+  - `feedbackRateLimiterEnabled` (`core.limits`): (default `true`) Dedicated per-user limiter for `POST /api/feedback` (`FEEDBACK_RATE_LIMITER_ENABLED`).
+  - `feedbackRateLimiterWindowMs` (`core.limits`): (default `3600000`) Feedback-limiter window in milliseconds (`FEEDBACK_RATE_LIMITER_WINDOW_MS`).
+  - `feedbackRateLimiterPerWindow` (`core.limits`): (default `5`) Feedback POSTs allowed per authenticated user per window (`FEEDBACK_RATE_LIMITER_PER_WINDOW`).
 
 To use a specific configuration when deploying or synthesizing your CDK stack:
 

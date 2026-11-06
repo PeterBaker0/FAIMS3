@@ -193,6 +193,10 @@ test('generator supports api platform export selection', () => {
   assert.match(output, /EMAIL_SERVICE_TYPE=MOCK/);
   assert.match(output, /AUTH_GOOGLE_TYPE=google/);
   assert.match(output, /AUTH_GOOGLE_CLIENT_ID=google-client-id/);
+  assert.match(output, /SUPPORT_EMAIL=/);
+  assert.match(output, /FEEDBACK_RATE_LIMITER_ENABLED=/);
+  assert.match(output, /FEEDBACK_RATE_LIMITER_WINDOW_MS=/);
+  assert.match(output, /FEEDBACK_RATE_LIMITER_PER_WINDOW=/);
   assert.doesNotMatch(output, /VITE_APP_NAME=/);
 });
 
