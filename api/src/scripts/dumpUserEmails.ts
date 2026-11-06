@@ -20,15 +20,12 @@
  *
  * Progress / diagnostics go to stderr so stdout stays paste-ready.
  */
-import {isPeopleUserAccountDisabled} from '@faims3/data-model';
 import {config} from '../buildconfig';
 import {verifyCouchDBConnection} from '../couchdb';
-import {filterPeopleUsersForList, getUsers} from '../couchdb/users';
+import {getUsers} from '../couchdb/users';
+import {listUserEmails} from '../utils/userEmailListing';
 
 type Format = 'lines' | 'bcc' | 'csv';
-
-/** Default patterns: "test"/"demo" anywhere in the address; example.com domain. */
-const DEFAULT_SKIP_PATTERNS = ['test', 'demo', String.raw`example\.com`];
 
 /** How long to wait for the initial HTTP probe / full user fetch before failing. */
 const CONNECT_TIMEOUT_MS = 15_000;
@@ -86,7 +83,9 @@ async function withTimeout<T>(
 function parseArgs(argv: string[]): {
   format: Format;
   includeDisabled: boolean;
-  skipPatterns: string[];
+  /** Undefined means use the helper's hardcoded default skip list. */
+  skipPatterns: string[] | undefined;
+  noSkip: boolean;
 } {
   let format: Format = 'lines';
   let includeDisabled = false;
@@ -137,11 +136,9 @@ Options:
 
   if (noSkip) {
     skipPatterns = [];
-  } else if (skipPatterns === undefined) {
-    skipPatterns = [...DEFAULT_SKIP_PATTERNS];
   }
 
-  return {format, includeDisabled, skipPatterns};
+  return {format, includeDisabled, skipPatterns, noSkip};
 }
 
 function compileSkipMatchers(patterns: string[]): RegExp[] {
@@ -228,18 +225,19 @@ async function probeCouchHttp(timeoutMs: number): Promise<void> {
 
 const main = async () => {
   try {
-    const {format, includeDisabled, skipPatterns} = parseArgs(
+    const {format, includeDisabled, skipPatterns, noSkip} = parseArgs(
       process.argv.slice(2)
     );
-    const skipMatchers = compileSkipMatchers(skipPatterns);
 
     logConfigSummary();
     log(
       `Options: format=${format}` +
         (includeDisabled ? ' includeDisabled' : '') +
-        (skipPatterns.length
-          ? ` skip=${JSON.stringify(skipPatterns)}`
-          : ' no-skip')
+        (noSkip
+          ? ' no-skip'
+          : skipPatterns !== undefined
+            ? ` skip=${JSON.stringify(skipPatterns)}`
+            : ' skip=default')
     );
 
     await probeCouchHttp(CONNECT_TIMEOUT_MS);
@@ -276,48 +274,18 @@ const main = async () => {
       `Fetched ${allUsers.length} people docs in ${Date.now() - fetchStarted}ms`
     );
 
-    const users = filterPeopleUsersForList(allUsers, includeDisabled);
-    log(
-      `After disabled filter: ${users.length} users` +
-        (includeDisabled ? ' (including disabled)' : ' (active only)')
-    );
+    const includeSkipped = noSkip || skipPatterns !== undefined;
+    let rows = listUserEmails(allUsers, {
+      includeArchived: includeDisabled,
+      includeSkipped,
+    });
 
-    type Row = {
-      email: string;
-      name: string;
-      userId: string;
-      disabled: boolean;
-      verified: boolean;
-    };
-
-    const rows: Row[] = [];
-    const seen = new Set<string>();
-    let skipped = 0;
-
-    for (const user of users) {
-      for (const entry of user.emails ?? []) {
-        const email = (entry.email ?? '').trim().toLowerCase();
-        if (!email || seen.has(email)) continue;
-        if (shouldSkipEmail(email, skipMatchers)) {
-          skipped += 1;
-          continue;
-        }
-        seen.add(email);
-        rows.push({
-          email,
-          name: user.name ?? '',
-          userId: user.user_id ?? user._id,
-          disabled: isPeopleUserAccountDisabled(user),
-          verified: entry.verified === true,
-        });
-      }
+    if (skipPatterns !== undefined && skipPatterns.length > 0) {
+      const skipMatchers = compileSkipMatchers(skipPatterns);
+      rows = rows.filter(row => !shouldSkipEmail(row.email, skipMatchers));
     }
 
-    rows.sort((a, b) => a.email.localeCompare(b.email));
-
-    log(
-      `users=${users.length} emails=${rows.length} skipped=${skipped} format=${format}`
-    );
+    log(`users=${allUsers.length} emails=${rows.length} format=${format}`);
 
     if (format === 'lines') {
       for (const row of rows) {
