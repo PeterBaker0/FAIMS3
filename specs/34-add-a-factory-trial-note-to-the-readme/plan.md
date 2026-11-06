@@ -5,7 +5,7 @@ One tiny pull request. Size **s**, risk **low**. Let's pin a sentence to the top
 ```yaml
 tasks:
   - key: add-readme-note
-    title: "🎉 Pin the factory trial sentence to the README"
+    title: '🎉 Pin the factory trial sentence to the README'
     description: >-
       ✨ Drop "Factory trial: this sentence was added by the control plane."
       onto line 1 of the root README.md and leave line 2 as a cheerful blank. 📝
