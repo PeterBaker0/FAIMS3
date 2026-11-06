@@ -22,5 +22,5 @@ tasks:
       - 4
     risk: low
     size: s
-    tier: 1
+    tier: cheap
 ```
