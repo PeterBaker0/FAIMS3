@@ -4,10 +4,10 @@
  */
 
 import {migrateNotebook} from '@faims3/data-model';
-import {render, waitFor} from '@testing-library/react';
+import {fireEvent, render, screen, waitFor} from '@testing-library/react';
 import {ReactNode} from 'react';
 import {useStore} from 'react-redux';
-import {describe, expect, it, vi} from 'vitest';
+import {beforeEach, describe, expect, it, vi} from 'vitest';
 import {DesignerWidget} from './DesignerWidget';
 import type {
   AppState,
@@ -49,6 +49,26 @@ vi.mock('./components/notebook-editor', () => ({
 vi.mock('./components/info-panel', () => ({InfoPanel: () => null}));
 vi.mock('./components/design-panel', () => ({DesignPanel: () => null}));
 
+const postFeedback = vi.hoisted(() =>
+  vi.fn().mockResolvedValue({message: 'Feedback sent'})
+);
+vi.mock('@/hooks/queries', () => ({
+  postFeedback: (...args: unknown[]) => postFeedback(...args),
+}));
+vi.mock('@/context/auth-provider', () => ({
+  useAuth: () => ({
+    user: {
+      token: 'test-token',
+      refreshToken: 'refresh',
+      decodedToken: null,
+      user: {id: 'u1', name: 'Ada', email: 'ada@example.com', isVerified: true},
+    },
+  }),
+}));
+vi.mock('sonner', () => ({
+  toast: {success: vi.fn(), error: vi.fn()},
+}));
+
 /** Fresh copy without designer identifiers, as a refetch delivers it. */
 const fetchNotebook = (): NotebookWithHistory => {
   const {migrated} = migrateNotebook(structuredClone(sampleNotebook));
@@ -65,6 +85,11 @@ const fetchNotebook = (): NotebookWithHistory => {
 };
 
 describe('DesignerWidget', () => {
+  beforeEach(() => {
+    postFeedback.mockClear();
+    postFeedback.mockResolvedValue({message: 'Feedback sent'});
+  });
+
   it('keeps originalFieldIdentifiers in step with the store after a same-notebook refetch', async () => {
     const {rerender} = render(
       <DesignerWidget
@@ -89,5 +114,34 @@ describe('DesignerWidget', () => {
     expect(storeIds.length).toBeGreaterThan(0);
     expect(new Set(storeIds).size).toBe(storeIds.length);
     expect(seen.contextIds.at(-1)).toEqual(new Set(storeIds));
+  });
+
+  it('shows Feedback in the AppBar and submit does not close or save the editor', async () => {
+    const onClose = vi.fn();
+    render(
+      <DesignerWidget
+        notebook={fetchNotebook()}
+        existingRecordCount={3}
+        onClose={onClose}
+        loadingDuration={0}
+      />
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId('web-designer-feedback-button')).toBeTruthy()
+    );
+    fireEvent.click(screen.getByTestId('web-designer-feedback-button'));
+    fireEvent.change(screen.getByTestId('web-designer-feedback-message'), {
+      target: {value: 'The undo stack is confusing.'},
+    });
+    fireEvent.click(screen.getByTestId('web-designer-feedback-send'));
+
+    await waitFor(() => expect(postFeedback).toHaveBeenCalledTimes(1));
+    const payload = postFeedback.mock.calls[0][0] as {
+      data: {source: string};
+    };
+    expect(payload.data.source).toBe('designer');
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByTestId('web-designer-shell')).toBeTruthy();
   });
 });
