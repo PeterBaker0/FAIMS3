@@ -33,6 +33,7 @@ import {schemaWithAbsent} from '../../../validationModule/readableErrors';
 import {BaseFieldParametersSchema, INPUT_LIMITS} from '@faims3/data-model';
 import {FullFieldProps} from '../../../formModule/types';
 import {ChoiceElementPropsSchema, ChoiceOption} from '../choiceFieldParams';
+import {visibleChoiceOptions} from '../visibleChoiceOptions';
 import {ListWrapper} from '../../../rendering/fields/view/wrappers/PrimitiveWrappers';
 import {FieldInfo} from '../../types';
 import {contentToSanitizedHtml} from '../RichText/DomPurifier';
@@ -501,7 +502,14 @@ export const MultiSelect = (props: FieldProps) => {
   const exclusiveOptions = ElementProps.exclusiveOptions ?? [];
   const enableOtherOption = ElementProps.enableOtherOption ?? false;
   const otherOptionPosition = ElementProps.otherOptionPosition;
+  // Validation and Other detection use the full list; rendering uses the
+  // filtered subset (selected-but-failing members stay visible).
   const predefinedValues = ElementProps.options.map(opt => opt.value);
+  const visibleOptions = visibleChoiceOptions({
+    options: ElementProps.options,
+    values: props.conditionValues ?? {},
+    selected: value,
+  });
 
   const {setOtherSelected, hasOtherSelected, otherText, handleOtherTextChange} =
     useOtherOption({
@@ -555,7 +563,7 @@ export const MultiSelect = (props: FieldProps) => {
       <Box sx={{mb: 1}}>
         {isExpandedChecklist ? (
           <ExpandedChecklist
-            options={ElementProps.options}
+            options={visibleOptions}
             value={uiValue}
             onChange={handleChange}
             exclusiveOptions={exclusiveOptions}
@@ -569,7 +577,7 @@ export const MultiSelect = (props: FieldProps) => {
           />
         ) : (
           <MuiMultiSelect
-            options={ElementProps.options}
+            options={visibleOptions}
             value={uiValue}
             onChange={handleChange}
             exclusiveOptions={exclusiveOptions}

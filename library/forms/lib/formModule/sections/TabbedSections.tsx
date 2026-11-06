@@ -2,6 +2,7 @@
 import {
   getFieldLabel,
   getFieldsForView,
+  type RecordValues,
   type UiSpecModel,
 } from '@faims3/data-model';
 import {
@@ -661,6 +662,8 @@ interface TabbedSectionDisplayProps {
    * When undefined, all fields and sections are visible.
    */
   fieldVisibilityMap: FieldVisibilityMap | undefined;
+  /** Same bag field/section visibility uses, so sibling edits re-filter options. */
+  conditionValues?: RecordValues;
   /**
    * Optional handler for the mobile stepper's complete action on the final section.
    * When provided, replaces the disabled "Next" button with a clickable button.
@@ -710,6 +713,7 @@ export const TabbedSectionDisplay: React.FC<TabbedSectionDisplayProps> = ({
   spec,
   config,
   fieldVisibilityMap,
+  conditionValues,
   onCompleteHandler,
 }) => {
   const theme = useTheme();
@@ -1142,6 +1146,7 @@ export const TabbedSectionDisplay: React.FC<TabbedSectionDisplayProps> = ({
             section={activeSection}
             config={config}
             fieldVisibilityMap={fieldVisibilityMap}
+            conditionValues={conditionValues}
           />
         ) : (
           <Typography variant="subtitle1" sx={{textAlign: 'center', py: 4}}>

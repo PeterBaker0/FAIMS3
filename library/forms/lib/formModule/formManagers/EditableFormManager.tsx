@@ -182,12 +182,15 @@ export const EditableFormManager: React.FC<
   // ---------------------------------------------------------------------------
   // Visibility Tracking
   // ---------------------------------------------------------------------------
-  const [visibleMap, setVisibleMap] = useState<FieldVisibilityMap>(
+  const [conditionValues, setConditionValues] = useState(() =>
+    buildConditionValues({
+      values: formDataExtractor({fullData: props.initialData ?? {}}),
+      context: buildContext(),
+    })
+  );
+  const [visibleMap, setVisibleMap] = useState<FieldVisibilityMap>(() =>
     currentlyVisibleMap({
-      values: buildConditionValues({
-        values: formDataExtractor({fullData: props.initialData ?? {}}),
-        context: buildContext(),
-      }),
+      values: conditionValues,
       uiSpec: dataEngine.uiSpec,
       viewsetId: props.formId,
     })
@@ -280,12 +283,14 @@ export const EditableFormManager: React.FC<
   // Visibility Updates
   // ---------------------------------------------------------------------------
   const updateVisibility = useCallback(() => {
+    const values = buildConditionValues({
+      values: formDataExtractor({fullData: form.state.values}),
+      context: buildContext(),
+    });
+    setConditionValues(values);
     setVisibleMap(
       currentlyVisibleMap({
-        values: buildConditionValues({
-          values: formDataExtractor({fullData: form.state.values}),
-          context: buildContext(),
-        }),
+        values,
         uiSpec: dataEngine.uiSpec,
         viewsetId: props.formId,
       })
@@ -1194,6 +1199,7 @@ export const EditableFormManager: React.FC<
         config={formManagerConfig}
         navigationContext={props.navigationContext}
         fieldVisibilityMap={visibleMap}
+        conditionValues={conditionValues}
         debugMode={debugMode}
       />
 

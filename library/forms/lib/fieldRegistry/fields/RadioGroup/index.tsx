@@ -40,6 +40,7 @@ import {schemaWithAbsent} from '../../../validationModule/readableErrors';
 import {BaseFieldParametersSchema, INPUT_LIMITS} from '@faims3/data-model';
 import {FullFieldProps} from '../../../formModule/types';
 import {ChoiceElementPropsSchema, ChoiceOption} from '../choiceFieldParams';
+import {visibleChoiceOptions} from '../visibleChoiceOptions';
 import {
   OTHER_MARKER,
   OTHER_PREFIX,
@@ -87,8 +88,15 @@ export const RadioGroup = (props: FieldProps) => {
 
   const rawValue = (state.value?.data as string) ?? '';
   const enableOtherOption = ElementProps.enableOtherOption ?? false;
-  const otherOptionPosition = ElementProps.options.length;
+  // Validation and Other detection use the full list; rendering uses the
+  // filtered subset (selected-but-failing options stay visible).
   const predefinedValues = ElementProps.options.map(opt => opt.value);
+  const visibleOptions = visibleChoiceOptions({
+    options: ElementProps.options,
+    values: props.conditionValues ?? {},
+    selected: rawValue,
+  });
+  const otherOptionPosition = visibleOptions.length;
   // if expandedChecklist is missing, we default to true - expanded by default
   const expandedChecklist = ElementProps.expandedChecklist !== false;
 
@@ -158,7 +166,7 @@ export const RadioGroup = (props: FieldProps) => {
         {expandedChecklist && (
           <RadioGroupWidget
             displayValue={displayValue}
-            options={ElementProps.options}
+            options={visibleOptions}
             enableOtherOption={enableOtherOption}
             otherOptionPosition={otherOptionPosition}
             handleChange={handleChange}
@@ -173,7 +181,7 @@ export const RadioGroup = (props: FieldProps) => {
         {!expandedChecklist && (
           <DropDownWidget
             displayValue={displayValue}
-            options={ElementProps.options}
+            options={visibleOptions}
             enableOtherOption={enableOtherOption}
             otherOptionPosition={otherOptionPosition}
             handleChange={handleChange}
