@@ -38,6 +38,11 @@ export type ConditionControlProps = {
   /** When set, restricts which fields can be chosen (e.g. same-section rules). */
   field?: string;
   view?: string;
+  /**
+   * When true with `field`, the picker includes that field so an option
+   * condition can reference its parent choice field.
+   */
+  includeField?: boolean;
 };
 
 export const ConditionControl = (props: ConditionControlProps) => {
@@ -118,6 +123,7 @@ export const ConditionControl = (props: ConditionControlProps) => {
         root={root}
         field={props.field}
         view={props.view}
+        includeField={props.includeField}
         actions={conditionEditorActions}
       />
     </Stack>

@@ -25,6 +25,7 @@ import {
   Box,
   Button,
   Checkbox,
+  Chip,
   Dialog,
   DialogActions,
   DialogContent,
@@ -48,7 +49,7 @@ import {
   Typography,
 } from '@mui/material';
 import {alpha} from '@mui/material/styles';
-import {ChoiceElementProps} from '@faims3/forms';
+import {ChoiceElementProps, ChoiceOption} from '@faims3/forms';
 import {designerHtmlInput, INPUT_LIMITS} from '../../lib/input-limits';
 import {useMemo, useState} from 'react';
 import {useAppDispatch, useAppSelector} from '../../state/hooks';
@@ -75,7 +76,10 @@ import {DragHandle} from '../drag-handle';
 import {
   findOptionReferences,
   updateConditionReferences,
+  updateOptionConditionReferences,
 } from '../../domain/conditions/conditionReferences';
+import {ConditionModal} from '../condition/ConditionModal';
+import {ConditionType} from '../../types/condition';
 
 /**
  * OptionsEditor is a component for managing a list of options for radio buttons or multi-select fields.
@@ -109,7 +113,7 @@ interface SortableItemProps {
   // item ID
   id: string;
   // option information
-  option: {label: string; value: string};
+  option: ChoiceOption;
   // index in the list
   index: number;
   // should we show exclusive options control/column
@@ -121,7 +125,11 @@ interface SortableItemProps {
   // to change an option value
   onEdit: (value: string, index: number) => void;
   // when removed
-  onRemove: (option: {label: string; value: string}) => void;
+  onRemove: (option: ChoiceOption) => void;
+  // persist or clear this option's visibility condition
+  onConditionChange: (condition: ConditionType | null) => void;
+  // parent choice field id (option conditions may reference it)
+  fieldName: string;
   // when moved up/down
   onMove: (index: number, direction: 'up' | 'down') => void;
   // how many items in total?
@@ -277,6 +285,8 @@ const SortableItem = ({
   onRemove,
   onMove,
   totalItems,
+  onConditionChange,
+  fieldName,
 }: SortableItemProps) => {
   // Initialize drag-and-drop functionality
   const {attributes, listeners, setNodeRef, transform, transition, isDragging} =
@@ -302,20 +312,62 @@ const SortableItem = ({
         />
       </TableCell>
 
-      {/* Option text column with tooltip */}
+      {/* Option text column with tooltip and per-option condition control */}
       <TableCell sx={{py: 1, minWidth: 0}}>
-        <Tooltip title={option.label}>
-          <Typography
-            sx={{
-              maxWidth: '100%',
-              fontSize: '0.875rem',
-              whiteSpace: 'normal',
-              overflowWrap: 'anywhere',
-            }}
+        <Stack spacing={0.5} sx={{minWidth: 0}}>
+          <Tooltip title={option.label}>
+            <Typography
+              sx={{
+                maxWidth: '100%',
+                fontSize: '0.875rem',
+                whiteSpace: 'normal',
+                overflowWrap: 'anywhere',
+              }}
+            >
+              {option.label}
+            </Typography>
+          </Tooltip>
+          <Stack
+            direction="row"
+            spacing={0.75}
+            sx={{alignItems: 'center', flexWrap: 'wrap'}}
+            data-testid={`option-condition-${index}`}
           >
-            {option.label}
-          </Typography>
-        </Tooltip>
+            {option.condition != null && (
+              <Chip
+                label="Conditional"
+                size="small"
+                variant="outlined"
+                data-testid={`option-conditional-indicator-${index}`}
+                sx={{
+                  fontWeight: 650,
+                  fontSize: '0.68rem',
+                  height: 22,
+                  '& .MuiChip-label': {px: 1},
+                  borderColor: theme => alpha(theme.palette.warning.main, 0.82),
+                  color: 'warning.main',
+                  backgroundColor: theme =>
+                    alpha(theme.palette.warning.main, 0.06),
+                }}
+              />
+            )}
+            <ConditionModal
+              label={option.condition ? 'Update condition' : 'Add condition'}
+              initial={(option.condition as ConditionType | null) ?? null}
+              onChange={onConditionChange}
+              field={fieldName}
+              includeField
+              buttonSx={{
+                textTransform: 'none',
+                fontWeight: 600,
+                fontSize: '0.75rem',
+                minWidth: 0,
+                px: 1,
+                py: 0,
+              }}
+            />
+          </Stack>
+        </Stack>
       </TableCell>
 
       {/* Optional exclusive checkbox column */}
@@ -336,6 +388,7 @@ const SortableItem = ({
           <span>
             <IconButton
               size="small"
+              aria-label="Move up"
               disabled={index === 0}
               onClick={() => onMove(index, 'up')}
               sx={{p: {xs: 0.25, sm: 0.5}, color: 'text.secondary'}}
@@ -350,6 +403,7 @@ const SortableItem = ({
           <span>
             <IconButton
               size="small"
+              aria-label="Move down"
               disabled={index === totalItems - 1}
               onClick={() => onMove(index, 'down')}
               sx={{p: {xs: 0.25, sm: 0.5}, color: 'text.secondary'}}
@@ -363,6 +417,7 @@ const SortableItem = ({
         <Tooltip title="Edit option">
           <IconButton
             size="small"
+            aria-label="Edit option"
             onClick={() => onEdit(option.label, index)}
             sx={{p: {xs: 0.25, sm: 0.5}, color: 'success.main'}}
           >
@@ -372,6 +427,7 @@ const SortableItem = ({
         <Tooltip title="Delete option">
           <IconButton
             size="small"
+            aria-label="Delete option"
             onClick={() => onRemove(option)}
             sx={{p: {xs: 0.25, sm: 0.5}, color: 'error.main'}}
           >
@@ -384,7 +440,7 @@ const SortableItem = ({
 };
 
 type CombinedRow =
-  | {id: string; type: 'option'; option: {label: string; value: string}}
+  | {id: string; type: 'option'; option: ChoiceOption}
   | {id: string; type: 'other'};
 
 /**
@@ -446,8 +502,7 @@ export const OptionsEditor = ({
     updateConditions: boolean;
   } | null>(null);
 
-  const options: Array<{label: string; value: string}> =
-    elementProps?.options || [];
+  const options: ChoiceOption[] = elementProps?.options || [];
   const exclusiveOptions: string[] = elementProps?.exclusiveOptions || [];
   const enableOther: boolean = elementProps?.enableOtherOption ?? false;
   const otherOptionPosition: number =
@@ -515,7 +570,7 @@ export const OptionsEditor = ({
    * @param updatedExclusiveOptions - New exclusive options array
    */
   const updateField = (
-    updatedOptions: Array<{label: string; value: string}>,
+    updatedOptions: ChoiceOption[],
     updatedExclusiveOptions: string[],
     updatedOtherOptionPosition?: number
   ) => {
@@ -524,14 +579,14 @@ export const OptionsEditor = ({
       'component-parameters'
     ] as ChoiceComponentParameters;
 
-    // Update field with new options and handle radio button IDs
+    // Keep every option property (including `condition`) across rebuilds.
     newParams.ElementProps = {
       ...newParams.ElementProps,
       options: updatedOptions.map((o, index) => {
         if (fieldName.includes('radio')) {
           return {
-            RadioProps: {id: 'radio-group-field-' + index},
             ...o,
+            RadioProps: o.RadioProps ?? {id: 'radio-group-field-' + index},
           };
         }
         return o;
@@ -553,32 +608,58 @@ export const OptionsEditor = ({
   };
 
   /**
-   * Used when user chooses to auto-update references in conditions
+   * Used when user chooses to auto-update references in conditions.
+   * Option rewrites on `fieldName` itself are applied by the caller so a
+   * later `updateField` is not overwritten with a stale options list.
    */
   const updateConditions = (oldValue: string, newValue: string) => {
-    // Field-level conditions
     for (const fId in allFields) {
       const fieldDef = allFields[fId];
-      if (!fieldDef.condition) continue;
+      const nextField: FieldType = {...fieldDef};
+      let fieldChanged = false;
 
-      const updatedCondition = updateConditionReferences(
-        fieldDef.condition,
-        fieldName,
-        oldValue,
-        newValue
-      );
-
-      if (updatedCondition !== fieldDef.condition) {
-        dispatch(
-          fieldUpdated({
-            fieldName: fId,
-            newField: {...fieldDef, condition: updatedCondition},
-          })
+      if (fieldDef.condition) {
+        const updatedCondition = updateConditionReferences(
+          fieldDef.condition,
+          fieldName,
+          oldValue,
+          newValue
         );
+        if (updatedCondition !== fieldDef.condition) {
+          nextField.condition = updatedCondition;
+          fieldChanged = true;
+        }
+      }
+
+      if (fId !== fieldName) {
+        const sourceOptions =
+          (fieldDef['component-parameters'] as ChoiceComponentParameters)
+            .ElementProps?.options ?? [];
+        const rewrittenOptions = updateOptionConditionReferences(
+          sourceOptions,
+          fieldName,
+          oldValue,
+          newValue
+        );
+        if (rewrittenOptions !== sourceOptions) {
+          nextField['component-parameters'] = {
+            ...nextField['component-parameters'],
+            ElementProps: {
+              ...(
+                nextField['component-parameters'] as ChoiceComponentParameters
+              ).ElementProps,
+              options: rewrittenOptions as ChoiceOption[],
+            },
+          };
+          fieldChanged = true;
+        }
+      }
+
+      if (fieldChanged) {
+        dispatch(fieldUpdated({fieldName: fId, newField: nextField}));
       }
     }
 
-    // Section-level conditions
     for (const vId in allFviews) {
       const sectionDef = allFviews[vId];
       if (!sectionDef.condition) continue;
@@ -627,7 +708,7 @@ export const OptionsEditor = ({
     const newOptions = newCombined
       .filter(r => r.type === 'option')
       .map(r => optionMap.get(r.id))
-      .filter(Boolean) as Array<{label: string; value: string}>;
+      .filter(Boolean) as ChoiceOption[];
 
     // Safety: if mapping failed, do nothing
     if (newOptions.length !== options.length) return;
@@ -680,7 +761,7 @@ export const OptionsEditor = ({
     if (error) {
       setErrorMessage(error);
     } else {
-      const newOptionObj = {label: newOption, value: newOption};
+      const newOptionObj: ChoiceOption = {label: newOption, value: newOption};
       updateField([...options, newOptionObj], exclusiveOptions);
       setErrorMessage('');
       setNewOption('');
@@ -701,7 +782,7 @@ export const OptionsEditor = ({
    * Removes an option from the list.
    * If the option is used in any condition, show a warning dialog instead.
    */
-  const removeOption = (option: {label: string; value: string}) => {
+  const removeOption = (option: ChoiceOption) => {
     // Check if this option is referenced in any condition.
     const references = findOptionReferences(
       allFields,
@@ -747,24 +828,37 @@ export const OptionsEditor = ({
   };
 
   /**
-   * Actually rename the option in the Redux store (does not alter conditions)
+   * Rename the option in place, keeping `condition` and other extra keys.
    */
-  const doRenameOption = (newValue: string, index: number) => {
+  const renamedOptions = (newValue: string, index: number): ChoiceOption[] => {
     const newOptions = [...options];
-    newOptions[index] = {label: newValue, value: newValue};
-
-    const newField: FieldType = {
-      ...field,
-      'component-parameters': {
-        ...field['component-parameters'],
-        ElementProps: {
-          ...elementProps,
-          options: newOptions,
-        },
-      },
+    newOptions[index] = {
+      ...options[index],
+      label: newValue,
+      value: newValue,
     };
+    return newOptions;
+  };
 
-    dispatch(fieldUpdated({fieldName, newField}));
+  /**
+   * Persist or clear the visibility condition on one option. Clearing deletes
+   * the property rather than leaving `null`.
+   */
+  const setOptionCondition = (
+    index: number,
+    condition: ConditionType | null
+  ) => {
+    const newOptions = options.map((opt, i) => {
+      if (i !== index) return opt;
+      const next: ChoiceOption = {...opt};
+      if (condition == null) {
+        delete next.condition;
+      } else {
+        next.condition = condition;
+      }
+      return next;
+    });
+    updateField(newOptions, exclusiveOptions);
   };
 
   /**
@@ -786,13 +880,21 @@ export const OptionsEditor = ({
       return;
     }
 
-    // Rename in Redux
-    doRenameOption(newValue, editingOption.index);
+    let newOptions = renamedOptions(newValue, editingOption.index);
+    const newExclusiveOptions = exclusiveOptions.map(value =>
+      value === editingOption.value ? newValue : value
+    );
 
-    // If chosen, also update references in conditions
     if (renameDialogState?.updateConditions) {
+      newOptions = updateOptionConditionReferences(
+        newOptions,
+        fieldName,
+        editingOption.value,
+        newValue
+      ) as ChoiceOption[];
       updateConditions(editingOption.value, newValue);
     }
+    updateField(newOptions, newExclusiveOptions);
 
     // Close dialog
     setEditingOption(null);
@@ -982,6 +1084,10 @@ export const OptionsEditor = ({
                                 onRemove={removeOption}
                                 onMove={moveOption}
                                 totalItems={options.length}
+                                fieldName={fieldName}
+                                onConditionChange={condition =>
+                                  setOptionCondition(optionIndex, condition)
+                                }
                               />
                             );
                           })}

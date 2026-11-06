@@ -74,6 +74,30 @@ type ViewConditionMap = Record<
   }
 >;
 
+type ChoiceOptionWithCondition = {
+  label?: string;
+  value?: string;
+  condition?: ConditionType | null;
+};
+
+/** Stored option conditions use the same AST; operator is a string on the forms type. */
+const asConditionType = (condition: unknown): ConditionType =>
+  condition as ConditionType;
+
+/** Reads `ElementProps.options` from a field without assuming the forms type. */
+const fieldChoiceOptions = (
+  fieldDefinition: FieldType
+): ChoiceOptionWithCondition[] => {
+  const params = fieldDefinition['component-parameters'] as {
+    ElementProps?: {options?: ChoiceOptionWithCondition[]};
+  };
+  return params.ElementProps?.options ?? [];
+};
+
+const fieldLabel = (fieldDefinition: FieldType, fieldId: string): string =>
+  (fieldDefinition['component-parameters'].label as string | undefined) ??
+  fieldId;
+
 /**
  * Whether a condition tree references `fieldName` with `expectedValue` (scalar or array member).
  *
@@ -129,9 +153,18 @@ export const findOptionReferences = (
       fieldDefinition.condition &&
       doesConditionContainValue(fieldDefinition.condition, fieldName, oldValue)
     ) {
-      references.push(
-        `Field: ${fieldDefinition['component-parameters'].label ?? fieldId}`
-      );
+      references.push(`Field: ${fieldLabel(fieldDefinition, fieldId)}`);
+    }
+
+    for (const option of fieldChoiceOptions(fieldDefinition)) {
+      if (
+        option.condition &&
+        doesConditionContainValue(option.condition, fieldName, oldValue)
+      ) {
+        references.push(
+          `Option: ${option.label ?? option.value ?? ''} in ${fieldLabel(fieldDefinition, fieldId)}`
+        );
+      }
     }
   }
 
@@ -150,6 +183,40 @@ export const findOptionReferences = (
   }
 
   return references;
+};
+
+/**
+ * Rewrites option-level conditions on a choice field that compare `fieldName`
+ * against `oldValue`. Returns the original array when nothing changed.
+ *
+ * @param options - Options that may carry a `condition`.
+ * @param fieldName - Field whose option value is changing.
+ * @param oldValue - Previous option value.
+ * @param newValue - Replacement option value.
+ */
+export const updateOptionConditionReferences = <
+  T extends {condition?: unknown},
+>(
+  options: T[],
+  fieldName: string,
+  oldValue: string,
+  newValue: string
+): T[] => {
+  let changed = false;
+  const updated = options.map(option => {
+    if (!option.condition) return option;
+    const current = asConditionType(option.condition);
+    const nextCondition = updateConditionReferences(
+      current,
+      fieldName,
+      oldValue,
+      newValue
+    );
+    if (nextCondition === current) return option;
+    changed = true;
+    return {...option, condition: nextCondition};
+  });
+  return changed ? updated : options;
 };
 
 /**

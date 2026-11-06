@@ -9,6 +9,7 @@ import {
   isFieldUsedInCondition,
   replaceFieldInCondition,
   updateConditionReferences,
+  updateOptionConditionReferences,
 } from './conditionReferences';
 import type {FieldType} from '../../state/initial';
 import type {ConditionType, RuleCondition} from '../../types/condition';
@@ -86,11 +87,33 @@ const dependentField: FieldType = {
   condition: {operator: 'equal', field: 'choice', value: 'A'},
 };
 
+const cascadingSelect: FieldType = {
+  exportName: 'hazards',
+  'component-namespace': 'faims-custom',
+  'component-name': 'MultiSelect',
+  'type-returned': 'faims-core::Array',
+  'component-parameters': {
+    name: 'hazards',
+    label: 'Hazards',
+    ElementProps: {
+      options: [
+        {label: 'None observed', value: 'None observed'},
+        {
+          label: 'Asbestos',
+          value: 'Asbestos',
+          condition: {operator: 'equal', field: 'choice', value: 'A'},
+        },
+      ],
+    },
+  },
+};
+
 describe('conditionReferences — option value references', () => {
-  it('finds option references in field and section conditions', () => {
+  it('finds option references in field, section, and other option conditions', () => {
     const fields: Record<string, FieldType> = {
       choice: selectField,
       dependent: dependentField,
+      hazards: cascadingSelect,
     };
 
     const sectionCondition: ConditionType = {
@@ -108,6 +131,7 @@ describe('conditionReferences — option value references', () => {
 
     expect(references).toContain('Field: Dependent');
     expect(references).toContain('Section: Section A');
+    expect(references).toContain('Option: Asbestos in Hazards');
   });
 
   it('updates matching condition values only', () => {
@@ -152,5 +176,34 @@ describe('conditionReferences — option value references', () => {
 
     expect((firstCondition as RuleCondition).value).toBe('AA');
     expect((secondCondition as RuleCondition).value).toBe('A');
+  });
+
+  it('rewrites matching values inside option-level conditions', () => {
+    const options: Array<{
+      label: string;
+      value: string;
+      condition?: ConditionType;
+    }> = [
+      {label: 'None observed', value: 'None observed'},
+      {
+        label: 'Asbestos',
+        value: 'Asbestos',
+        condition: {operator: 'equal', field: 'choice', value: 'A'},
+      },
+    ];
+
+    const updated = updateOptionConditionReferences(
+      options,
+      'choice',
+      'A',
+      'AA'
+    );
+
+    expect(updated[1].condition).toEqual({
+      operator: 'equal',
+      field: 'choice',
+      value: 'AA',
+    });
+    expect(updated[0]).toBe(options[0]);
   });
 });
