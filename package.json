@@ -63,7 +63,8 @@
     "typescript": "^7.0.2"
   },
   "lint-staged": {
-    "*.{js,jsx,ts,tsx,mts,cts,mjs,cjs,json,jsonc,css,scss,less,md,mdx,yml,yaml,html,vue,svelte}": "oxfmt --write"
+    "!(specs)/**/*.{js,jsx,ts,tsx,mts,cts,mjs,cjs,json,jsonc,css,scss,less,md,mdx,yml,yaml,html,vue,svelte}": "oxfmt --write",
+    "./*.{js,jsx,ts,tsx,mts,cts,mjs,cjs,json,jsonc,css,scss,less,md,mdx,yml,yaml,html,vue,svelte}": "oxfmt --write"
   },
   "engines": {
     "node": "24"
