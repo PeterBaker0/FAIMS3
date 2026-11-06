@@ -354,9 +354,8 @@ export default function MainAppBar() {
               ) : (
                 <ListItemButton
                   key={item.title}
-                  to={item.to}
-                  component={RouterLink}
                   disabled={item.disabled}
+                  {...(item.to ? {to: item.to, component: RouterLink} : {})}
                   onClick={toggle}
                 >
                   <ListItemIcon>{item.icon}</ListItemIcon>
