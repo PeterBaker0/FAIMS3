@@ -36,11 +36,11 @@ the outlier.
   direction): the same corner the advanced-helper close already uses.
   Prefer a logical inset (`insetInlineEnd`) over a physical `right` so the
   control stays trailing in RTL.
-- Keep both controls tappable: not under the App app bar, Capacitor status
-  bar, notch, or other system chrome. Safe-area inset on the trailing and
-  top edges is required. Extra top offset is allowed only if needed to stay
-  clear of chrome; it must not be a reason to keep the control on the
-  start/left side.
+- Keep the lightbox close tappable: not under the App app bar, Capacitor
+  status bar, notch, or other system chrome. Safe-area inset on the
+  trailing and top edges is required. Extra top offset is allowed only if
+  needed to stay clear of chrome; it must not be a reason to keep the
+  control on the start/left side.
 - Prefer a `PhotoLightbox` change so Take Photo and Quick Share pick up the
   same corner. Edit `FieldWrapper` only if the helper close is no longer
   top-end after that.
@@ -49,36 +49,20 @@ the outlier.
   is the smallest way to keep the two corners aligned.
 - Preserve existing close behaviour: the labelled button still dismisses
   the overlay; Escape, backdrop/outside tap, and the lightbox rule that
-  pan-then-release must not close stay as they are.
+  pan-then-release must not close stay as they are. Do not add tests for
+  those existing paths.
 - Do not change Control Centre / Designer close buttons.
 
 ## 3. Acceptance criteria
 
-1. With the advanced-helper dialog open, the control named `Close` is in
-   the top-end corner of the dialog paper (trailing edge of the title row
-   in LTR).
-2. With `PhotoLightbox` open, the control named `Close preview` is in the
+1. With `PhotoLightbox` open, the control named `Close preview` is in the
    top-end corner of the full-screen overlay (trailing edge in LTR), not
    the top-start / left edge.
-3. Opening an image from advanced helper, then comparing the two overlays,
-   both close controls occupy the top-end corner of their respective
-   surfaces.
-4. The lightbox close remains fully visible and tappable on a narrow
-   viewport and with a non-zero `env(safe-area-inset-top)` /
-   `env(safe-area-inset-right)` (or equivalent test stub). It is not
-   clipped by the overlay and not covered by the App app bar.
-5. Activating `Close` dismisses the advanced-helper dialog. Activating
-   `Close preview` dismisses the lightbox. Helper image zoom still returns
-   to the helper dialog when the lightbox closes.
-6. Take Photo and Quick Share lightbox instances use the same top-end close
-   position, via the shared `PhotoLightbox` control.
-7. Keyboard and pointer close paths that already exist (Escape, labelled
-   button, lightbox backdrop tap when the user did not just pan) still
-   dismiss the overlay. Pan-then-release on a zoomed lightbox still does
-   not close it.
-8. Product source changes for this issue are limited to the forms/App
-   close-position fix and tests for it. No Designer, API, or unrelated
-   dialog churn.
+2. With the advanced-helper dialog open, the control named `Close` remains
+   in the top-end corner of the dialog paper (trailing edge of the title
+   row in LTR).
+3. Activating `Close preview` still dismisses the lightbox. Activating
+   `Close` still dismisses the advanced-helper dialog.
 
 ## 4. Out of scope
 
@@ -88,36 +72,31 @@ the outlier.
 - Map fullscreen, attachment-manager, Quick Share parent dialog, sync-mode
   help, or other App dialogs except insofar as they already use
   `PhotoLightbox`.
-- A design-system close-button extraction, RTL-only restyles beyond using
-  the top-end/trailing corner, and new browser e2e coverage
-  (unit/component tests in `@faims3/forms` are enough).
+- A design-system close-button extraction and RTL-only restyles beyond
+  using the top-end/trailing corner.
+- New browser e2e, a helper-image click-to-zoom integration test, Take
+  Photo / Quick Share surface tests, safe-area env stubs, and regression
+  tests for Escape, backdrop tap, or pan-then-release. Those paths are
+  unchanged.
 
 ## 5. Test plan
 
+Keep this small: one position assertion, plus the existing forms suite.
+
 1. `@faims3/forms` vitest (`pnpm --filter=@faims3/forms exec vitest --run`):
-   render `FieldWrapper` with advanced helper text, open the helper, assert
-   `getByRole('button', {name: 'Close'})` is present and on the trailing
-   side of the title (DOM order / computed `insetInlineEnd` or equivalent,
-   not `left`).
-2. Render `PhotoLightbox` and assert
-   `getByRole('button', {name: 'Close preview'})` is positioned on the
-   trailing / top-end edge (`insetInlineEnd` or `right`, not `left: 16`).
-3. Click-to-zoom path: helper with an `<img>`, open helper, click the
-   image, assert the lightbox close is top-end; activate it and assert the
-   helper dialog is still open.
-4. Activate each labelled close control and assert the overlay unmounts.
-5. Manual in the App (`http://localhost:3000`): open a record field with
-   advanced helper text, confirm the helper close is top-end; zoom an
-   embedded image and confirm the lightbox close is the same corner and
-   tappable below any app-bar / safe-area chrome. Spot-check Take Photo
-   and Quick Share lightbox.
+   render `PhotoLightbox` and assert
+   `getByRole('button', {name: 'Close preview'})` is on the trailing /
+   top-end edge (`insetInlineEnd` or `right`, not `left: 16`).
+2. Confirm the existing `FieldWrapper` tests still pass (helper `Close`
+   remains on the trailing title edge; no new helper test required).
+3. No new e2e. A manual glance in the App is optional, not required.
 
 ## 6. Risk class and why
 
 **Low.** Layout of an existing close `IconButton` on a shared overlay. No
 persistence, sync, auth, or form-data change. Residual risk is hiding the
-control under native chrome or covering a corner of a full-bleed image;
-both are checkable in the tests above. Size **s**.
+control under native chrome; that stays a constraint, not an extra test
+matrix. Size **s**.
 
 ## 7. Open questions
 
