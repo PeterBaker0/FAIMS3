@@ -862,7 +862,7 @@ Before we finish, let's explore the SETTINGS tab to understand sync and data man
 1. **Click on the SETTINGS tab** (next to the MY SITE DETAILSS, MAP, and DETAILS tabs)
 
 ```{screenshot} first-notebook-tutorial/qs-035-settings-tab-desktop.png
-:alt: SETTINGS tab with four panels: Quick share, reading Share this {{notebook}} with another user by generating a temporary QR code, with a SHARE THIS {{NOTEBOOK}} button; Sync Mode showing Upload and download above the helper text Choose how this {{notebook}} syncs record data with the server; Get attachments from other devices with its toggle Off and an explanation of the trade-offs; and De-activate {{Notebook}} with warning text and a red DE-ACTIVATE {{NOTEBOOK}} button
+:alt: SETTINGS tab with four panels: Quick share, reading Share this {{notebook}} with another user by generating a temporary QR code, with a SHARE THIS {{NOTEBOOK}} button; Sync Mode showing Upload and download above the helper text Choose how this {{notebook}} syncs record data with the server; Download attachments from other devices? with its toggle Off and an explanation of the trade-offs; and De-activate {{Notebook}} with warning text and a red DE-ACTIVATE {{NOTEBOOK}} button
 :align: right
 :width: 100%
 ```
@@ -894,7 +894,7 @@ You'll see several important controls:
 :width: 100%
 ```
 
-**Get attachments from other devices**
+**Download attachments from other devices?**
 
 - Toggle switch (Off by default)
 - When enabled, {{FAIMS}} automatically downloads photos and attachments created by other team members
