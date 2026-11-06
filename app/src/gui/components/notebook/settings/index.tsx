@@ -169,7 +169,7 @@ export default function NotebookSettings(props: {uiSpec: UiSpecModel}) {
             sx={{p: 2, mb: {xs: 1, sm: 2, md: 3}}}
           >
             <Typography variant={'h6'} sx={{mb: 2}}>
-              Get attachments from other devices
+              Download attachments from other devices?
             </Typography>
 
             <Box>
@@ -220,7 +220,7 @@ export default function NotebookSettings(props: {uiSpec: UiSpecModel}) {
               />
               <Typography variant={'body2'}>
                 {pullSyncEnabled
-                  ? 'This control is app and device specific. If this option is enabled, Fieldmark™ will automatically download and show images and attachments created by other devices. Be aware that this may be resource intensive and use your mobile data plan. Disable this setting to minimise network usage. This setting will not affect uploading of your data from this device to the central server. Attachments are always uploaded to the server regardless of this setting.'
+                  ? "Do you want to download attachments from other users' devices? Doing so will increase data usage and load on your device. We recommend leaving this off."
                   : 'Attachment download requires two-way sync. Change sync mode above to enable this option.'}
               </Typography>
             </Box>
