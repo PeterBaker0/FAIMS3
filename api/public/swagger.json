@@ -22,6 +22,10 @@
     {
       "name": "Records",
       "description": "Notebook record metadata, paginated hydrated field values, and full-record reads. Optional exclusive updatedAfter / updatedBefore (epoch ms) filter list and export routes. Mutating routes are omitted from this spec until records CRUD is enabled in the API."
+    },
+    {
+      "name": "Feedback",
+      "description": "Authenticated in-app feedback emailed to the install support address."
     }
   ],
   "components": {
@@ -67,6 +71,81 @@
           },
           "401": {
             "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/feedback": {
+      "post": {
+        "summary": "Submit in-app feedback",
+        "description": "Emails a short feedback message to the server-configured support inbox (`SUPPORT_EMAIL`). Requires authentication and `SUBMIT_FEEDBACK`. The client cannot choose the recipient or subject. User HTML in `message` is escaped in the HTML part of the email. Dedicated per-user rate limiting applies independently of the global IP limiter.",
+        "tags": ["Feedback"],
+        "produces": ["application/json"],
+        "security": [
+          {
+            "Auth": []
+          }
+        ],
+        "requestBody": {
+          "description": "Feedback payload",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["message", "source"],
+                "properties": {
+                  "message": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 10000,
+                    "description": "Trimmed feedback text. Empty or whitespace-only values are rejected."
+                  },
+                  "source": {
+                    "type": "string",
+                    "enum": ["app", "control-centre", "designer"],
+                    "description": "Which client surface submitted the feedback."
+                  },
+                  "pageUrl": {
+                    "type": "string",
+                    "maxLength": 2048,
+                    "description": "Optional current page URL. The API does not fetch it."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Feedback emailed to the configured support address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body (empty/overlong message, missing or invalid source, overlong pageUrl)"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "description": "Authenticated but missing Action.SUBMIT_FEEDBACK"
+          },
+          "429": {
+            "description": "Per-user feedback rate limit exceeded"
+          },
+          "503": {
+            "description": "SUPPORT_EMAIL is blank; no email is sent"
           }
         }
       }

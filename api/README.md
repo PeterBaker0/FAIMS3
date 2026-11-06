@@ -364,6 +364,16 @@ POST /api/admin/test-email
 
 Requires cluster admin authentication. Returns detailed diagnostics including timing and error suggestions.
 
+#### In-app feedback
+
+Signed-in users (with `SUBMIT_FEEDBACK`) can send a short message to the install support inbox:
+
+```HTTP
+POST /api/feedback
+```
+
+The recipient is always `SUPPORT_EMAIL` (default `support@fieldmark.au`). Clients send `message`, `source` (`app` | `control-centre` | `designer`), and an optional `pageUrl`. Unauthenticated requests return 401; callers without the permission return 403; invalid bodies return 400. A dedicated per-user limiter (`FEEDBACK_RATE_LIMITER_*`, default 5 / hour) returns 429 and does not send. A blank `SUPPORT_EMAIL` returns 503. Unlike the admin test-email route, SMTP failure is a 5xx error, not `200` with `success: false`.
+
 ### Testing
 
 Use the Mock implementation with `EMAIL_SERVICE_TYPE=MOCK` for testing. Access sent emails for verification:
