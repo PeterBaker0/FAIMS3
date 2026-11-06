@@ -54,11 +54,12 @@ structure to the Select Field. Below the Markdown syntax info banner,
 you will find the **Add Option** input and a table listing all current
 options.
 
-| Setting                | What It Does                                                                                   |
-| ---------------------- | ---------------------------------------------------------------------------------------------- |
-| **Options list**       | The choices displayed as radio buttons. Each option appears as a row in the table.             |
-| **Add "Other" Option** | Adds a special "Other" choice that prompts the collector to type a custom value when selected. |
-| **Display mode**       | Select _Expanded Checklist_ or _Dropdown list_.                                                |
+| Setting                | What It Does                                                                                                                                                          |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Options list**       | The choices displayed as radio buttons. Each option appears as a row in the table.                                                                                    |
+| **Add "Other" Option** | Adds a special "Other" choice that prompts the collector to type a custom value when selected.                                                                        |
+| **Display mode**       | Select _Expanded Checklist_ or _Dropdown list_.                                                                                                                       |
+| **Option condition**   | On each ordinary option row, **Add condition** hides that choice until another field (or this field) matches a rule. The synthetic Other row cannot take a condition. |
 
 **Managing options:**
 
@@ -70,8 +71,17 @@ options.
   option, or use the **up/down arrow** buttons in the Actions column.
 - **To delete an option:** Click the **trash** icon in the option's Actions
   column.
+- **To show an option only in some cases:** Click **Add condition** on that
+  option's row and build a rule, the same way as a field condition. A
+  **Conditional** indicator appears while a condition is set. Clearing the
+  condition removes it from that option only. Other cannot take a condition.
 - **Add "Other" Option** Click to allow the user to select 'Other' from the
   list and enter free text into this field.
+
+When a collector already has a hidden option selected (its condition later
+evaluates false), that option stays visible and selected until they change it.
+The stored value is not cleared automatically, and it still appears in view
+mode and in CSV/GIS export.
 
 **Note**: You can use Markdown syntax in
 option text (e.g., \*\*bold\*\* or \*italic\*) to add emphasis

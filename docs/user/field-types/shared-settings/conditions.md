@@ -1,7 +1,7 @@
 # Conditions
 
-_How to use the conditions builder to show or hide fields based on
-other fields' values._
+_How to use the conditions builder to show or hide fields, sections, and
+individual Select options based on other fields' values._
 
 ---
 
@@ -11,8 +11,11 @@ Conditions let you create visibility rules so that a field only appears
 when another field has a particular value. For example, you might show
 a "Please specify" text field only when a collector selects "Other" in
 a dropdown, or reveal a detailed damage assessment section only when a
-checkbox is ticked. Conditions are configured per-field in the {{Notebook}}
-Editor and evaluated dynamically during data collection.
+checkbox is ticked. The same builder also hides or shows **individual
+options** on Select single and Select multiple fields — for cascading
+vocabularies such as showing "Asbestos" only when Site type is Industrial —
+without splitting the question across two fields. Conditions are configured
+in the {{Notebook}} Editor and evaluated dynamically during data collection.
 
 ```{screenshot} field-types-design/shared-05-conditions.png
 :alt: An expanded field showing a configured condition banner
@@ -38,6 +41,11 @@ details of creating and editing conditions.
 - **Hidden fields retain their data.** If a collector fills in a
   field and it is subsequently hidden by a condition change, the
   data is preserved (not deleted).
+- **Option conditions** on Select single and Select multiple hide
+  choices from new selection when the rule is false. A selected option
+  whose condition later becomes false stays visible and selected until
+  the collector changes it; the stored value is not cleared. The
+  synthetic **Other** option cannot take a condition.
 - **Validation on hidden fields** is filtered from the visible
   error display. However, be cautious about marking conditionally
   shown fields as Required — if the field is hidden but still
