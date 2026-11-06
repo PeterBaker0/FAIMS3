@@ -21,6 +21,7 @@
     "app/android/**",
     "app/ios/**",
     "**/*.min.js",
-    "**/*.handlebars"
+    "**/*.handlebars",
+    "specs/**"
   ]
 }
