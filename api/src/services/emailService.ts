@@ -30,6 +30,8 @@ export interface EmailOptions {
   cc?: string | string[];
   /** Email BCC recipient(s) */
   bcc?: string | string[];
+  /** Per-send Reply-To. Falls back to EmailConfig.replyTo, then fromEmail. */
+  replyTo?: string;
   /** Email attachments */
   attachments?: Array<{
     filename: string;
@@ -202,7 +204,7 @@ export class SMTPEmailService extends BaseEmailService {
       cc: options.cc,
       bcc: options.bcc,
       attachments: options.attachments,
-      replyTo: this.config.replyTo || this.config.fromEmail,
+      replyTo: options.replyTo || this.config.replyTo || this.config.fromEmail,
     };
 
     try {
