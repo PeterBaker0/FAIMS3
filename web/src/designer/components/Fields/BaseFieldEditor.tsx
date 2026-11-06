@@ -64,6 +64,14 @@ const FIRST_AUTO_SYNC_DELAY_MS = 700;
 type Props = {
   fieldName: string;
   showExtraConfig?: boolean;
+  /**
+   * Show Add/Update condition and the condition summary without the
+   * extra-config card (Required, Annotation, Uncertainty, persistence,
+   * voice-to-text, template protection). Has no effect when
+   * `showExtraConfig` is true, because that card already includes the
+   * same condition controls.
+   */
+  showCondition?: boolean;
   showHelperText?: boolean;
   children?: React.ReactNode;
   // Allow field-specific updates when Required changes.
@@ -93,6 +101,7 @@ type StateType = {
 export const BaseFieldEditor = ({
   fieldName,
   showExtraConfig = true,
+  showCondition = false,
   showHelperText = true,
   children,
   onRequiredChange,
@@ -1014,6 +1023,56 @@ export const BaseFieldEditor = ({
                     </Grid>
                   )}
                 </Grid>
+              </Box>
+            )}
+          </Card>
+        </Grid>
+      )}
+
+      {/* Condition-only controls for display fields that must not expose
+          Required / Annotation / Uncertainty / persistence. Ordinary
+          fields keep conditions inside the extra-config card above. */}
+      {showCondition && !showExtraConfig && (
+        <Grid size={12}>
+          <Card variant="outlined" sx={{p: 2}}>
+            <Stack
+              direction="row"
+              sx={{
+                alignItems: 'center',
+                gap: 2,
+                flexWrap: 'wrap',
+              }}
+            >
+              <ConditionModal
+                label={state.condition ? 'Update condition' : 'Add condition'}
+                initial={state.condition}
+                onChange={conditionChanged}
+                field={fieldName}
+                buttonSx={{
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  fontSize: '0.875rem',
+                }}
+              />
+            </Stack>
+
+            {state.condition && (
+              <Box
+                sx={{
+                  ...(designerInfoCalloutSx as Record<string, unknown>),
+                  p: 1.5,
+                  mt: 2,
+                }}
+              >
+                <Typography
+                  variant="caption"
+                  sx={{fontWeight: 600, color: 'text.secondary'}}
+                >
+                  Show this field if{' '}
+                </Typography>
+                <Typography variant="caption" color="text.primary">
+                  <ConditionSummary condition={state.condition} />
+                </Typography>
               </Box>
             )}
           </Card>
