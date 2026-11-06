@@ -99,6 +99,12 @@ export type BaseFieldParameters = z.infer<typeof BaseFieldParametersSchema>;
  * fields and passes any further per-field-type parameters through unmodelled
  * (validated precisely in the forms layer via each field's `fieldPropsSchema`,
  * which depends on this package and so cannot be referenced from it).
+ *
+ * Per-option visibility for Select single / Select multiple lives on
+ * `component-parameters.ElementProps.options[].condition` using
+ * {@link ConditionalExpression}. Those conditions are not compiled onto the
+ * field (`conditionFn` remains field/section only). Absence means the option
+ * is always listed. This is additive at schema `1.0.1` — no version bump.
  */
 const fieldDefinitionBaseShape = {
   'component-namespace': z.string(),
