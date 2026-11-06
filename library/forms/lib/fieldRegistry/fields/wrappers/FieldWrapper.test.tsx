@@ -1,8 +1,56 @@
 // SPDX-License-Identifier: Apache-2.0
 import '@testing-library/jest-dom';
-import {render, screen} from '@testing-library/react';
-import {it, expect, describe} from 'vitest';
+import {render, screen, waitFor} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import {beforeAll, describe, expect, it, vi} from 'vitest';
 import FieldWrapper from './FieldWrapper';
+
+beforeAll(() => {
+  class ResizeObserverStub {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  vi.stubGlobal('ResizeObserver', ResizeObserverStub);
+});
+
+const HELPER_PNG =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+
+/** Emotion/MUI `sx` rules applied to `element`. */
+function cssTextForElement(element: Element): string {
+  const classNames = [...element.classList];
+  const parts: string[] = [];
+  for (const sheet of document.styleSheets) {
+    let rules: CSSRuleList;
+    try {
+      rules = sheet.cssRules;
+    } catch {
+      continue;
+    }
+    for (const rule of rules) {
+      if (!(rule instanceof CSSStyleRule)) continue;
+      if (classNames.some(name => rule.selectorText.includes(`.${name}`))) {
+        parts.push(rule.cssText);
+      }
+    }
+  }
+  return parts.join('\n');
+}
+
+async function openAdvancedHelper(heading = 'Site notes', helperText?: string) {
+  const user = userEvent.setup();
+  render(
+    <FieldWrapper
+      heading={heading}
+      advancedHelperText={helperText ?? 'More about this field'}
+    >
+      <input />
+    </FieldWrapper>
+  );
+  await user.click(screen.getByTestId('advanced-help'));
+  return user;
+}
 
 describe('FieldWrapper', () => {
   it('renders children', () => {
@@ -111,5 +159,62 @@ describe('FieldWrapper', () => {
 
     // Required fields should have appropriate ARIA attributes
     // (This test depends on your implementation)
+  });
+
+  it('places helper Close on the trailing title edge', async () => {
+    await openAdvancedHelper();
+    const close = await screen.findByRole('button', {name: 'Close'});
+    const title = close.closest('.MuiDialogTitle-root');
+
+    expect(title?.lastElementChild).toBe(close);
+    expect(cssTextForElement(close)).not.toMatch(/(?:^|[;{])\s*left:\s*16px/);
+  });
+
+  it('dismisses the helper dialog from the labelled Close control', async () => {
+    const user = await openAdvancedHelper();
+    await user.click(await screen.findByRole('button', {name: 'Close'}));
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('button', {name: 'Close'})
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  it('dismisses the helper dialog on Escape', async () => {
+    const user = await openAdvancedHelper();
+    await screen.findByRole('button', {name: 'Close'});
+    await user.keyboard('{Escape}');
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('button', {name: 'Close'})
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  it('opens helper image zoom and returns to the helper after Close preview', async () => {
+    const user = await openAdvancedHelper(
+      'Site notes',
+      `See the example ![Example](${HELPER_PNG})`
+    );
+    await user.click(await screen.findByRole('img', {name: 'Example'}));
+
+    const lightboxClose = await screen.findByRole('button', {
+      name: 'Close preview',
+    });
+    const css = cssTextForElement(lightboxClose);
+    expect(css).toMatch(/inset-inline-end:/);
+    expect(css).not.toMatch(/(?:^|[;{])\s*left:\s*16px/);
+    expect(css).toMatch(/safe-area-inset-right/);
+    expect(css).toMatch(/safe-area-inset-top/);
+
+    await user.click(lightboxClose);
+
+    expect(
+      screen.queryByRole('button', {name: 'Close preview'})
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('button', {name: 'Close'})).toBeInTheDocument();
+    expect(screen.getByRole('img', {name: 'Example'})).toBeInTheDocument();
   });
 });
