@@ -207,7 +207,10 @@ export const PhotoLightbox: React.FC<{
           sx={{
             position: 'absolute',
             top: 'max(56px, env(safe-area-inset-top, 0px) + 48px)',
-            left: 16,
+            // Trailing / top-end (LTR top-right), matching App dialogs and
+            // the advanced-helper Close. Keep 16px plus trailing safe-area
+            // so notches and system chrome do not cover the control.
+            insetInlineEnd: 'max(16px, env(safe-area-inset-right, 0px) + 16px)',
             // Sit above the transform wrapper so it stays tappable when zoomed.
             zIndex: 2,
             color: 'white',
