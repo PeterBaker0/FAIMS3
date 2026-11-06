@@ -17,6 +17,11 @@ export type FieldSearchScope =
       fieldId?: string;
       /** Section whose condition is being edited; scopes to its form and excludes its fields. */
       sectionId?: string;
+      /**
+       * Keep `fieldId` in the picker. Option conditions may reference their
+       * parent choice field so a MultiSelect can cascade inside one list.
+       */
+      includeField?: boolean;
     };
 
 export type FieldSearchFilters = {

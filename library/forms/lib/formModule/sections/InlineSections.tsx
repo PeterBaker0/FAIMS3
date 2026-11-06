@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import {UiSpecModel} from '@faims3/data-model';
+import {RecordValues, UiSpecModel} from '@faims3/data-model';
 import {FieldVisibilityMap, FormManagerConfig} from '../formManagers/types';
 import {FaimsForm} from '../types';
 import {FormSection} from './FormSection';
@@ -19,6 +19,8 @@ export const InlineSectionDisplay: React.FC<{
   /** Visibility information - undefined means full visibility (disabling this
    * feature) */
   fieldVisibilityMap: FieldVisibilityMap | undefined;
+  /** Same bag field/section visibility uses, so sibling edits re-filter options. */
+  conditionValues?: RecordValues;
 }> = props => {
   useEffect(() => {
     // When we first mount the component, if we have a valid nav context then we
@@ -65,6 +67,7 @@ export const InlineSectionDisplay: React.FC<{
                 section={sectionName}
                 config={props.config}
                 fieldVisibilityMap={props.fieldVisibilityMap}
+                conditionValues={props.conditionValues}
               />
             </>
           );

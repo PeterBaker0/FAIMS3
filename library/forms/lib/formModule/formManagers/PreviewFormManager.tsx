@@ -65,12 +65,15 @@ export const PreviewFormManager = (props: PreviewFormManagerProps) => {
     [props.metadataValues]
   );
 
-  const [visibleMap, setVisibleMap] = useState<FieldVisibilityMap>(
+  const [conditionValues, setConditionValues] = useState(() =>
+    buildConditionValues({
+      values: formDataExtractor({fullData: formValues}),
+      context: previewContext,
+    })
+  );
+  const [visibleMap, setVisibleMap] = useState<FieldVisibilityMap>(() =>
     currentlyVisibleMap({
-      values: buildConditionValues({
-        values: formDataExtractor({fullData: formValues}),
-        context: previewContext,
-      }),
+      values: conditionValues,
       uiSpec: uiSpec,
       viewsetId: props.formName,
     })
@@ -104,12 +107,14 @@ export const PreviewFormManager = (props: PreviewFormManagerProps) => {
         });
 
         // Updating visibility
+        const values = buildConditionValues({
+          values: formDataExtractor({fullData: form.state.values}),
+          context: previewContext,
+        });
+        setConditionValues(values);
         setVisibleMap(
           currentlyVisibleMap({
-            values: buildConditionValues({
-              values: formDataExtractor({fullData: form.state.values}),
-              context: previewContext,
-            }),
+            values,
             uiSpec: uiSpec,
             viewsetId: props.formName,
           })
@@ -120,12 +125,14 @@ export const PreviewFormManager = (props: PreviewFormManagerProps) => {
 
   // Whenever the uiSpec, formName or metadata changes, recompute the visible fields
   useEffect(() => {
+    const values = buildConditionValues({
+      values: formDataExtractor({fullData: form.state.values}),
+      context: previewContext,
+    });
+    setConditionValues(values);
     setVisibleMap(
       currentlyVisibleMap({
-        values: buildConditionValues({
-          values: formDataExtractor({fullData: form.state.values}),
-          context: previewContext,
-        }),
+        values,
         uiSpec: uiSpec,
         viewsetId: props.formName,
       })
@@ -149,6 +156,7 @@ export const PreviewFormManager = (props: PreviewFormManagerProps) => {
         uiSpec={uiSpec}
         config={config}
         fieldVisibilityMap={visibleMap}
+        conditionValues={conditionValues}
       />
     </QueryClientProvider>
   );

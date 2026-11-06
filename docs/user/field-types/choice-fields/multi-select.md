@@ -58,12 +58,13 @@ controls. Below the Markdown syntax info banner, you will find the
 **Add Option** input, the **Add "Other" Option** button, and a table
 listing all current options.
 
-| Setting                | What It Does                                                                                                                |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| **Options list**       | The choices available for selection. Each option appears as a row in the table.                                             |
-| **Add "Other" Option** | Adds a special "Other" choice that prompts the collector to type a custom value when selected.                              |
-| **Display mode**       | Select _Expanded Checklist_ or _Dropdown list_.                                                                             |
-| **Exclusive**          | A per-option checkbox that marks an option as exclusive — selecting it clears all other selections (e.g., "None observed"). |
+| Setting                | What It Does                                                                                                                                                                                                               |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Options list**       | The choices available for selection. Each option appears as a row in the table.                                                                                                                                            |
+| **Add "Other" Option** | Adds a special "Other" choice that prompts the collector to type a custom value when selected.                                                                                                                             |
+| **Display mode**       | Select _Expanded Checklist_ or _Dropdown list_.                                                                                                                                                                            |
+| **Exclusive**          | A per-option checkbox that marks an option as exclusive — selecting it clears all other selections (e.g., "None observed").                                                                                                |
+| **Option condition**   | On each ordinary option row, **Add condition** hides that choice until another field (or this field) matches a rule. Use this for cascading vocabularies inside one list. The synthetic Other row cannot take a condition. |
 
 **Note**: You can use Markdown syntax in
 option text (e.g., \*\*bold\*\* or \*italic\*) to add emphasis
@@ -88,6 +89,17 @@ or formatting to individual options.
 - **To make an option exclusive:** Tick the **Exclusive** checkbox in the
   option's row. When a collector selects an exclusive option, all other
   selections are cleared.
+- **To show an option only in some cases:** Click **Add condition** on that
+  option's row. An option condition may reference other fields in the same
+  form **and** this Select Multiple field itself, so later choices can depend
+  on earlier ticks in the same list. Other cannot take a condition.
+
+When a collector already has a hidden option selected (its condition later
+evaluates false), that option stays visible and selected until they change it.
+The stored value is not cleared automatically, and it still appears in view
+mode and in CSV/GIS export. Hidden exclusive options are not offered for new
+selection; a selected exclusive option that is kept visible still clears
+others when chosen.
 
 The display label and stored value are always the same — what your users
 see is exactly what appears in exported data.

@@ -79,6 +79,16 @@ describe('resolveFieldIdsInScope', () => {
     ).toEqual(['field-b', 'field-c']);
   });
 
+  test('context field scope can include self for option conditions', () => {
+    expect(
+      resolveFieldIdsInScope(allFields, views, viewsets, {
+        kind: 'context',
+        fieldId: 'field-a',
+        includeField: true,
+      })
+    ).toEqual(['field-a', 'field-b', 'field-c']);
+  });
+
   test('context section scope excludes section fields', () => {
     expect(
       resolveFieldIdsInScope(allFields, views, viewsets, {

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type {UiSpecModel} from '@faims3/data-model';
+import type {RecordValues, UiSpecModel} from '@faims3/data-model';
 import {FORCE_IGNORED_FIELDS} from '../../fieldRegistry';
 import {Field} from '../Field';
 import {FieldVisibilityMap, FormManagerConfig} from '../formManagers/types';
@@ -14,6 +14,8 @@ interface FormSectionProps {
   /** Visibility information - undefined means full visibility (disabling this
    * feature) */
   fieldVisibilityMap: FieldVisibilityMap | undefined;
+  /** Same bag field/section visibility uses, so sibling edits re-filter options. */
+  conditionValues?: RecordValues;
 }
 
 // A form section contains the fields defined for one section of a form
@@ -23,6 +25,7 @@ export const FormSection = ({
   form,
   config,
   fieldVisibilityMap,
+  conditionValues,
 }: FormSectionProps) => {
   const sectionSpec = uiSpec.views[section];
   if (!sectionSpec) {
@@ -79,6 +82,7 @@ export const FormSection = ({
             fieldSpec={fieldSpec}
             key={fieldName}
             config={config}
+            conditionValues={conditionValues}
           />
         );
       })}

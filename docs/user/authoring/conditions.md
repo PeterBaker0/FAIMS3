@@ -9,10 +9,25 @@ conditional structure. Conditions are created and edited using the _condition ed
 ```
 
 A condition on a _section_ or _field_ determines whether they will be shown
-in the form. Conditions are based on the values of one or more fields and
-are evaluated each time a value changes in the form. This means that when
-the user enters data in the form, some fields or sections may appear or
-disappear.
+in the form. The same condition builder can also be attached to an
+individual **option** on a Select single or Select multiple field, so that
+choice is offered only when the rule is true. Conditions are based on the
+values of one or more fields and are evaluated each time a value changes
+in the form. This means that when the user enters data in the form, some
+fields, sections, or options may appear or disappear.
+
+Option conditions are edited from the option row in the field's options
+table (**Add condition** / **Update condition**), not from the field
+toolbar. They use the same comparison and AND/OR groups as field
+conditions. Unlike a field condition, an option condition **may**
+reference the parent choice field itself so a Select multiple list can
+cascade inside one question. The synthetic **Other** option cannot take
+a condition.
+
+If a collector already selected an option and its condition later
+evaluates false, that option stays visible and selected until they change
+it. The stored value is not cleared automatically, and view mode and
+CSV/GIS export still show it.
 
 ## Simple Conditions
 
@@ -23,6 +38,8 @@ and _Value_.
 The _Field_ is the target field who's value will be compared. In
 the condition editor you will see a drop-down list of all of the fields in
 the {{notebook}}. For a condition on a field, you won't see the field itself.
+For a condition on an option, you **will** see the parent choice field, so
+a Select multiple can cascade inside one list.
 
 For the _Value_ you can generally enter a target value or select from a drop-down
 list of possible values.

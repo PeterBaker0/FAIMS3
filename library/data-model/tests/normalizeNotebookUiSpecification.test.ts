@@ -9,6 +9,7 @@ import {
   parseNotebookDefinitionUpload,
   prepareNotebookUiSpecificationInputForApi,
 } from '../src/uiSpecification/normalize';
+import {NotebookDefinitionV1_0_1Schema} from '../src/uiSpecification/types';
 
 describe('notebookUiSpecificationNeedsMigration', () => {
   it('returns true when schema version is missing (treated as v1)', () => {
@@ -57,6 +58,51 @@ describe('normalizeNotebookUiSpecification', () => {
     const current = normalizeNotebookUiSpecification(sampleNotebook);
     const again = normalizeNotebookUiSpecification(current);
     expect(again).toEqual(current);
+  });
+
+  it('keeps option-level conditions when normalising notebook JSON at 1.0.1', () => {
+    const current = normalizeNotebookUiSpecification(sampleNotebook);
+    const fields = current.uiSpec.fields as Record<
+      string,
+      {
+        'component-parameters': {
+          ElementProps?: {
+            options?: Array<{
+              value: string;
+              label: string;
+              condition?: {operator: string; field: string; value: string};
+            }>;
+          };
+        };
+      }
+    >;
+    const choiceField = Object.values(fields).find(
+      field => field['component-parameters'].ElementProps?.options?.length
+    );
+    expect(choiceField).toBeDefined();
+    const option =
+      choiceField!['component-parameters'].ElementProps!.options![0];
+    option.condition = {
+      operator: 'equal',
+      field: 'Site-Type',
+      value: 'Industrial',
+    };
+
+    const parsed = NotebookDefinitionV1_0_1Schema.parse(current);
+    expect(parsed.uiSpec.schemaVersion).toBe('1.0.1');
+    const parsedFields = parsed.uiSpec.fields as typeof fields;
+    const parsedChoice = Object.values(parsedFields).find(
+      field =>
+        field['component-parameters'].ElementProps?.options?.[0]?.condition
+    );
+    expect(
+      parsedChoice?.['component-parameters'].ElementProps?.options?.[0]
+        ?.condition
+    ).toEqual({
+      operator: 'equal',
+      field: 'Site-Type',
+      value: 'Industrial',
+    });
   });
 
   it('rejects non-object input', () => {

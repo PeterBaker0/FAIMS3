@@ -5,6 +5,7 @@ import {
   FieldDefinition,
   FormAnnotation,
   FormDataEntry,
+  RecordValues,
 } from '@faims3/data-model';
 import {Alert} from '@mui/material';
 import React, {useMemo} from 'react';
@@ -20,6 +21,8 @@ interface FieldProps {
   fieldSpec: FieldDefinition;
   form: FaimsForm;
   config: FormManagerConfig;
+  /** Same bag field/section visibility uses; re-filter options as siblings change. */
+  conditionValues?: RecordValues;
 }
 
 export const Field = React.memo((props: FieldProps) => {
@@ -142,6 +145,7 @@ export const Field = React.memo((props: FieldProps) => {
               handleBlur={field.handleBlur}
               fieldId={props.fieldId}
               trigger={triggers}
+              conditionValues={props.conditionValues}
             />
             <FieldAnnotation
               config={props.fieldSpec.meta}

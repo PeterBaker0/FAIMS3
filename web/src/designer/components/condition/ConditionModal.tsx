@@ -65,6 +65,7 @@ export const ConditionModal = (
   const {selectableFieldCount} = useConditionRuleFieldContext({
     field: props.field,
     view: props.view,
+    includeField: props.includeField,
   });
   // If there are no fields to select, show a message instead of the editor.
   const canEditCondition = selectableFieldCount > 0;
@@ -125,6 +126,7 @@ export const ConditionModal = (
               onChange={setDraft}
               field={props.field}
               view={props.view}
+              includeField={props.includeField}
             />
           ) : (
             <NoConditionFieldsMessage view={props.view} />

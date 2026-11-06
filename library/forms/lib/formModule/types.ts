@@ -3,6 +3,7 @@ import {
   BaseFieldParameters,
   FormAnnotation,
   FormUpdateData,
+  RecordValues,
 } from '@faims3/data-model';
 import {useForm} from '@tanstack/react-form';
 import React from 'react';
@@ -69,6 +70,12 @@ export type FormFieldContextProps = {
   setAttachmentSaving?: (saving: boolean) => void;
   handleBlur: () => void;
   config: FormConfig;
+  /**
+   * Value bag used to evaluate option-level conditions (same merge as field
+   * and section visibility: current record, parent, linked-record, metadata).
+   * Absent when the form manager is not tracking visibility.
+   */
+  conditionValues?: RecordValues;
   /** Special behavior triggers */
   trigger: {
     /** Force a commit/save of the current record */

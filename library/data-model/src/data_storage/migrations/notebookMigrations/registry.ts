@@ -30,6 +30,10 @@
  * silently), **minor** = significant but non-mission-critical (older apps
  * render with a warning), **major** = older apps cannot safely interpret the
  * form graph.
+ *
+ * Optional keys inside already-loose `component-parameters` (for example
+ * `options[].condition` on Select single / Select multiple) do not require a
+ * bump: older apps ignore unknown option keys and keep showing every option.
  */
 
 import type {NotebookSchemaSemver} from '../../../uiSpecification/schemaVersion';

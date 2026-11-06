@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type {UiSpecModel} from '@faims3/data-model';
+import type {RecordValues, UiSpecModel} from '@faims3/data-model';
 import {type ComponentProps} from 'react';
 import {InlineSectionDisplay} from '../sections/InlineSections';
 import {TabbedSectionDisplay} from '../sections/TabbedSections';
@@ -22,6 +22,8 @@ export interface FormManagerProps extends ComponentProps<any> {
   /** Visibility information - undefined means full visibility (disabling this
    * feature) */
   fieldVisibilityMap: FieldVisibilityMap | undefined;
+  /** Same bag field/section visibility uses, so sibling edits re-filter options. */
+  conditionValues?: RecordValues;
   debugMode?: boolean;
 }
 
@@ -48,6 +50,7 @@ export const FormManager = (props: FormManagerProps) => {
           formId={props.formName}
           spec={props.uiSpec}
           fieldVisibilityMap={props.fieldVisibilityMap}
+          conditionValues={props.conditionValues}
         />
       )}
 
@@ -59,6 +62,7 @@ export const FormManager = (props: FormManagerProps) => {
           formId={props.formName}
           spec={props.uiSpec}
           fieldVisibilityMap={props.fieldVisibilityMap}
+          conditionValues={props.conditionValues}
           onCompleteHandler={onCompleteHandler}
         />
       )}
