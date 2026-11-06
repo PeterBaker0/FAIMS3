@@ -292,6 +292,8 @@ export enum Action {
   SEND_TEST_EMAIL = 'SEND_TEST_EMAIL',
   TEST_ATTACHMENT_STORAGE = 'TEST_ATTACHMENT_STORAGE',
   VERIFY_EMAIL = 'VERIFY_EMAIL',
+  /** Authenticated in-app feedback email to the install support address. */
+  SUBMIT_FEEDBACK = 'SUBMIT_FEEDBACK',
 }
 
 /**
@@ -981,6 +983,13 @@ export const actionDetails: Record<Action, ActionDetails> = {
     resourceSpecific: false,
     resource: Resource.SYSTEM,
   },
+  [Action.SUBMIT_FEEDBACK]: {
+    name: 'Submit in-app feedback',
+    description:
+      'Submit in-app feedback which is emailed to the install support address',
+    resourceSpecific: false,
+    resource: Resource.SYSTEM,
+  },
 
   // ============================================================
   // LONG LIVED TOKEN ACTIONS
@@ -1375,6 +1384,7 @@ export const roleActions: Record<
       Action.READ_PUBLIC_TEMPLATE_DETAILS,
       Action.LIST_MAP_ASSETS,
       Action.VERIFY_EMAIL,
+      Action.SUBMIT_FEEDBACK,
 
       // Long-lived token actions for own tokens (CRUD)
       Action.CREATE_LONG_LIVED_TOKEN,
@@ -1389,6 +1399,7 @@ export const roleActions: Record<
   [Role.OPERATIONS_ADMIN]: {
     actions: [
       Action.VERIFY_EMAIL,
+      Action.SUBMIT_FEEDBACK,
 
       // Manage users
       Action.VIEW_USER_LIST,

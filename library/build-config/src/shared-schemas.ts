@@ -159,6 +159,10 @@ export const SHARED_DEFAULTS = {
   exportRateLimiterWindowMs: 600000,
   /** Export requests allowed per window. */
   exportRateLimiterPerWindow: 20,
+  /** In-app feedback limiter window (1 hour). */
+  feedbackRateLimiterWindowMs: 3600000,
+  /** Feedback POSTs allowed per user per window. */
+  feedbackRateLimiterPerWindow: 5,
   /** Age of a stuck `running` migration lock before it is stolen (30 min). */
   startupMigrationLockTimeoutMs: 1800000,
   /** Max uploaded design JSON size in the designer. */

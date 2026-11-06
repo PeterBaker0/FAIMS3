@@ -441,6 +441,17 @@ const LimitsBuildConfigSchema = z
       .int()
       .positive()
       .default(SHARED_DEFAULTS.exportRateLimiterPerWindow),
+    feedbackRateLimiterEnabled: z.boolean().default(true),
+    feedbackRateLimiterWindowMs: z
+      .number()
+      .int()
+      .positive()
+      .default(SHARED_DEFAULTS.feedbackRateLimiterWindowMs),
+    feedbackRateLimiterPerWindow: z
+      .number()
+      .int()
+      .positive()
+      .default(SHARED_DEFAULTS.feedbackRateLimiterPerWindow),
     /** Email-code / verification attempt limiter. */
     attemptLimiterEnabled: z.boolean().default(true),
     jsonBodyLimit: z.string().default(SHARED_DEFAULTS.jsonBodyLimit),

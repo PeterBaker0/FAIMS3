@@ -6,6 +6,7 @@ import {config} from '../../../buildconfig';
 import {selectActiveUser} from '../../../context/slices/authSlice';
 import {useAppSelector} from '../../../context/store';
 
+/** Mailto support link. Kept as the offline fallback next to in-app Feedback. */
 export default function SupportEmail() {
   const theme = useTheme();
   // Get active user

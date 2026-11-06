@@ -1118,6 +1118,69 @@ describe('IMPERSONATE_USER permission', () => {
   });
 });
 
+describe('SUBMIT_FEEDBACK permission', () => {
+  it('has complete actionDetails on SYSTEM and is not resource-specific', () => {
+    const details = actionDetails[Action.SUBMIT_FEEDBACK];
+    expect(details).toBeDefined();
+    expect(details.name).toBeDefined();
+    expect(details.description).toBeDefined();
+    expect(details.resource).toBe(Resource.SYSTEM);
+    expect(details.resourceSpecific).toBe(false);
+  });
+
+  it('is granted to GENERAL_USER', () => {
+    expect(
+      roleGrantsAction({
+        roles: [Role.GENERAL_USER],
+        action: Action.SUBMIT_FEEDBACK,
+      })
+    ).toBe(true);
+  });
+
+  it('is granted to OPERATIONS_ADMIN', () => {
+    expect(
+      roleGrantsAction({
+        roles: [Role.OPERATIONS_ADMIN],
+        action: Action.SUBMIT_FEEDBACK,
+      })
+    ).toBe(true);
+  });
+
+  it('is granted to GENERAL_ADMIN (via inheritance)', () => {
+    expect(
+      roleGrantsAction({
+        roles: [Role.GENERAL_ADMIN],
+        action: Action.SUBMIT_FEEDBACK,
+      })
+    ).toBe(true);
+  });
+
+  it('is NOT granted to GENERAL_CREATOR', () => {
+    expect(
+      roleGrantsAction({
+        roles: [Role.GENERAL_CREATOR],
+        action: Action.SUBMIT_FEEDBACK,
+      })
+    ).toBe(false);
+  });
+
+  it('is a different grant from SEND_TEST_EMAIL', () => {
+    expect(
+      roleGrantsAction({
+        roles: [Role.GENERAL_USER],
+        action: Action.SEND_TEST_EMAIL,
+      })
+    ).toBe(false);
+    expect(
+      roleGrantsAction({
+        roles: [Role.OPERATIONS_ADMIN],
+        action: Action.SEND_TEST_EMAIL,
+      })
+    ).toBe(true);
+    expect(Action.SUBMIT_FEEDBACK).not.toBe(Action.SEND_TEST_EMAIL);
+  });
+});
+
 describe('projectRolesUserCanInvite', () => {
   const projectId = 'survey-1';
 

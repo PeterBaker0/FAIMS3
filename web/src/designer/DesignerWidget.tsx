@@ -42,6 +42,7 @@ import {InfoPanel} from './components/info-panel';
 import {DesignPanel} from './components/design-panel';
 import {SetupFormPanel} from './components/setup-form-panel';
 import {config} from '@/constants';
+import {DesignerFeedbackControl} from '@/components/feedback/feedback-dialog';
 
 /**
  * @file Full-screen designer shell: hydrate notebook, Redux, memory router, export without internal ids.
@@ -277,18 +278,21 @@ export function DesignerWidget({
                 <Typography variant="h6" sx={{fontWeight: 'bold'}}>
                   {config.notebookNameCapitalized} Editor
                 </Typography>
-                <IconButton
-                  aria-label="close designer"
-                  data-testid="web-designer-close-button"
-                  onClick={() => setCancelDialogOpen(true)}
-                  size="small"
-                  sx={{
-                    color: 'text.secondary',
-                    '&:hover': {color: 'text.primary'},
-                  }}
-                >
-                  <CloseRoundedIcon />
-                </IconButton>
+                <Box sx={{display: 'flex', alignItems: 'center'}}>
+                  <DesignerFeedbackControl />
+                  <IconButton
+                    aria-label="close designer"
+                    data-testid="web-designer-close-button"
+                    onClick={() => setCancelDialogOpen(true)}
+                    size="small"
+                    sx={{
+                      color: 'text.secondary',
+                      '&:hover': {color: 'text.primary'},
+                    }}
+                  >
+                    <CloseRoundedIcon />
+                  </IconButton>
+                </Box>
               </Toolbar>
             </AppBar>
 

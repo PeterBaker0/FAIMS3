@@ -10,7 +10,7 @@ import {config, emailService} from '../buildconfig';
 import {EmailOptions} from '../services/emailService';
 
 /** Escape user-controlled text before interpolating it into HTML email bodies. */
-function escapeHtml(value: string): string {
+export function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -316,6 +316,112 @@ If you did not request a password reset, you can safely ignore this email. Your 
     subject,
     text: textContent,
     html: htmlContent,
+  };
+
+  await emailService.sendEmail({options: emailOptions});
+}
+
+/** Fields for the in-app feedback email sent to the install support inbox. */
+export type SupportFeedbackEmailParams = {
+  message: string;
+  source: string;
+  pageUrl?: string;
+  userId: string;
+  displayName: string;
+  emails: string[];
+  impersonatingUserId?: string;
+  userAgent: string;
+};
+
+/**
+ * Emails in-app feedback to `config.supportEmail`. From stays the notification
+ * identity. Optional per-send Reply-To is the sender's first people-db email.
+ */
+export async function sendSupportFeedbackEmail({
+  message,
+  source,
+  pageUrl,
+  userId,
+  displayName,
+  emails,
+  impersonatingUserId,
+  userAgent,
+}: SupportFeedbackEmailParams): Promise<void> {
+  const senderLabel = displayName.trim() || userId;
+  const subject = `[${config.conductorInstanceName}] Feedback (${source}) from ${senderLabel}`;
+  const sentAt = new Date().toISOString();
+  const emailList = emails.filter(Boolean);
+  const emailLines =
+    emailList.length > 0 ? emailList.join(', ') : '(none on file)';
+  const impersonationLine = impersonatingUserId
+    ? `Impersonating user id: ${impersonatingUserId}`
+    : undefined;
+  const pageUrlLine = pageUrl ? `Page URL: ${pageUrl}` : undefined;
+
+  const textContent = [
+    `In-app feedback from ${senderLabel}`,
+    '',
+    `Message:`,
+    message,
+    '',
+    '---',
+    `Source: ${source}`,
+    `User id: ${userId}`,
+    `Name: ${senderLabel}`,
+    `Emails: ${emailLines}`,
+    impersonationLine,
+    pageUrlLine,
+    `User-Agent: ${userAgent}`,
+    `Instance: ${config.conductorInstanceName}`,
+    `Conductor URL: ${config.conductorPublicUrl}`,
+    `Sent at: ${sentAt}`,
+  ]
+    .filter((line): line is string => line !== undefined)
+    .join('\n');
+
+  const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>In-app feedback</title>
+</head>
+<body>
+  <h1>In-app feedback</h1>
+  <p><strong>From:</strong> ${escapeHtml(senderLabel)} (${escapeHtml(userId)})</p>
+  <h2>Message</h2>
+  <pre style="white-space: pre-wrap; font-family: inherit;">${escapeHtml(message)}</pre>
+  <h2>Metadata</h2>
+  <ul>
+    <li><strong>Source:</strong> ${escapeHtml(source)}</li>
+    <li><strong>User id:</strong> ${escapeHtml(userId)}</li>
+    <li><strong>Name:</strong> ${escapeHtml(senderLabel)}</li>
+    <li><strong>Emails:</strong> ${escapeHtml(emailLines)}</li>
+    ${
+      impersonatingUserId
+        ? `<li><strong>Impersonating user id:</strong> ${escapeHtml(impersonatingUserId)}</li>`
+        : ''
+    }
+    ${
+      pageUrl
+        ? `<li><strong>Page URL:</strong> ${escapeHtml(pageUrl)}</li>`
+        : ''
+    }
+    <li><strong>User-Agent:</strong> ${escapeHtml(userAgent)}</li>
+    <li><strong>Instance:</strong> ${escapeHtml(config.conductorInstanceName)}</li>
+    <li><strong>Conductor URL:</strong> ${escapeHtml(config.conductorPublicUrl)}</li>
+    <li><strong>Sent at:</strong> ${escapeHtml(sentAt)}</li>
+  </ul>
+</body>
+</html>
+  `.trim();
+
+  const emailOptions: EmailOptions = {
+    to: config.supportEmail,
+    subject,
+    text: textContent,
+    html: htmlContent,
+    ...(emailList[0] ? {replyTo: emailList[0]} : {}),
   };
 
   await emailService.sendEmail({options: emailOptions});

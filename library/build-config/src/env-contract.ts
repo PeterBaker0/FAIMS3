@@ -219,6 +219,16 @@ const apiContract: Record<string, EnvResolver> = {
   EXPORT_RATE_LIMITER_PER_WINDOW: runtime =>
     runtime.limits.exportRateLimiterPerWindow ??
     SHARED_DEFAULTS.exportRateLimiterPerWindow,
+  SUPPORT_EMAIL: runtime =>
+    runtime.support.supportEmail ?? 'support@fieldmark.au',
+  FEEDBACK_RATE_LIMITER_ENABLED: runtime =>
+    runtime.limits.feedbackRateLimiterEnabled ?? true,
+  FEEDBACK_RATE_LIMITER_WINDOW_MS: runtime =>
+    runtime.limits.feedbackRateLimiterWindowMs ??
+    SHARED_DEFAULTS.feedbackRateLimiterWindowMs,
+  FEEDBACK_RATE_LIMITER_PER_WINDOW: runtime =>
+    runtime.limits.feedbackRateLimiterPerWindow ??
+    SHARED_DEFAULTS.feedbackRateLimiterPerWindow,
   ATTEMPT_LIMITER_ENABLED: runtime =>
     runtime.limits.attemptLimiterEnabled ?? true,
   REDIRECT_WHITELIST: runtime => runtime.endpoints.redirectWhitelist ?? [],

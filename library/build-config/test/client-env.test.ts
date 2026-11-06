@@ -221,6 +221,26 @@ test('parseApiEnv forces MOCK email under test even when SMTP is configured', ()
   assert.equal(parsed.emailServiceType, 'MOCK');
   assert.equal(parsed.smtp, undefined);
   assert.equal(parsed.exportRateLimiterEnabled, false);
+  assert.equal(parsed.feedbackRateLimiterEnabled, false);
+  assert.equal(parsed.supportEmail, 'support@fieldmark.au');
+});
+
+test('parseApiEnv reads SUPPORT_EMAIL and feedback limiter env', () => {
+  const parsed = parseApiEnv(
+    {
+      ...MINIMAL_API,
+      SUPPORT_EMAIL: 'ops@example.org',
+      FEEDBACK_RATE_LIMITER_ENABLED: 'true',
+      FEEDBACK_RATE_LIMITER_WINDOW_MS: '7200000',
+      FEEDBACK_RATE_LIMITER_PER_WINDOW: '3',
+    },
+    {runningUnderTest: false}
+  );
+  assert.equal(parsed.supportEmail, 'ops@example.org');
+  assert.equal(parsed.feedbackRateLimiterEnabled, true);
+  assert.equal(parsed.feedbackRateLimiterWindowMs, 7200000);
+  assert.equal(parsed.feedbackRateLimiterPerWindow, 3);
+  assert.notEqual(parsed.supportEmail, parsed.testEmailAddress);
 });
 
 test('parseApiEnv requires S3 bucket, prefix, and region when ATTACHMENT_STORAGE_TYPE is S3', () => {
@@ -479,6 +499,8 @@ test('parseApiEnv maps a generated api env into ApiRuntimeConfig', () => {
   assert.equal(parsed.shortCodePrefix, 'EXM');
   assert.equal(parsed.rateLimiterEnabled, false);
   assert.equal(parsed.jsonBodyLimit, '50mb');
+  assert.equal(parsed.supportEmail, 'support@fieldmark.au');
+  assert.equal(parsed.feedbackRateLimiterPerWindow, 5);
   assert.deepEqual(parsed.redirectWhitelist, [
     'https://web.example.org',
     'https://app.example.org',

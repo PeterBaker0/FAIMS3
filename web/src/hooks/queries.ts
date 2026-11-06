@@ -10,6 +10,8 @@ import type {
   GetTemplateByIdResponse,
   PostCreateLongLivedTokenRequest,
   PostCreateLongLivedTokenResponse,
+  PostFeedbackRequest,
+  PostFeedbackResponse,
   PostRequestEmailVerificationRequest,
   PostRequestEmailVerificationResponse,
   PutRevokeLongLivedTokenResponse,
@@ -649,3 +651,26 @@ export const revokeLongLivedToken = async ({
 
   return (await response.json()) as PutRevokeLongLivedTokenResponse;
 };
+
+/**
+ * POST /api/feedback — emails the install support address via Conductor.
+ */
+export const postFeedback = async ({
+  user,
+  data,
+}: {
+  user: User;
+  data: PostFeedbackRequest;
+}) =>
+  post<PostFeedbackRequest, PostFeedbackResponse>({
+    path: '/api/feedback',
+    data,
+    user,
+  });
+
+/** React Query mutation for {@link postFeedback}. */
+export const useSubmitFeedback = () =>
+  useMutation({
+    mutationFn: async ({user, data}: {user: User; data: PostFeedbackRequest}) =>
+      postFeedback({user, data}),
+  });

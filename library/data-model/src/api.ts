@@ -1463,6 +1463,47 @@ export type PostLongLivedTokenExchangeResponse = z.infer<
 >;
 
 // =====
+// FEEDBACK
+// =====
+
+/** Client surface that submitted in-app feedback. */
+export const FeedbackSourceSchema = z.enum([
+  'app',
+  'control-centre',
+  'designer',
+]);
+export type FeedbackSource = z.infer<typeof FeedbackSourceSchema>;
+
+/**
+ * POST /api/feedback request body. The recipient is server-configured;
+ * clients must not send `to` / `subject`.
+ */
+export const PostFeedbackRequestSchema = z.object({
+  message: z
+    .string()
+    .trim()
+    .min(1, 'Message is required')
+    .max(
+      INPUT_LIMITS.LONG_TEXT_MAX_LENGTH,
+      `Message must be at most ${INPUT_LIMITS.LONG_TEXT_MAX_LENGTH} characters`
+    ),
+  source: FeedbackSourceSchema,
+  pageUrl: z
+    .string()
+    .max(
+      INPUT_LIMITS.REDIRECT_URL_MAX_LENGTH,
+      `pageUrl must be at most ${INPUT_LIMITS.REDIRECT_URL_MAX_LENGTH} characters`
+    )
+    .optional(),
+});
+export type PostFeedbackRequest = z.infer<typeof PostFeedbackRequestSchema>;
+
+export const PostFeedbackResponseSchema = z.object({
+  message: z.string(),
+});
+export type PostFeedbackResponse = z.infer<typeof PostFeedbackResponseSchema>;
+
+// =====
 // TOMBSTONES
 // =====
 

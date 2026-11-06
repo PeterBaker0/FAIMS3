@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import {ImpersonationBanner} from '@/components/alerts/impersonation-banner';
+import {FeedbackDialog} from '@/components/feedback/feedback-dialog';
 import {VerificationAlertComponent} from '@/components/alerts/verification-alert';
 import Breadcrumbs from '@/components/breadcrumbs';
 import {LogoIcon} from '@/components/logo';
@@ -170,6 +171,7 @@ function RouteComponent() {
                 <Breadcrumbs />
               </div>
               <div className="flex shrink-0">
+                <FeedbackDialog source="control-centre" />
                 {config.docsUrl && (
                   <Button variant="outline" className="mr-2 p-2">
                     <a href={config.docsUrl} target="_blank">
