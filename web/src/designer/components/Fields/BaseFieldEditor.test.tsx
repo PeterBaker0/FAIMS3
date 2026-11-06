@@ -26,6 +26,7 @@ import {CURRENT_NOTEBOOK_UI_SCHEMA_VERSION} from '../../state/initial';
 import {fieldRenamed, loaded} from '../../store/slices/uiSpec';
 import globalTheme from '../../theme/index';
 import {ConditionType} from '../../types/condition';
+import {flushPendingDesignerEdits} from '../../state/pendingEditFlush';
 import {BaseFieldEditor} from './BaseFieldEditor';
 import {RichTextEditor} from './RichTextEditor';
 
@@ -646,6 +647,42 @@ describe('RichText field conditions', () => {
     expect(optionLabels.some(label => label.includes('Safety warning'))).toBe(
       false
     );
+  });
+});
+
+describe('BaseFieldEditor pending edit flush', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('commits DebouncedTextField keystrokes without blur', () => {
+    vi.useFakeTimers();
+    const store = storeWithTextField();
+
+    render(
+      <WithProviders store={store}>
+        <BaseFieldEditor fieldName={STORAGE_ID} showHelperText={false} />
+      </WithProviders>
+    );
+
+    const labelInput = screen.getByPlaceholderText('Enter field label');
+    fireEvent.change(labelInput, {target: {value: 'Typed without blur'}});
+
+    expect(
+      store.getState().notebook.uiSpec.present.fields[STORAGE_ID][
+        'component-parameters'
+      ].label
+    ).toBe('Site Name');
+
+    act(() => {
+      flushPendingDesignerEdits();
+    });
+
+    expect(
+      store.getState().notebook.uiSpec.present.fields[STORAGE_ID][
+        'component-parameters'
+      ].label
+    ).toBe('Typed without blur');
   });
 });
 
