@@ -131,12 +131,9 @@ function RouteComponent() {
   return (
     <>
       {!isLoading && teamIsArchived ? (
-        <Alert
-          className="mb-6 border-amber-500/40 bg-amber-500/10 text-amber-950 dark:border-amber-500/50 dark:bg-amber-500/10 dark:text-amber-50 [&>svg]:text-amber-700 dark:[&>svg]:text-amber-300"
-          role="status"
-        >
+        <Alert variant="warning" className="mb-6" role="status">
           <AlertTitle>This team is archived</AlertTitle>
-          <AlertDescription className="mt-2 space-y-2 text-amber-900/90 dark:text-amber-50/90">
+          <AlertDescription className="mt-2 space-y-2">
             <p>
               It is hidden from active team lists and cannot be used for new
               membership, invites, or in-team {config.notebookNamePlural},
@@ -147,7 +144,7 @@ function RouteComponent() {
               <Link
                 to="/archive"
                 search={{tab: 'teams'}}
-                className="font-medium text-amber-950 underline underline-offset-4 hover:text-amber-800 dark:text-amber-50 dark:hover:text-amber-200"
+                className="font-medium underline underline-offset-4 hover:text-primary"
               >
                 Open Teams in Archive
               </Link>

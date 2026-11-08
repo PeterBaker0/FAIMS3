@@ -32,11 +32,11 @@ export function RestoreTeamDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent onClick={e => e.stopPropagation()} className="text-black">
+      <DialogContent onClick={e => e.stopPropagation()}>
         <DialogHeader>
-          <DialogTitle className="text-black">Restore team</DialogTitle>
+          <DialogTitle>Restore team</DialogTitle>
           <DialogDescription asChild>
-            <p className="text-sm leading-relaxed text-black">
+            <p className="text-sm leading-relaxed">
               Restoring this team will unarchive it. Membership and owned{' '}
               {config.notebookNamePlural}, templates, and map layers are
               unchanged. You will be able to invite members and create new

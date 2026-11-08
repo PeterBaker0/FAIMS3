@@ -32,20 +32,20 @@ export function DeleteArchivedTeamDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         onClick={e => e.stopPropagation()}
-        className="max-h-[min(90vh,40rem)] overflow-y-auto text-black"
+        className="max-h-[min(90vh,40rem)] overflow-y-auto text-foreground"
       >
         <DialogHeader>
-          <DialogTitle className="text-black">
+          <DialogTitle className="text-foreground">
             Permanently delete team
           </DialogTitle>
           <DialogDescription asChild>
-            <div className="space-y-3 text-sm text-black">
-              <p className="leading-relaxed text-black">
+            <div className="space-y-3 text-sm text-foreground">
+              <p className="leading-relaxed text-foreground">
                 This permanently removes{' '}
                 <span
                   className={cn(
                     'mx-0.5 inline-block max-w-full align-middle rounded-md border border-border',
-                    'bg-muted px-1.5 py-0.5 font-mono text-sm text-black',
+                    'bg-muted px-1.5 py-0.5 font-mono text-sm text-foreground',
                     'break-words [overflow-wrap:anywhere]'
                   )}
                   title={teamName}
@@ -54,13 +54,8 @@ export function DeleteArchivedTeamDialog({
                 </span>
                 . This cannot be undone.
               </p>
-              <div
-                className={cn(
-                  'rounded-md border-2 border-red-500 bg-red-100 p-4',
-                  'text-black'
-                )}
-              >
-                <p className="leading-relaxed text-black">
+              <div className="rounded-md border-2 border-destructive bg-destructive/10 p-4 text-foreground">
+                <p className="leading-relaxed text-foreground">
                   Delete is refused while the team still owns{' '}
                   {config.notebookNamePlural}, templates, or map layers.
                   Reassign or delete those first. Membership roles for this team
