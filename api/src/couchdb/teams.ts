@@ -269,7 +269,7 @@ export const deleteTeam = async (teamId: string): Promise<void> => {
   }
 
   // Dynamic import avoids teams ↔ users ↔ auth/helpers cycle at load time.
-  const {stripTeamRolesForTeamId} = await import('./users');
+  const {stripTeamRolesForTeamId} = await import('./users.js');
   await stripTeamRolesForTeamId(teamId);
 
   // Delete the team
