@@ -46,9 +46,13 @@ server `limit` / `startKey` / `nextStartKey`; templates do not.
     `_id`). Omit it for the first page. An unknown `startKey` returns
     `{ templates: [] }` and no `nextStartKey` (same as an invalid record
     cursor), not 5xx.
-  - `nextStartKey` is present iff at least one further **visible** row
-    remains for that query. Walking `startKey=nextStartKey` until it is
-    absent must yield each visible template exactly once.
+  - `nextStartKey` is present iff the server stopped before the end of
+    the listing view: either `limit` visible rows were collected and more
+    view rows remain, or the per-request scan cap was hit with more view
+    rows remaining. Omit it only when the view is exhausted. Walking
+    `startKey=nextStartKey` until it is absent must yield each visible
+    template exactly once. Intermediate pages may be shorter than
+    `limit`, including empty, when most scanned rows are not readable.
 - **No unbounded dump.** Omitting `limit` must not return the full
   catalogue. There is no “give me everything” query on this route.
 - **Thin listings stay thin.** Rows remain `TemplateApiListItem` (no
@@ -62,15 +66,27 @@ server `limit` / `startKey` / `nextStartKey`; templates do not.
   must give that view a unique ordered key (for example
   `[ownedByTeamId, _id]` or `[ownedByTeamId, archived, _id]`) so
   `startKey` works. A design-doc update for that is in scope.
-- **Page of visible rows, not raw view rows.** `limit` counts templates
-  the caller may read after archive + `userCanReadTemplateDocument`.
-  Naive `limit` on the view then post-filter is not enough: it yields
-  short pages and can hide later visible rows. Scan the view until
-  `limit` visible items are collected or the view is exhausted, then set
-  `nextStartKey` from the last consumed view row so the next page does
-  not repeat or skip. Encoding `archived` in the view key so
-  `includeArchived` is a range query (not a full-DB post-filter) is
-  allowed and preferred.
+- **Page of visible rows, with a hard scan cap.** `limit` counts
+  templates the caller may read after archive +
+  `userCanReadTemplateDocument`. Naive `limit` on the view then
+  post-filter is not enough: it yields short pages and can hide later
+  visible rows. Fill by scanning the view in `_id` order, skipping
+  unreadables, until `limit` visible items are collected, **the view is
+  exhausted**, or **the scan cap is hit** — whichever comes first. Then
+  set `nextStartKey` from the last examined view row so the next page
+  does not repeat or skip.
+  - Per HTTP request, examine at most **500** listing-view rows
+    (`TEMPLATE_LIST_VIEW_SCAN_MAX`, same number as max `limit`). If the
+    implementer fills with repeated Couch queries, those batches must
+    sum to ≤ 500 rows and must not exceed **5** view queries. A
+    low-privilege caller must not be able to force a full-catalogue
+    server scan in one request; they iterate with `nextStartKey`
+    instead (more round trips, shorter or empty pages).
+  - Hitting the cap with `templates.length < limit` is success, not an
+    error. If more view rows remain, still return `nextStartKey`.
+  - Encoding `archived` in the view key so `includeArchived` is a range
+    query (not a full-DB post-filter) is allowed and preferred; the
+    500-row cap still applies to the ranged scan.
 - **Auth unchanged.** `LIST_TEMPLATES` still gates the route. Per-row
   `userCanReadTemplateDocument` still applies. Pages must not include
   templates the caller cannot read. `ownedByTeamDisplayName` injection
@@ -81,7 +97,10 @@ server `limit` / `startKey` / `nextStartKey`; templates do not.
   may use a client cursor stack (re-request from the start of that
   page). First page = omit `startKey`. Jump-to-last is not required
   without a total. Do not fetch the full catalogue and slice it in
-  `getPaginationRowModel` for those three tables.
+  `getPaginationRowModel` for those three tables. Next must remain
+  available when `nextStartKey` is present even if the current page is
+  shorter than `limit` or empty (scan cap), so a low-privilege user can
+  keep iterating.
 - **Compact consumers stay bounded.** Sidebar template nav and the
   create-survey template picker must call the same paginated GET (they
   may use a `limit` up to 500). They must not depend on an unbounded
@@ -111,8 +130,8 @@ server `limit` / `startKey` / `nextStartKey`; templates do not.
    returns the next distinct row(s). A further page with that page's
    `nextStartKey` (or a `limit` large enough to finish) omits
    `nextStartKey` once the catalogue is exhausted. Concatenating pages
-   equals the full visible active set in `_id` ascending order, with
-   each `_id` once.
+   — including any short pages — equals the full visible active set in
+   `_id` ascending order, with each `_id` once.
 3. `GET /api/templates?limit=0`, `limit=501`, and `limit=abc` return 400
    and the validation message `limit must be between 1 and 500`
    (`api/test/requestValidation.test.ts`). `limit=1` and `limit=500` are
@@ -131,10 +150,14 @@ server `limit` / `startKey` / `nextStartKey`; templates do not.
 6. A caller who can read only a subset of templates (no
    `READ_TEMPLATE_DETAILS` on some private rows, no
    `READ_PUBLIC_TEMPLATE_DETAILS` if those rows are public-only) never
-   sees the hidden rows on any page. With `limit=1`, enough hidden rows
-   in `_id` order before a visible one still return that visible
-   template on the first page (page-fill after permission filter, not
-   raw view `limit`).
+   sees the hidden rows on any page. Hidden rows inside the 500-row
+   scan window are skipped so a later visible template can still appear
+   on that page (page-fill after permission filter, not raw view
+   `limit`). If more than 500 consecutive unreadables precede the next
+   visible template, that request returns fewer than `limit` rows
+   (possibly none) **and** a `nextStartKey`. Walking pages still
+   reaches the visible template; a single request does not scan past
+   500 view rows to find it.
 7. `GetListTemplatesResponseSchema` accepts `{ templates }` and optional
    `nextStartKey: string`, and rejects a row that includes
    `uiSpecification`. Swagger documents `limit`, `startKey`, and
@@ -151,6 +174,12 @@ server `limit` / `startKey` / `nextStartKey`; templates do not.
    keeps the current archive/restore list split and team-scoped list
    assertions, updated to pass `limit` or follow cursors where a test
    previously assumed one payload was the entire set.
+10. Create 501 templates whose `_id` order is 500 unreadable then one
+    readable (the readable document has the greatest `_id`).
+    `GET /api/templates?limit=1` as that caller returns `templates: []`
+    and a `nextStartKey`. The follow-up
+    `GET /api/templates?limit=1&startKey=<that cursor>` returns the
+    readable template. The first page does not include it.
 
 ## 4. Out of scope
 
@@ -188,18 +217,21 @@ Automated (`@faims3/api`, vitest, in-memory PouchDB):
 3. Repeat (2) with `includeArchived=true` on archived templates, and with
    `teamId` (two teams, mixed ownership) including the combined
    `teamId` + `includeArchived=true` case.
-4. Permission fill: a user who cannot read the first N private templates
-   still receives the next visible template on `limit=1` (not an empty
-   first page while visible rows remain). Hidden ids never appear.
-5. `api/test/requestValidation.test.ts`: reject `limit=0`, `limit=501`,
+4. Permission fill inside the cap: a user who cannot read the first N
+   private templates (N well under 500) still receives the next visible
+   template on `limit=1`. Hidden ids never appear.
+5. Scan cap: 500 unreadable templates then one readable (greatest
+   `_id`). `limit=1` first page is `templates: []` with `nextStartKey`;
+   the following page returns that readable id and not sooner.
+6. `api/test/requestValidation.test.ts`: reject `limit=0`, `limit=501`,
    non-numeric `limit`; accept `limit=1`. Keep the existing invalid
    `includeArchived` case.
-6. Existing archive/restore and “list is summaries only” tests stay
+7. Existing archive/restore and “list is summaries only” tests stay
    green (they already create fewer than 50 templates).
 
 Automated (`@faims3/web`, one-shot vitest) if hooks/tables grow tests:
 
-7. Template list hooks include `limit` / `startKey` in the query key and
+8. Template list hooks include `limit` / `startKey` in the query key and
    request URL. No new browser e2e is required; pagination is proven by
    the API tests. Existing
    `e2e/test/specs/web/templates-create.e2e.ts` and
@@ -221,13 +253,16 @@ pnpm --filter=@faims3/web exec vitest --run
 This is a breaking change on a shared catalogue GET: today's clients
 treat `{ templates }` as the full visible set. Cursor + permission
 fill is easy to get wrong (short pages, skipped public rows, repeated
-ids, team view keys that cannot seek). Residual risk is contained
-because the route is already thin-listed, record listing shows the
-cursor pattern, and the collection app does not use this GET. Medium
-rather than low because Control Centre tables, sidebar, and the
-create-survey picker all consume the same payload. Medium rather than
-high because there is no new permission model and no Fieldmark local
-data path.
+ids, team view keys that cannot seek). Unbounded fill-until-`limit`
+would let a low-privilege caller force a full server-side view scan
+in one request; the 500-row / 5-query cap is what stops that, at the
+cost of empty or short pages the client must continue. Residual risk
+is contained because the route is already thin-listed, record listing
+shows the cursor pattern, and the collection app does not use this
+GET. Medium rather than low because Control Centre tables, sidebar,
+and the create-survey picker all consume the same payload. Medium
+rather than high because there is no new permission model and no
+Fieldmark local data path.
 
 ## 7. Open questions
 
@@ -238,3 +273,8 @@ data path.
 2. If product wants Control Centre “Search…” and column sort to apply to
    the whole catalogue, that is server-side filter/sort and is out of
    scope here.
+3. The scan cap is 500 view rows / 5 Couch queries per request so a
+   fully authorised `limit=500` still fills in one call. Lowering it
+   (for example 200) would throttle low-privilege callers more and make
+   the cap test cheaper; raise that only if operations wants a tighter
+   bound.
