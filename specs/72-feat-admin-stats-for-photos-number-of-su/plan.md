@@ -23,7 +23,7 @@ tasks:
       - 1
     risk: low
     size: s
-    tier: impl
+    tier: cheap
   - key: schemas
     title: Define stats contracts
     description: >
@@ -39,7 +39,7 @@ tasks:
       - 4
     risk: low
     size: s
-    tier: impl
+    tier: cheap
   - key: snapshot
     title: Build cached snapshot
     description: >
@@ -62,7 +62,7 @@ tasks:
       - 11
     risk: med
     size: m
-    tier: impl
+    tier: frontier
   - key: routes
     title: Expose stats HTTP API
     description: >
@@ -87,7 +87,7 @@ tasks:
       - 14
     risk: med
     size: m
-    tier: impl
+    tier: mid
   - key: api-tests
     title: Cover stats API
     description: >
@@ -114,7 +114,7 @@ tasks:
       - 14
     risk: med
     size: m
-    tier: test
+    tier: mid
   - key: swagger
     title: Document stats routes
     description: >
@@ -128,7 +128,7 @@ tasks:
       - 15
     risk: low
     size: s
-    tier: impl
+    tier: cheap
   - key: web-ui
     title: Add Control Centre Stats page
     description: >
@@ -148,7 +148,7 @@ tasks:
       - 13
     risk: med
     size: m
-    tier: impl
+    tier: mid
   - key: web-tests
     title: Test Stats UI gating
     description: >
@@ -167,5 +167,5 @@ tasks:
       - 13
     risk: low
     size: s
-    tier: test
+    tier: cheap
 ```
