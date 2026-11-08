@@ -67,11 +67,18 @@ Current shape:
   notebook JSON; if attached at runtime, keep them off the serialisable
   option object or allow them in the forms props schema without failing
   parse.
-- Reuse `ConditionModal` / `ConditionControl` / `ConditionSummary`.
-  Wire the control in `OptionsEditor` so Select single and Select
-  multiple both get it. Saving an option condition updates that option
-  in `ElementProps.options`; clearing **deletes** `condition` on that
-  option (do not leave `null`).
+- Reuse `ConditionModal` / `ConditionControl` / `ConditionSummary` for
+  the editor dialog. The option-row trigger must **fit the Actions
+  column** (`IconButton` size, next to edit / delete), not the
+  field-level labeled **Add condition** / **Update condition** button.
+  The column may widen slightly for one extra icon; it must not wrap
+  labeled text. Tooltip copy is **Add condition** when unset and
+  **Update condition** when set. A set condition is shown by the icon’s
+  state (e.g. colour), not a **Conditional** chip or extra column.
+  `ConditionModal` may grow an icon-only trigger; do not restyle the
+  dialog itself for this. Saving an option condition updates that
+  option in `ElementProps.options`; clearing **deletes** `condition` on
+  that option (do not leave `null`).
 - `OptionsEditor` currently rebuilds options as `{label, value}` (plus
   `RadioProps` for radio ids). Reorder, rename, exclusive toggle, and
   “Other” position changes **must keep** each option’s `condition`.
@@ -108,14 +115,18 @@ Current shape:
 ## 3. Acceptance criteria
 
 1. Expanding a Select single (`RadioGroup`) or Select multiple field in
-   the designer shows an **Add condition** control on each ordinary
-   option row. The synthetic Other row has no such control.
+   the designer shows a compact condition control on each ordinary
+   option row’s Actions column, sized like the existing edit / delete
+   icon buttons, with tooltip **Add condition**. The synthetic Other
+   row has no such control. The labeled field-level **Add condition**
+   button is not used on the option row.
 2. Saving an option condition writes
    `fields[<id>].component-parameters.ElementProps.options[<i>].condition`
    using the existing condition AST. Reloading the notebook in the
-   designer still shows that condition and an **Update condition**
-   control on that row. A **Conditional** indicator is visible on that
-   option row while a condition is set.
+   designer still shows that condition. The same compact control now
+   has tooltip **Update condition** and a set-state (e.g. colour)
+   distinct from the unset icon. No **Conditional** chip or extra
+   table column is added.
 3. Clearing the condition removes `condition` from that option object
    (property deleted, not `null`). Other options’ conditions are
    unchanged.
@@ -150,8 +161,9 @@ Current shape:
     Select multiple (`docs/user/field-types/choice-fields/multi-select.md`),
     and the shared conditions page (`docs/user/authoring/conditions.md`)
     describe per-option visibility (not only field hide/show), including
-    that a selected option stays visible if its condition becomes false
-    and that Other cannot take a condition.
+    that a selected option stays visible if its condition becomes false,
+    that Other cannot take a condition, and that the designer control
+    is a compact Actions-column icon (not the field-level button).
 
 ## 4. Out of scope
 
@@ -166,7 +178,8 @@ Current shape:
 - Notebook schema version bump, API/Couch changes, or changing how
   selected values are exported.
 - Rewriting `ConditionModal` except as needed to allow an option
-  condition to reference its parent choice field.
+  condition to reference its parent choice field, and to expose an
+  icon-only trigger that fits the option-row Actions column.
 - Cycle detection beyond what field conditions already do.
 
 ## 5. Test plan
@@ -179,12 +192,15 @@ runtime and persists a new optional key on option objects.
 Automated (designer, `@faims3/web`):
 
 1. Render `OptionsEditor` for a RadioGroup and a MultiSelect in a form
-   that also has another choice/text field. Assert **Add condition** on
-   ordinary option rows and not on Other.
+   that also has another choice/text field. Assert an Actions-column
+   condition icon (tooltip **Add condition**) on ordinary option rows
+   and not on Other. Assert the row does not contain the labeled
+   **Add condition** / **Update condition** button text.
 2. Save a simple equality condition on one option. Assert the store
-   option has the expected `condition` object and the row shows the
-   Conditional indicator. Reload from that notebook JSON; the condition
-   is still there.
+   option has the expected `condition` object and the same icon now
+   has tooltip **Update condition** (and a set-state distinct from
+   unset). Reload from that notebook JSON; the condition is still
+   there.
 3. Clear the condition. Assert `condition` is absent on that option.
 4. With a condition set, reorder the option, rename it, and
    (MultiSelect) toggle Exclusive. Assert `condition` is still present
@@ -250,14 +266,7 @@ options default to “keep stored value, still show if selected”.
 
 ## 7. Open questions
 
-1. Should a selected option whose condition becomes false be
-   auto-cleared instead of kept visible? This spec keeps the value
-   (same idea as hidden fields retaining data). Switch to auto-clear
-   only if product wants it in this change.
-2. Should older collection apps that ignore `option.condition` (and
-   therefore show every option) trigger a notebook schema **minor**
-   bump so they warn? This spec does not bump; showing extra options is
-   conservative and still a valid list.
-3. Exact control copy on the option row (**Add condition** vs a compact
-   icon) can match the field-level button or be tightened to fit the
-   options table. Behaviour in §3 is what matters.
+None. Revision feedback is incorporated: keep stored values (no
+auto-clear); do not bump the notebook schema (`condition` is optional);
+tighten the designer control to an Actions-column icon that fits the
+option row.
