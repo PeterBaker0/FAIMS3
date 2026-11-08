@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
+import {ChoiceElementProps, ChoiceOption} from '@faims3/forms';
 import {ThemeProvider} from '@mui/material/styles';
 import {ToolkitStore} from '@reduxjs/toolkit/dist/configureStore';
 import {
@@ -26,6 +27,14 @@ import {loaded} from '../../store/slices/uiSpec';
 import globalTheme from '../../theme/index';
 import {ConditionType} from '../../types/condition';
 import {OptionsEditor} from './OptionsEditor';
+
+type ChoiceComponentParameters = {ElementProps?: Partial<ChoiceElementProps>};
+
+const choiceParams = (field: FieldType): Partial<ChoiceElementProps> => {
+  const params = field['component-parameters'] as ChoiceComponentParameters;
+  params.ElementProps ??= {};
+  return params.ElementProps;
+};
 
 vi.mock('../mdx-editor', () => ({
   MdxEditor: () => null,
@@ -60,25 +69,15 @@ function choiceField(
   specName: 'RadioGroup' | 'MultiSelect',
   id: string,
   label: string,
-  options: Array<{
-    label: string;
-    value: string;
-    condition?: ConditionType;
-  }>
+  options: ChoiceOption[]
 ): FieldType {
   const field = getFieldSpec(specName);
   field['component-parameters'].name = id;
   field['component-parameters'].label = label;
   field.exportName = id;
-  (
-    field['component-parameters'] as {
-      ElementProps: {options: unknown; enableOtherOption?: boolean};
-    }
-  ).ElementProps = {
-    ...(field['component-parameters'] as {ElementProps?: object}).ElementProps,
-    options,
-    enableOtherOption: false,
-  };
+  const elementProps = choiceParams(field);
+  elementProps.options = options;
+  elementProps.enableOtherOption = false;
   return field;
 }
 
@@ -101,18 +100,10 @@ function storeWithChoiceFields(opts?: {
     },
   ]);
   if (opts?.enableOther) {
-    (
-      hazards['component-parameters'] as {
-        ElementProps: {enableOtherOption: boolean};
-      }
-    ).ElementProps.enableOtherOption = true;
+    choiceParams(hazards).enableOtherOption = true;
   }
   if (opts?.exclusive) {
-    (
-      hazards['component-parameters'] as {
-        ElementProps: {exclusiveOptions: string[]};
-      }
-    ).ElementProps.exclusiveOptions = [];
+    choiceParams(hazards).exclusiveOptions = [];
   }
 
   const notes = getFieldSpec('TextField');
@@ -148,18 +139,12 @@ function storeWithChoiceFields(opts?: {
 
 function getOptions(store: ToolkitStore<AppState>, fieldId: string) {
   return (
-    store.getState().notebook.uiSpec.present.fields[fieldId][
-      'component-parameters'
-    ] as {
-      ElementProps: {
-        options: Array<{
-          label: string;
-          value: string;
-          condition?: ConditionType;
-        }>;
-      };
-    }
-  ).ElementProps.options;
+    (
+      store.getState().notebook.uiSpec.present.fields[fieldId][
+        'component-parameters'
+      ] as ChoiceComponentParameters
+    ).ElementProps?.options ?? []
+  );
 }
 
 function optionRow(label: string) {
