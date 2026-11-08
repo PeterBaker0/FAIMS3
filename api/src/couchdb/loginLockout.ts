@@ -121,7 +121,7 @@ export const getLoginLockoutForUserId = async (
     if (error instanceof LoginLockoutUnavailableError) {
       throw error;
     }
-    wrapReadError(error, id);
+    return wrapReadError(error, id);
   }
 };
 
@@ -208,7 +208,7 @@ export const incrementLoginLockoutForUserId = async (
         } else if (error instanceof LoginLockoutUnavailableError) {
           throw error;
         } else {
-          wrapReadError(error, id);
+          return wrapReadError(error, id);
         }
       }
 
