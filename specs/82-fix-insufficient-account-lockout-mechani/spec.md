@@ -35,8 +35,10 @@ Current shape (`api/src/auth/authRoutes.ts`):
   keys.
 
 Email-code and verification-challenge limits already use the shared
-Auth CouchDB and `ATTEMPT_LIMITER_ENABLED`. Login lockout does not; it
-never reads that flag. The HTTP IP limiter (`express-rate-limit`) is a
+Auth CouchDB and `ATTEMPT_LIMITER_ENABLED`. Login lockout does not
+read that flag today. This change adds a **dedicated**
+`LOGIN_LOCKOUT_ENABLED` so tests can opt out without touching the
+email-code limiter. The HTTP IP limiter (`express-rate-limit`) is a
 separate per-process control and is not this finding.
 
 ## 2. Constraints
@@ -91,16 +93,29 @@ separate per-process control and is not this finding.
   Wrong password, disabled account, and “social-only” local login all
   count. Successful local login deletes or zeros that user’s lockout
   document so the next failure starts at 1.
-- **Fail closed on unexpected reads.** A `404` / missing doc means no
+- **Fail closed on unexpected reads (flag on only).** When
+  `loginLockoutEnabled` is true, a `404` / missing doc means no
   delay. Any other read error (network, 5xx, parse) must not
   authenticate; treat it as lockout-unavailable and reject the login
   (redirect + generic failure, no token). Login already depends on
-  Couch for the people lookup.
-- **Do not reuse `ATTEMPT_LIMITER_ENABLED`.** That flag is documented
-  as email-code / verification-challenge limits (`api/.env.dist`,
-  CDK `core.limits.attemptLimiterEnabled`, e2e README). Login lockout
-  stays on unless a future dedicated flag is added; this change does
-  not add one.
+  Couch for the people lookup. When the flag is false, skip this
+  path entirely.
+- **Dedicated `LOGIN_LOCKOUT_ENABLED`, not `ATTEMPT_LIMITER_ENABLED`.**
+  Add `LOGIN_LOCKOUT_ENABLED` (parsed boolean, default **true**) on
+  the same path as the other limit flags: `parseApiEnv` /
+  `api/.env.dist` / `@faims3/build-config` env-contract /
+  `core.limits.loginLockoutEnabled` (CDK + `LimitsBuildConfigSchema`).
+  Map it to `config.loginLockoutEnabled`. Force **false** when
+  `runningUnderTest` is true (same pattern as
+  `exportRateLimiterEnabled` in
+  `library/build-config/src/client-env/api-env.ts`), so the existing
+  API login suite does not write lockout docs. Tests that assert
+  lockout **opt in** by setting `config.loginLockoutEnabled = true`
+  (see `api/test/exportRateLimit.test.ts`). Production and local
+  `pnpm run dev` stay on unless the env is set false. Do not read
+  `ATTEMPT_LIMITER_ENABLED` for login lockout. When the flag is
+  false: skip delay checks, skip lockout reads/writes (including
+  fail-closed), and do not increment or reset lockout documents.
 - **TTL.** Include lockout docs in `api/src/couchdb/ttlCleanup.ts`.
   Delete when `lastAttemptMs` is older than 15 minutes plus the
   existing rate-limit grace (default 1 hour is fine). On read, a
@@ -123,7 +138,8 @@ separate per-process control and is not this finding.
    `failedLoginAttempts` map (or equivalent in-memory counter) that
    is consulted for lockout decisions. Reviewers can confirm this
    from the diff.
-2. Failed local login for an existing people user writes or updates
+2. With lockout opted in (`config.loginLockoutEnabled = true`),
+   failed local login for an existing people user writes or updates
    one Auth CouchDB document whose `_id` is deterministic from that
    user’s `_id`, with `count` and `lastAttemptMs`. Two sequential
    failures against the same in-memory PouchDB (stand-in for two
@@ -135,22 +151,23 @@ separate per-process control and is not this finding.
    API test file as (2).
 4. A failed local login for an identifier that is not a people user
    creates no lockout document. Command: `pnpm --filter=@faims3/api test`.
-5. After 5 recorded failures, a further `POST /auth/local`
-   (`action: 'login'`) for that user, issued before the 10s delay
-   elapses, redirects to `/login` without an `exchangeToken` and
-   without verifying the password. After the delay elapses, a login
-   with the correct password succeeds. Fake timers are allowed.
-   Command: `pnpm --filter=@faims3/api test`.
+5. With lockout opted in, after 5 recorded failures, a further
+   `POST /auth/local` (`action: 'login'`) for that user, issued
+   before the 10s delay elapses, redirects to `/login` without an
+   `exchangeToken` and without verifying the password. After the
+   delay elapses, a login with the correct password succeeds. Fake
+   timers are allowed. Command: `pnpm --filter=@faims3/api test`.
 6. Thresholds match today’s policy, asserted on the delay helper with
    fake timers: no delay for count 4; 10s remaining at count 5 with
    last attempt just now; 1m at 7; 5m at 10; 15m at 15. When half the
    period has elapsed, the helper returns approximately the remaining
    half, not the full period. Command:
    `pnpm --filter=@faims3/api test`.
-7. A successful `POST /auth/local` login deletes or zeros that user’s
-   lockout document. Five failures, wait out the 10s delay, succeed
-   once, then one wrong password leaves `count === 1` (or equivalent
-   “fresh” state), not 6. Command: `pnpm --filter=@faims3/api test`.
+7. With lockout opted in, a successful `POST /auth/local` login
+   deletes or zeros that user’s lockout document. Five failures,
+   wait out the 10s delay, succeed once, then one wrong password
+   leaves `count === 1` (or equivalent “fresh” state), not 6.
+   Command: `pnpm --filter=@faims3/api test`.
 8. Two overlapping increments on the same user id (parallel
    `Promise`s against one PouchDB) both apply: final `count` is the
    sum of those increments, not a lost write. Command:
@@ -164,13 +181,25 @@ separate per-process control and is not this finding.
     15 minutes + grace as deletable, and a fresher doc as retained.
     Command: `pnpm --filter=@faims3/api test` (extend
     `api/test/ttlCleanup.test.ts`).
-11. Existing local-login tests still pass, including successful admin
-    login and “failed login puts email back on `/login`” in
+11. Existing local-login tests still pass **with the test default
+    (lockout off)**, including successful admin login and “failed
+    login puts email back on `/login`” in
     `api/test/conductor.test.ts`. Command:
     `pnpm --filter=@faims3/api test`.
-12. CDK auto-scaling fields and Conductor desired/min/max capacity
-    are unchanged. Confirm from the diff: no edits required under
-    `infrastructure/aws-cdk/` for this issue.
+12. `parseApiEnv` with `runningUnderTest: false` and the env unset
+    yields `loginLockoutEnabled === true`. With
+    `runningUnderTest: true` it is `false` even if the env is
+    `true`. Command: `pnpm --filter=@faims3/build-config test`.
+13. With `config.loginLockoutEnabled = false`, five failed
+    `POST /auth/local` logins for a known user do not create a
+    lockout document and the sixth (immediate) attempt with the
+    correct password still authenticates. With the flag set true,
+    criterion 5 holds. Command: `pnpm --filter=@faims3/api test`.
+14. CDK auto-scaling `desiredCapacity` / `minCapacity` /
+    `maxCapacity` are unchanged. Adding `loginLockoutEnabled` under
+    `core.limits` (default true, documented next to
+    `attemptLimiterEnabled`) is expected. Confirm auto-scaling
+    numbers from the diff.
 
 ## 4. Out of scope
 
@@ -205,19 +234,28 @@ Automated (`@faims3/api`, in-memory PouchDB, fake timers):
    writes nothing; reset/delete on success; alias identifiers share
    one doc.
 3. Concurrent increments (two overlapping writes) land as count 2.
-4. HTTP: five failed `POST /auth/local` logins for `admin` (or a
-   fixture user), then a sixth before 10s expires → 302 to `/login`,
-   no `exchangeToken`. Advance timers past 10s; correct password
-   succeeds and clears the doc.
-5. While delayed, a request with the **correct** password still does
-   not authenticate.
-6. Extend `api/test/ttlCleanup.test.ts` for the new doc type’s
+4. HTTP lockout cases **set `config.loginLockoutEnabled = true`**
+   (and restore false in `afterEach`). Five failed `POST /auth/local`
+   logins for `admin` (or a fixture user), then a sixth before 10s
+   expires → 302 to `/login`, no `exchangeToken`. Advance timers
+   past 10s; correct password succeeds and clears the doc.
+5. While delayed (flag on), a request with the **correct** password
+   still does not authenticate.
+6. With the flag left false (test default), five failed logins do
+   not persist a lockout doc; a following correct password succeeds
+   immediately. Existing `api/test/conductor.test.ts` auth cases
+   stay green without opting in.
+7. Extend `api/test/ttlCleanup.test.ts` for the new doc type’s
    retention predicate (stale vs fresh `lastAttemptMs`).
-7. Existing `api/test/conductor.test.ts` auth cases stay green.
+
+Automated (`@faims3/build-config`):
+
+8. `parseApiEnv`: default true outside test; forced false under
+   `runningUnderTest`. Independent of `ATTEMPT_LIMITER_ENABLED`.
 
 Automated (`@faims3/data-model`):
 
-8. New document type parses; existing AuthRecord fixtures and
+9. New document type parses; existing AuthRecord fixtures and
    migrations (including a new no-op AUTH bump if added) stay green:
    `pnpm --filter=@faims3/data-model test`.
 
@@ -229,6 +267,7 @@ Commands:
 
 ```bash
 pnpm --filter=@faims3/data-model test
+pnpm --filter=@faims3/build-config test
 pnpm --filter=@faims3/api test
 ```
 
@@ -245,26 +284,26 @@ people lookup, so availability is not a new dependency, but every
 failed login now writes Auth Couch and must retry 409s on the hot
 path.
 
+`LOGIN_LOCKOUT_ENABLED` is forced off under `runningUnderTest`, so
+the existing login suite cannot prove the control. Lockout tests must
+opt in; a reviewer should reject a PR whose lockout cases never set
+`config.loginLockoutEnabled = true`.
+
 Medium would fit a docs-only or single-process tweak. High is
 appropriate because the behaviour change is cluster-wide lockout and
 the failure modes are security-sensitive. Size is **m**: one new
-Auth document type, route wiring, TTL, and API tests — not a new
-service.
+Auth document type, env flag, route wiring, TTL, and API tests — not
+a new service.
 
 ## 7. Open questions
 
-1. Should a dedicated `LOGIN_LOCKOUT_ENABLED` (default true, false
-   under `runningUnderTest`) be added so API tests that hammer login
-   can opt out without touching `ATTEMPT_LIMITER_ENABLED`? This spec
-   does not add it; tests should use fake timers and explicit
-   fixtures instead.
-2. If increment 409 retries are exhausted, should the failed login
+1. If increment 409 retries are exhausted, should the failed login
    still return the generic “username or password incorrect” response
    (count maybe dropped) or fail closed? This spec prefers fail
    closed on **reads** and, on **write** exhaustion after an already
    failed password, still reject the login (password was wrong) while
    logging the write error — the next request may under-count by one.
    Switch to failing the HTTP request harder only if ops want that.
-3. Exact Auth `documentType` string and prefix (`loginlockout` vs
+2. Exact Auth `documentType` string and prefix (`loginlockout` vs
    `failedlogin`) are implementer choice as long as they are stable,
    prefixed, and unique in `AUTH_RECORD_ID_PREFIXES`.
