@@ -36,9 +36,9 @@ const mockUser: User = {
   user: {
     id: 'admin',
     name: 'Admin',
-    emails: [],
-    globalRoles: [Role.GENERAL_ADMIN],
-  } as User['user'],
+    email: 'admin@example.com',
+    isVerified: true,
+  },
   token: 'token',
   refreshToken: 'refresh',
   decodedToken: {
