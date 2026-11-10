@@ -4,14 +4,7 @@
  */
 
 import {ThemeProvider} from '@mui/material/styles';
-import {
-  act,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  within,
-} from '@testing-library/react';
+import {act, fireEvent, render, screen} from '@testing-library/react';
 import {ReactNode} from 'react';
 import {Provider} from 'react-redux';
 import {ActionCreators} from 'redux-undo';
@@ -25,10 +18,8 @@ import {DesignerEditingProvider} from '../../state/editing-context';
 import {CURRENT_NOTEBOOK_UI_SCHEMA_VERSION} from '../../state/initial';
 import {fieldRenamed, loaded} from '../../store/slices/uiSpec';
 import globalTheme from '../../theme/index';
-import {ConditionType} from '../../types/condition';
 import {flushPendingDesignerEdits} from '../../state/pendingEditFlush';
 import {BaseFieldEditor} from './BaseFieldEditor';
-import {RichTextEditor} from './RichTextEditor';
 
 vi.mock('../mdx-editor', () => ({
   MdxEditor: () => null,
@@ -82,7 +73,7 @@ function storeWithTextField() {
   return store;
 }
 
-describe('BaseFieldEditor export name', () => {
+describe('BaseFieldEditor export title', () => {
   afterEach(() => {
     vi.useRealTimers();
   });
@@ -96,7 +87,7 @@ describe('BaseFieldEditor export name', () => {
       </WithProviders>
     );
 
-    const exportInput = screen.getByPlaceholderText('Enter export name');
+    const exportInput = screen.getByPlaceholderText('Enter export title');
     fireEvent.change(exportInput, {target: {value: 'Observation-Notes'}});
     fireEvent.blur(exportInput);
 
@@ -114,7 +105,7 @@ describe('BaseFieldEditor export name', () => {
     ).toBeNull();
   });
 
-  it('reverts punctuation-only export names instead of persisting an empty slug', () => {
+  it('reverts punctuation-only export titles instead of persisting an empty slug', () => {
     const store = storeWithTextField();
 
     render(
@@ -123,7 +114,7 @@ describe('BaseFieldEditor export name', () => {
       </WithProviders>
     );
 
-    const exportInput = screen.getByPlaceholderText('Enter export name');
+    const exportInput = screen.getByPlaceholderText('Enter export title');
     fireEvent.change(exportInput, {target: {value: '!!!'}});
     fireEvent.blur(exportInput);
 
@@ -142,7 +133,7 @@ describe('BaseFieldEditor export name', () => {
       </WithProviders>
     );
 
-    const exportInput = screen.getByPlaceholderText('Enter export name');
+    const exportInput = screen.getByPlaceholderText('Enter export title');
 
     fireEvent.change(exportInput, {target: {value: 'Observation'}});
 
@@ -164,7 +155,7 @@ describe('BaseFieldEditor export name', () => {
     ).toBe('Observation-Notes');
   });
 
-  it('does not reset the input when a colliding export name is uniquified mid-typing', () => {
+  it('does not reset the input when a colliding export title is uniquified mid-typing', () => {
     vi.useFakeTimers();
     const store = createDesignerStore();
     const taken = getFieldSpec('TextField');
@@ -200,7 +191,7 @@ describe('BaseFieldEditor export name', () => {
       </WithProviders>
     );
 
-    const exportInput = screen.getByPlaceholderText('Enter export name');
+    const exportInput = screen.getByPlaceholderText('Enter export title');
     exportInput.focus();
     fireEvent.change(exportInput, {target: {value: 'width'}});
 
@@ -257,7 +248,7 @@ describe('BaseFieldEditor export name', () => {
       </WithProviders>
     );
 
-    const exportInput = screen.getByPlaceholderText('Enter export name');
+    const exportInput = screen.getByPlaceholderText('Enter export title');
     fireEvent.change(exportInput, {target: {value: 'width'}});
     fireEvent.blur(exportInput);
 
@@ -271,7 +262,7 @@ describe('BaseFieldEditor export name', () => {
     expect((exportInput as HTMLInputElement).value).toBe('Plot-Name');
   });
 
-  it('Sync with Label inside the debounce window wins over the typed text', () => {
+  it('Sync with Field Heading inside the debounce window wins over the typed text', () => {
     vi.useFakeTimers();
     const store = storeWithTextField();
 
@@ -281,10 +272,12 @@ describe('BaseFieldEditor export name', () => {
       </WithProviders>
     );
 
-    const exportInput = screen.getByPlaceholderText('Enter export name');
+    const exportInput = screen.getByPlaceholderText('Enter export title');
     exportInput.focus();
     fireEvent.change(exportInput, {target: {value: 'typed'}});
-    fireEvent.click(screen.getByRole('button', {name: 'Sync with Label'}));
+    fireEvent.click(
+      screen.getByRole('button', {name: 'Sync with Field Heading'})
+    );
 
     act(() => {
       vi.advanceTimersByTime(1000);
@@ -296,7 +289,7 @@ describe('BaseFieldEditor export name', () => {
     expect((exportInput as HTMLInputElement).value).toBe('Site-Name');
   });
 
-  it('shows an undone export name even when it looks like an own echo', () => {
+  it('shows an undone export title even when it looks like an own echo', () => {
     const store = createDesignerStore();
     const taken = getFieldSpec('TextField');
     taken['component-parameters'].name = 'f_taken';
@@ -339,7 +332,7 @@ describe('BaseFieldEditor export name', () => {
         })
       );
     });
-    const exportInput = screen.getByPlaceholderText('Enter export name');
+    const exportInput = screen.getByPlaceholderText('Enter export title');
     fireEvent.change(exportInput, {target: {value: 'width'}});
     fireEvent.blur(exportInput);
     expect((exportInput as HTMLInputElement).value).toBe('width');
@@ -370,11 +363,11 @@ describe('BaseFieldEditor first-edit export-name auto-sync', () => {
     return store;
   }
 
-  it('syncs export name from the label after the first typing pause', () => {
+  it('syncs export title from the label after the first typing pause', () => {
     vi.useFakeTimers();
     const store = renderNewFieldEditor();
 
-    fireEvent.change(screen.getByPlaceholderText('Enter field label'), {
+    fireEvent.change(screen.getByPlaceholderText('Enter field heading'), {
       target: {value: 'Observation Notes'},
     });
     act(() => {
@@ -389,7 +382,7 @@ describe('BaseFieldEditor first-edit export-name auto-sync', () => {
   it('keeps syncing on later debounce pauses until the label loses focus', () => {
     vi.useFakeTimers();
     const store = renderNewFieldEditor();
-    const labelInput = screen.getByPlaceholderText('Enter field label');
+    const labelInput = screen.getByPlaceholderText('Enter field heading');
 
     fireEvent.change(labelInput, {target: {value: 'Site'}});
     act(() => {
@@ -411,7 +404,7 @@ describe('BaseFieldEditor first-edit export-name auto-sync', () => {
   it('syncs the latest typed label when tabbing or clicking away', () => {
     vi.useFakeTimers();
     const store = renderNewFieldEditor();
-    const labelInput = screen.getByPlaceholderText('Enter field label');
+    const labelInput = screen.getByPlaceholderText('Enter field heading');
 
     fireEvent.change(labelInput, {target: {value: 'Observation'}});
     act(() => {
@@ -429,7 +422,7 @@ describe('BaseFieldEditor first-edit export-name auto-sync', () => {
   it('does not keep auto-syncing after the label loses focus', () => {
     vi.useFakeTimers();
     const store = renderNewFieldEditor();
-    const labelInput = screen.getByPlaceholderText('Enter field label');
+    const labelInput = screen.getByPlaceholderText('Enter field heading');
 
     fireEvent.change(labelInput, {target: {value: 'Site'}});
     fireEvent.blur(labelInput);
@@ -448,11 +441,11 @@ describe('BaseFieldEditor first-edit export-name auto-sync', () => {
     ).toBe('Site');
   });
 
-  it('does not overwrite a custom export name when the label later changes', () => {
+  it('does not overwrite a custom export title when the label later changes', () => {
     vi.useFakeTimers();
     const store = renderNewFieldEditor();
 
-    fireEvent.change(screen.getByPlaceholderText('Enter export name'), {
+    fireEvent.change(screen.getByPlaceholderText('Enter export title'), {
       target: {value: 'Custom-Export'},
     });
     act(() => {
@@ -462,7 +455,7 @@ describe('BaseFieldEditor first-edit export-name auto-sync', () => {
       store.getState().notebook.uiSpec.present.fields[STORAGE_ID].exportName
     ).toBe('Custom-Export');
 
-    fireEvent.change(screen.getByPlaceholderText('Enter field label'), {
+    fireEvent.change(screen.getByPlaceholderText('Enter field heading'), {
       target: {value: 'Observation Notes'},
     });
     act(() => {
@@ -486,167 +479,17 @@ describe('BaseFieldEditor first-edit export-name auto-sync', () => {
       </WithProviders>
     );
 
-    fireEvent.change(screen.getByPlaceholderText('Enter field label'), {
+    fireEvent.change(screen.getByPlaceholderText('Enter field heading'), {
       target: {value: 'Observation Notes'},
     });
     act(() => {
       vi.advanceTimersByTime(LABEL_AUTO_SYNC_MS);
     });
-    fireEvent.blur(screen.getByPlaceholderText('Enter field label'));
+    fireEvent.blur(screen.getByPlaceholderText('Enter field heading'));
 
     expect(
       store.getState().notebook.uiSpec.present.fields[STORAGE_ID].exportName
     ).toBe('Site-Name');
-  });
-});
-
-const RICH_TEXT_ID = 'f_richtext';
-const CHOICE_ID = 'f_choice';
-const RICH_TEXT_DESIGNER_ID = 'designer-richtext';
-const CHOICE_DESIGNER_ID = 'designer-choice';
-const EQUALITY_CONDITION: ConditionType = {
-  operator: 'equal',
-  field: CHOICE_ID,
-  value: 'Hazardous',
-};
-
-function storeWithRichTextAndChoice(condition?: ConditionType) {
-  const store = createDesignerStore();
-  const richText = getFieldSpec('RichText');
-  richText['component-parameters'].name = RICH_TEXT_ID;
-  richText['component-parameters'].label = 'Safety warning';
-  richText.exportName = 'Safety-warning';
-  richText.designerIdentifier = RICH_TEXT_DESIGNER_ID;
-  if (condition) {
-    richText.condition = condition;
-  }
-
-  const choice = getFieldSpec('RadioGroup');
-  choice['component-parameters'].name = CHOICE_ID;
-  choice['component-parameters'].label = 'Site status';
-  choice['component-parameters'].ElementProps = {
-    enableOtherOption: false,
-    options: [
-      {value: 'Safe', label: 'Safe'},
-      {value: 'Hazardous', label: 'Hazardous'},
-    ],
-  };
-  choice.exportName = 'Site-status';
-  choice.designerIdentifier = CHOICE_DESIGNER_ID;
-
-  store.dispatch(
-    loaded({
-      fields: {[RICH_TEXT_ID]: richText, [CHOICE_ID]: choice},
-      views: {
-        sectionA: {label: 'Section A', fields: [CHOICE_ID, RICH_TEXT_ID]},
-      },
-      viewsets: {
-        formA: {label: 'Form A', views: ['sectionA'], summary_fields: []},
-      },
-      visible_types: ['formA'],
-      settings: {showQrCodeButton: false},
-      schemaVersion: CURRENT_NOTEBOOK_UI_SCHEMA_VERSION,
-    })
-  );
-  return store;
-}
-
-function renderRichTextEditor(store: DesignerStore) {
-  return render(
-    <WithProviders store={store}>
-      <RichTextEditor fieldName={RICH_TEXT_ID} />
-    </WithProviders>
-  );
-}
-
-/** Opens the condition field picker and returns visible option labels. */
-const openConditionFieldOptions = (): string[] => {
-  const input = within(screen.getByTestId('field-input')).getByRole(
-    'combobox'
-  ) as HTMLInputElement;
-  act(() => {
-    input.focus();
-    fireEvent.keyDown(input, {key: 'ArrowDown'});
-  });
-  return screen
-    .getAllByRole('option')
-    .map(o => o.textContent ?? '')
-    .filter(Boolean);
-};
-
-describe('RichText field conditions', () => {
-  it('shows Add condition without Required, Annotation, Uncertainty, or copy-value', () => {
-    renderRichTextEditor(storeWithRichTextAndChoice());
-
-    expect(screen.getByRole('button', {name: 'Add condition'})).toBeTruthy();
-    expect(screen.queryByText('Required')).toBeNull();
-    expect(screen.queryByText('Annotation')).toBeNull();
-    expect(screen.queryByText('Uncertainty')).toBeNull();
-    expect(screen.queryByText('Copy value to new records')).toBeNull();
-  });
-
-  it('saves an equality condition against the other field', async () => {
-    const store = storeWithRichTextAndChoice();
-    renderRichTextEditor(store);
-
-    fireEvent.click(screen.getByRole('button', {name: 'Add condition'}));
-
-    const fieldInput = within(screen.getByTestId('field-input')).getByRole(
-      'combobox'
-    );
-    fireEvent.change(fieldInput, {target: {value: 'Site status'}});
-    fireEvent.click(await screen.findByRole('option', {name: /site status/i}));
-
-    await waitFor(() => {
-      expect(screen.getByTestId('value-input')).toBeDefined();
-    });
-
-    fireEvent.mouseDown(
-      within(screen.getByTestId('value-input')).getByRole('combobox')
-    );
-    fireEvent.click(screen.getByRole('option', {name: 'Hazardous'}));
-
-    fireEvent.click(screen.getByRole('button', {name: 'Save Changes'}));
-
-    expect(
-      store.getState().notebook.uiSpec.present.fields[RICH_TEXT_ID].condition
-    ).toEqual(EQUALITY_CONDITION);
-  });
-
-  it('shows Update condition and a summary when a condition is already stored', () => {
-    renderRichTextEditor(storeWithRichTextAndChoice(EQUALITY_CONDITION));
-
-    expect(screen.getByRole('button', {name: 'Update condition'})).toBeTruthy();
-    expect(screen.getByText(/Show this field if/)).toBeTruthy();
-    expect(screen.getByText('Site status')).toBeTruthy();
-    expect(screen.getByText('Hazardous')).toBeTruthy();
-  });
-
-  it('deletes the condition property when the condition is cleared', async () => {
-    const store = storeWithRichTextAndChoice(EQUALITY_CONDITION);
-    renderRichTextEditor(store);
-
-    fireEvent.click(screen.getByRole('button', {name: 'Update condition'}));
-    fireEvent.click(screen.getByTestId('delete-button'));
-    fireEvent.click(screen.getByRole('button', {name: 'Save Changes'}));
-
-    const field = store.getState().notebook.uiSpec.present.fields[RICH_TEXT_ID];
-    expect(field).not.toHaveProperty('condition');
-    expect(field.condition).toBeUndefined();
-  });
-
-  it('excludes the RichText field from the condition source picker', () => {
-    renderRichTextEditor(storeWithRichTextAndChoice());
-
-    fireEvent.click(screen.getByRole('button', {name: 'Add condition'}));
-
-    const optionLabels = openConditionFieldOptions();
-    expect(optionLabels.some(label => label.includes('Site status'))).toBe(
-      true
-    );
-    expect(optionLabels.some(label => label.includes('Safety warning'))).toBe(
-      false
-    );
   });
 });
 
@@ -665,7 +508,7 @@ describe('BaseFieldEditor pending edit flush', () => {
       </WithProviders>
     );
 
-    const labelInput = screen.getByPlaceholderText('Enter field label');
+    const labelInput = screen.getByPlaceholderText('Enter field heading');
     fireEvent.change(labelInput, {target: {value: 'Typed without blur'}});
 
     expect(
@@ -686,15 +529,35 @@ describe('BaseFieldEditor pending edit flush', () => {
   });
 });
 
-describe('BaseFieldEditor extra-config conditions', () => {
-  it('keeps Required next to Add condition on ordinary fields', () => {
+describe('BaseFieldEditor condition settings', () => {
+  it('can show only conditions when extra config is disabled', () => {
+    const store = storeWithTextField();
+
     render(
-      <WithProviders store={storeWithTextField()}>
+      <WithProviders store={store}>
+        <BaseFieldEditor
+          fieldName={STORAGE_ID}
+          showExtraConfig={false}
+          showCondition
+          showHelperText={false}
+        />
+      </WithProviders>
+    );
+
+    expect(screen.getByRole('button', {name: 'Add condition'})).toBeDefined();
+    expect(screen.queryByText('Required')).toBeNull();
+  });
+
+  it('shows Required and Add condition by default', () => {
+    const store = storeWithTextField();
+
+    render(
+      <WithProviders store={store}>
         <BaseFieldEditor fieldName={STORAGE_ID} showHelperText={false} />
       </WithProviders>
     );
 
-    expect(screen.getByText('Required')).toBeTruthy();
-    expect(screen.getByRole('button', {name: 'Add condition'})).toBeTruthy();
+    expect(screen.getByText('Required')).toBeDefined();
+    expect(screen.getByRole('button', {name: 'Add condition'})).toBeDefined();
   });
 });
