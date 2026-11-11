@@ -23,9 +23,9 @@ import {
   type RecordFormLayer,
 } from './recordFormLayers';
 import {
-  groupRecordFormMapFeaturesByForm,
-  recordFormMapFeatureSyncKey,
-  type RecordFormMapFeatureCollection,
+  groupRecordFeaturesByForm,
+  recordFeatureSyncKey,
+  type RecordFeatureCollection,
 } from './recordFormMapLayers';
 
 /** Selection used only by the overview map's View-record highlight. */
@@ -68,7 +68,7 @@ export function useRecordFormLayersPlot({
   onOverallExtent,
 }: {
   map: Map | undefined;
-  collection: RecordFormMapFeatureCollection | undefined;
+  collection: RecordFeatureCollection | undefined;
   recordLayers: RecordFormLayer[];
   overviewMapTypes: string[];
   selectedFeature?: RecordFormLayerPlotSelection;
@@ -86,7 +86,7 @@ export function useRecordFormLayersPlot({
   const selectedFeatureRef = useRef(selectedFeature);
   const collectionRef = useRef(collection);
   collectionRef.current = collection;
-  const plottedSyncKey = recordFormMapFeatureSyncKey(collection);
+  const plottedSyncKey = recordFeatureSyncKey(collection);
   const formExtentsRef = useRef<
     Record<string, [number, number, number, number]>
   >({});
@@ -108,7 +108,7 @@ export function useRecordFormLayersPlot({
       return;
     }
 
-    const grouped = groupRecordFormMapFeaturesByForm(current);
+    const grouped = groupRecordFeaturesByForm(current);
     const formIds = new Set(grouped.keys());
     const geoJson = new GeoJSON();
     const nextExtents: Record<string, [number, number, number, number]> = {};

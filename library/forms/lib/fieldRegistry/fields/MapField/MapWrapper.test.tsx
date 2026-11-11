@@ -11,7 +11,7 @@ import {
 } from '../../../components/maps/recordFormLayers';
 import {
   RecordFormMapLayersContext,
-  type RecordFormMapFeatureCollection,
+  type RecordFeatureCollection,
   type RecordFormMapLayersValue,
 } from '../../../components/maps/recordFormMapLayers';
 import {useRecordFormLayerList} from '../../../components/maps/useRecordFormLayerList';
@@ -66,7 +66,7 @@ function recordLayer(
   };
 }
 
-const collection: RecordFormMapFeatureCollection = {
+const collection: RecordFeatureCollection = {
   type: 'FeatureCollection',
   features: [
     {

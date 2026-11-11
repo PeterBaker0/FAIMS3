@@ -15,7 +15,7 @@ import type {
 } from './recordFormLayers';
 
 /** Properties tagged onto every extracted feature, tracing it to its record. */
-export type RecordFormMapFeatureProperties = {
+export type RecordFeatureProps = {
   name: string;
   record_id: string;
   revision_id: string;
@@ -23,14 +23,14 @@ export type RecordFormMapFeatureProperties = {
 };
 
 /** A parsed GeoJSON feature retagged with its owning record's properties. */
-export type RecordFormMapFeature = Omit<GeoJSONFeature, 'properties'> & {
-  properties: RecordFormMapFeatureProperties;
+export type RecordGeoJSONFeature = Omit<GeoJSONFeature, 'properties'> & {
+  properties: RecordFeatureProps;
 };
 
 /** The extracted features of all records, as one GeoJSON FeatureCollection. */
-export type RecordFormMapFeatureCollection = {
+export type RecordFeatureCollection = {
   type: 'FeatureCollection';
-  features: RecordFormMapFeature[];
+  features: RecordGeoJSONFeature[];
 };
 
 /**
@@ -39,7 +39,7 @@ export type RecordFormMapFeatureCollection = {
  * render; they must not fetch records.
  */
 export type RecordFormMapLayersValue = {
-  collection: RecordFormMapFeatureCollection | undefined;
+  collection: RecordFeatureCollection | undefined;
   recordLayers: RecordFormLayer[];
   /** Form ids used for stable default colors ({@link getOverviewMapTypes}). */
   overviewMapTypes: string[];
@@ -61,11 +61,32 @@ export const RecordFormMapLayersContext =
   createContext<RecordFormMapLayersValue>(emptyRecordFormMapLayers);
 
 /**
- * Fingerprint of what is plotted. Empty collection is not the same key as
- * "no data" (`c:` vs `''`).
+ * Fingerprint of what is plotted. Keeps collection identity stable across a
+ * parent re-render that rebuilt the array, and is the plot-hook effect dep
+ * that refreshes vector sources in place (no MapComponent remount).
+ *
+ * One `record_id:revision_id:form_id` token per feature — do not unique them,
+ * or a second GIS field on the same record looks like a no-op. Empty → first
+ * geometry already changes the string.
+ *
+ * Options:
+ * - Identity key (this): cheap every render; live add / delete / new revision.
+ *   Misses in-place coordinate edits on an already-plotted feature, and a
+ *   GIS-field replace that keeps the same feature count.
+ * - `JSON.stringify(geometry)`: catches those two cases; serializes every
+ *   geometry on every parent render.
+ * - Identity + `gisFieldsKey` here: catches a spec field-list change; the
+ *   query key already includes `gisFieldsKey`, so the hook re-extracts.
+ *
+ * Same-revision late AVPs (create, then finish/flush location onto the same
+ * id) are not visible in this string until extract runs again. The query key
+ * includes `record.updated` for that; tab-away remount still honours
+ * staleTime (5 min). Full reload always re-reads.
+ *
+ * Prefix so an empty plotted collection is not the same key as "no data".
  */
-export function recordFormMapFeatureSyncKey(
-  collection: RecordFormMapFeatureCollection | undefined
+export function recordFeatureSyncKey(
+  collection: RecordFeatureCollection | undefined
 ): string {
   if (!collection) {
     return '';
@@ -78,11 +99,19 @@ export function recordFormMapFeatureSyncKey(
     .join('|')}`;
 }
 
+/** True when both collections encode the same records, revisions, and forms. */
+export function recordFeatureCollectionsEqual(
+  left: RecordFeatureCollection | undefined,
+  right: RecordFeatureCollection | undefined
+): boolean {
+  return recordFeatureSyncKey(left) === recordFeatureSyncKey(right);
+}
+
 /** Split a notebook FeatureCollection into one collection per form type. */
-export function groupRecordFormMapFeaturesByForm(
-  collection: RecordFormMapFeatureCollection
-): Map<string, RecordFormMapFeatureCollection> {
-  const grouped = new Map<string, RecordFormMapFeature[]>();
+export function groupRecordFeaturesByForm(
+  collection: RecordFeatureCollection
+): Map<string, RecordFeatureCollection> {
+  const grouped = new Map<string, RecordGeoJSONFeature[]>();
   for (const feature of collection.features) {
     const formId = feature.properties.form_id;
     if (!formId) {
@@ -108,9 +137,9 @@ export function groupRecordFormMapFeaturesByForm(
  * is not drawn under the live sketch.
  */
 export function excludeRecordFormMapFeatures(
-  collection: RecordFormMapFeatureCollection | undefined,
+  collection: RecordFeatureCollection | undefined,
   recordId: string | undefined
-): RecordFormMapFeatureCollection | undefined {
+): RecordFeatureCollection | undefined {
   if (!collection || !recordId) {
     return collection;
   }
@@ -128,7 +157,7 @@ export function excludeRecordFormMapFeatures(
  * to the form id when `formName` returns nothing.
  */
 export function recordFormLayerDescriptors(
-  collection: RecordFormMapFeatureCollection | undefined,
+  collection: RecordFeatureCollection | undefined,
   formName: (formId: string) => string,
   formExtents: Record<string, [number, number, number, number]> = {}
 ): RecordFormLayerDescriptor[] {

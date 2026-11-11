@@ -5,7 +5,7 @@ import {
   type CompiledNotebookUiSpec,
   type NotebookUiSpec,
 } from '@faims3/data-model';
-import {act, render, screen} from '@testing-library/react';
+import {act, render, renderHook, screen} from '@testing-library/react';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import type {RecordFeatureCollection} from './recordFeatures';
 
@@ -70,28 +70,6 @@ const features = vi.hoisted(() => ({
 }));
 
 vi.mock('./recordFeatures', () => ({
-  recordFeatureSyncKey: (collection?: RecordFeatureCollection) =>
-    (collection?.features ?? [])
-      .map(
-        feature =>
-          `${feature.properties.record_id}:${feature.properties.revision_id}:${feature.properties.form_id}`
-      )
-      .join('|'),
-  groupRecordFeaturesByForm: (collection: RecordFeatureCollection) => {
-    const grouped = new Map<string, RecordFeatureCollection['features']>();
-    for (const feature of collection.features) {
-      const formId = feature.properties.form_id;
-      const list = grouped.get(formId) ?? [];
-      list.push(feature);
-      grouped.set(formId, list);
-    }
-    return new Map(
-      [...grouped.entries()].map(([formId, items]) => [
-        formId,
-        {type: 'FeatureCollection' as const, features: items},
-      ])
-    );
-  },
   useRecordFeatures: () => ({
     data: features.data,
     isLoading: features.isLoading,
@@ -102,6 +80,7 @@ vi.mock('./recordFeatures', () => ({
   }),
 }));
 
+import {useRecordFormLayerList, writeRecordFormLayerPrefs} from '@faims3/forms';
 import {OverviewMap} from './OverviewMap';
 
 const rawUiSpec: NotebookUiSpec = {
@@ -176,21 +155,18 @@ describe('OverviewMap record layers', () => {
     expect(layers.every(layer => layer.visible)).toBe(true);
   });
 
-  it('honours hide/show written to the collection popup prefs key', () => {
-    localStorage.setItem(
-      'map-record-form-prefs:project-1',
-      JSON.stringify({
-        'record-form:Site': {
-          visible: false,
-          opacity: 1,
-          zIndex: 980,
-          stroke: '#2171b5',
-          fill: '#2171b580',
-          lineWidth: 4,
-          pointSize: 7,
-        },
-      })
-    );
+  it('hides a form layer after the collection popup writes shared prefs', () => {
+    writeRecordFormLayerPrefs('project-1', {
+      'record-form:Site': {
+        visible: false,
+        opacity: 1,
+        zIndex: 980,
+        stroke: '#2171b5',
+        fill: '#2171b580',
+        lineWidth: 4,
+        pointSize: 7,
+      },
+    });
 
     render(
       <OverviewMap
@@ -208,6 +184,43 @@ describe('OverviewMap record layers', () => {
       mapProps.current?.recordLayers?.find(
         layer => layer.formId === 'Observation'
       )?.visible
+    ).toBe(true);
+  });
+
+  it('collection popup prefs see a hide written through the overview map', () => {
+    const {unmount} = render(
+      <OverviewMap
+        uiSpec={uiSpec}
+        project_id="project-1"
+        records={{allRecords: []}}
+      />
+    );
+
+    act(() => {
+      mapProps.current?.onUpdateRecordLayer?.('record-form:Site', {
+        visible: false,
+      });
+    });
+    unmount();
+
+    const {result} = renderHook(() =>
+      useRecordFormLayerList({
+        projectId: 'project-1',
+        descriptors: [
+          {formId: 'Observation', name: 'Observations'},
+          {formId: 'Site', name: 'Sites'},
+        ],
+        colorFormIds: ['Site', 'Observation'],
+      })
+    );
+
+    expect(
+      result.current.recordLayers.find(layer => layer.formId === 'Site')
+        ?.visible
+    ).toBe(false);
+    expect(
+      result.current.recordLayers.find(layer => layer.formId === 'Observation')
+        ?.visible
     ).toBe(true);
   });
 

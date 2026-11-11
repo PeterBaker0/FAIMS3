@@ -2,14 +2,14 @@
 import {describe, expect, it} from 'vitest';
 import {
   excludeRecordFormMapFeatures,
-  groupRecordFormMapFeaturesByForm,
+  groupRecordFeaturesByForm,
+  recordFeatureSyncKey,
   recordFormLayerDescriptors,
-  recordFormMapFeatureSyncKey,
-  type RecordFormMapFeature,
-  type RecordFormMapFeatureCollection,
+  type RecordFeatureCollection,
+  type RecordGeoJSONFeature,
 } from './recordFormMapLayers';
 
-const feature = (formId: string, recordId: string): RecordFormMapFeature => ({
+const feature = (formId: string, recordId: string): RecordGeoJSONFeature => ({
   type: 'Feature',
   geometry: {type: 'Point', coordinates: [151.2, -33.9]},
   properties: {
@@ -21,8 +21,8 @@ const feature = (formId: string, recordId: string): RecordFormMapFeature => ({
 });
 
 const collection = (
-  features: RecordFormMapFeature[]
-): RecordFormMapFeatureCollection => ({
+  features: RecordGeoJSONFeature[]
+): RecordFeatureCollection => ({
   type: 'FeatureCollection',
   features,
 });
@@ -58,11 +58,11 @@ describe('recordFormMapLayers helpers', () => {
       feature('Site', 'site-1'),
       feature('Observation', 'obs-1'),
     ]);
-    expect([...groupRecordFormMapFeaturesByForm(source).keys()]).toEqual([
+    expect([...groupRecordFeaturesByForm(source).keys()]).toEqual([
       'Site',
       'Observation',
     ]);
-    expect(recordFormMapFeatureSyncKey(undefined)).toBe('');
-    expect(recordFormMapFeatureSyncKey(collection([]))).toBe('c:');
+    expect(recordFeatureSyncKey(undefined)).toBe('');
+    expect(recordFeatureSyncKey(collection([]))).toBe('c:');
   });
 });
