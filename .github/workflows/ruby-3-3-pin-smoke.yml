@@ -1,0 +1,40 @@
+# Smoke check for #109: ruby/setup-ruby must resolve series 3.3 on
+# ubuntu-latest (ubuntu-26.04). Nightly/production Android jobs cannot be
+# dispatched from this fork (workflow_dispatch 403; scheduled runs fail
+# before android-build when SCHEDULED_ANDROID_ENVIRONMENT is unset).
+# This job only covers Set up ruby env + bundle/fastlane start.
+
+name: Ruby 3.3 pin smoke
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/common-android-build.yml'
+      - '.github/workflows/common-ios-build.yml'
+      - '.github/workflows/ruby-3-3-pin-smoke.yml'
+      - 'app/android/.ruby-version'
+      - 'app/ios/App/.ruby-version'
+      - 'app/android/Gemfile'
+      - 'app/android/Gemfile.lock'
+  workflow_dispatch:
+
+jobs:
+  android-ruby:
+    name: Set up ruby env
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up ruby env
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+          working-directory: app/android
+
+      - name: Fastlane
+        run: |
+          cd app/android
+          ruby -v
+          bundle install
+          bundle exec fastlane --version
