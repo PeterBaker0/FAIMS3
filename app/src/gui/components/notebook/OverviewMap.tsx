@@ -16,7 +16,9 @@ import {
   formatTimestamp,
 } from '@faims3/data-model';
 import {
+  emptyRecordFormMapLayers,
   MapComponent,
+  RecordFormMapLayersContext,
   recordFormLayerDescriptors,
   useRecordFormLayerList,
   useRecordFormLayersPlot,
@@ -34,7 +36,14 @@ import {
 import {useQuery} from '@tanstack/react-query';
 import {Extent} from 'ol/extent';
 import Map from 'ol/Map';
-import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {Link as RouterLink} from 'react-router-dom';
 import {useNotebookRoute} from '../../../context/notebookRoute';
 import {getMapConfig} from '../../../buildconfig';
@@ -272,12 +281,29 @@ export const OverviewMap = (props: OverviewMapProps) => {
     [formExtents, plottedCollection, uiSpec]
   );
 
-  const {recordLayers, updateRecordLayer, resetRecordLayers} =
-    useRecordFormLayerList({
-      projectId: project_id,
-      descriptors: recordFormDescriptors,
-      colorFormIds: overviewMapTypes,
-    });
+  // Same RecordFormMapLayersContext MapWrapper reads in the collection popup
+  // (`map-record-form-prefs:<projectId>`). Isolated tests without a notebook
+  // provider keep a local list so OverviewMap.test.tsx stays self-contained.
+  const sharedRecordMapLayers = useContext(RecordFormMapLayersContext);
+  const hasSharedRecordLayers =
+    sharedRecordMapLayers !== emptyRecordFormMapLayers;
+  const localRecordFormList = useRecordFormLayerList({
+    projectId: project_id,
+    descriptors: recordFormDescriptors,
+    colorFormIds: overviewMapTypes,
+  });
+  const updateRecordLayer = hasSharedRecordLayers
+    ? sharedRecordMapLayers.updateRecordLayer
+    : localRecordFormList.updateRecordLayer;
+  const resetRecordLayers = hasSharedRecordLayers
+    ? sharedRecordMapLayers.resetRecordLayers
+    : localRecordFormList.resetRecordLayers;
+  const recordLayers = hasSharedRecordLayers
+    ? sharedRecordMapLayers.recordLayers.map(layer => {
+        const extent = formExtents[layer.formId];
+        return extent ? {...layer, extent4326: extent} : layer;
+      })
+    : localRecordFormList.recordLayers;
 
   const handleFormExtents = useCallback(
     (extents: Record<string, [number, number, number, number]>) => {
