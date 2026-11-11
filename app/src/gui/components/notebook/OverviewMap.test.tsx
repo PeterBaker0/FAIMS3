@@ -176,6 +176,41 @@ describe('OverviewMap record layers', () => {
     expect(layers.every(layer => layer.visible)).toBe(true);
   });
 
+  it('honours hide/show written to the collection popup prefs key', () => {
+    localStorage.setItem(
+      'map-record-form-prefs:project-1',
+      JSON.stringify({
+        'record-form:Site': {
+          visible: false,
+          opacity: 1,
+          zIndex: 980,
+          stroke: '#2171b5',
+          fill: '#2171b580',
+          lineWidth: 4,
+          pointSize: 7,
+        },
+      })
+    );
+
+    render(
+      <OverviewMap
+        uiSpec={uiSpec}
+        project_id="project-1"
+        records={{allRecords: []}}
+      />
+    );
+
+    const site = mapProps.current?.recordLayers?.find(
+      layer => layer.formId === 'Site'
+    );
+    expect(site?.visible).toBe(false);
+    expect(
+      mapProps.current?.recordLayers?.find(
+        layer => layer.formId === 'Observation'
+      )?.visible
+    ).toBe(true);
+  });
+
   it('hides a form layer through the same panel patch path', () => {
     const {rerender} = render(
       <OverviewMap

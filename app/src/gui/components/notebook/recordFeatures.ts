@@ -4,9 +4,10 @@
  * values (Map / TakePoint components) read via the data engine and returned as
  * GeoJSON features tagged with the owning record.
  *
- * This is the geometry source for the notebook's {@link OverviewMap} tab. It
- * lives in its own module to keep the extraction pipeline and its unit tests
- * separate from the map rendering.
+ * This is the geometry source for the notebook's {@link OverviewMap} tab and
+ * the Map field collection popup (via NotebookRecordMapLayers on the notebook
+ * route). It lives in its own module to keep the extraction pipeline and its
+ * unit tests separate from the map rendering.
  */
 import {
   DatabaseInterface,
