@@ -125,6 +125,28 @@ export const useGetProject = ({
   });
 
 /**
+ * Builds GET /api/notebooks path. `includeByteCount=true` triggers per-notebook
+ * Couch `info()` on the server; omit it for name-only consumers such as the nav.
+ */
+export function notebooksListPath({
+  includeArchived = false,
+  includeByteCount = true,
+}: {
+  includeArchived?: boolean;
+  includeByteCount?: boolean;
+} = {}): string {
+  const params = new URLSearchParams();
+  if (includeByteCount) {
+    params.set('includeByteCount', 'true');
+  }
+  if (includeArchived) {
+    params.set('includeArchived', 'true');
+  }
+  const qs = params.toString();
+  return qs ? `/api/notebooks/?${qs}` : '/api/notebooks/';
+}
+
+/**
  * useGetProjects hook returns a query for fetching projects.
  *
  * @param {User} user - The user object.
@@ -134,19 +156,28 @@ export const useGetProjects = ({
   user,
   enabled = true,
   includeArchived = false,
+  includeByteCount = true,
 }: {
   user: User | null;
   enabled?: boolean;
   /** When true, lists archived notebooks/projects too (directory-style sync uses this). */
   includeArchived?: boolean;
+  /**
+   * When true, attach per-notebook `byteCount` (Couch `info()`). Defaults true so
+   * the Projects index keeps stats. The sidebar passes false — names do not need it.
+   */
+  includeByteCount?: boolean;
 }) =>
   useQuery({
-    queryKey: ['projects', user?.token, includeArchived, 'stats'],
+    queryKey: [
+      'projects',
+      user?.token,
+      includeArchived,
+      includeByteCount ? 'stats' : 'list',
+    ],
     queryFn: () =>
       get<GetNotebookListWithStatsResponse>(
-        includeArchived
-          ? '/api/notebooks/?includeByteCount=true&includeArchived=true'
-          : '/api/notebooks/?includeByteCount=true',
+        notebooksListPath({includeArchived, includeByteCount}),
         user
       ),
     select: sortNotebookListNewestFirst,
@@ -315,8 +346,31 @@ export const useGetTeams = ({
   });
 
 /**
+ * Builds GET /api/templates path. `limit` is included when the caller asks for a
+ * page size (sidebar recent cap). Index pages omit it and keep a full listing.
+ */
+export function templatesListPath({
+  includeArchived = false,
+  limit,
+}: {
+  includeArchived?: boolean;
+  limit?: number;
+} = {}): string {
+  const params = new URLSearchParams();
+  if (includeArchived) {
+    params.set('includeArchived', 'true');
+  }
+  if (limit !== undefined) {
+    params.set('limit', String(limit));
+  }
+  const qs = params.toString();
+  return qs ? `/api/templates?${qs}` : '/api/templates';
+}
+
+/**
  * useGetTemplates hook returns a query for fetching templates.
  * By default archived templates are excluded. Pass includeArchived: true for the Archive section.
+ * Pass `limit` to request a page size without changing the default (full) listing.
  *
  * @param {User} user - The user object.
  * @returns {Query} A query for fetching templates.
@@ -325,22 +379,25 @@ export const useGetTemplates = ({
   user,
   enabled = true,
   includeArchived = false,
+  limit,
 }: {
   user: User | null;
   enabled?: boolean;
   /** When true, lists only archived templates (requires includeArchived=true on the API). */
   includeArchived?: boolean;
+  /** Optional page size for GET /api/templates when the API accepts `limit`. */
+  limit?: number;
 }) =>
   useQuery({
     queryKey: [
       'templates',
       user?.token,
       includeArchived ? 'archived' : 'active',
+      limit ?? 'all',
     ],
     queryFn: async () => {
-      const qs = includeArchived ? '?includeArchived=true' : '';
       const data = await get<GetListTemplatesResponse>(
-        `/api/templates${qs}`,
+        templatesListPath({includeArchived, limit}),
         user
       );
       return data.templates;
