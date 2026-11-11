@@ -190,8 +190,8 @@ function navGroup(testId: string) {
 
 function hrefs(group: ReturnType<typeof within>) {
   return group
-    .getAllByRole('link', {hidden: true})
-    .map(link => link.getAttribute('href'));
+    .getAllByRole('link')
+    .map((link: HTMLElement) => link.getAttribute('href'));
 }
 
 function enableCatalogueNav() {
@@ -247,11 +247,9 @@ describe('AppSidebar catalogue recent rows', () => {
       expect(links).toContain(`/projects/project-${i}`);
     }
     expect(links).not.toContain('/projects/project-11');
-    expect(projects.getByText('View all', {hidden: true})).toBeDefined();
+    expect(projects.getByText('View all')).toBeDefined();
     expect(
-      projects
-        .getByRole('link', {name: 'View all', hidden: true})
-        .getAttribute('href')
+      projects.getByRole('link', {name: 'View all'}).getAttribute('href')
     ).toBe('/projects');
   });
 
@@ -264,16 +262,12 @@ describe('AppSidebar catalogue recent rows', () => {
       expect.arrayContaining(['/projects/project-1', '/projects/project-2'])
     );
     expect(
-      projects
-        .getByRole('link', {name: 'project 1', hidden: true})
-        .getAttribute('href')
+      projects.getByRole('link', {name: 'project 1'}).getAttribute('href')
     ).toBe('/projects/project-1');
     expect(
-      projects
-        .getByRole('link', {name: 'project 2', hidden: true})
-        .getAttribute('href')
+      projects.getByRole('link', {name: 'project 2'}).getAttribute('href')
     ).toBe('/projects/project-2');
-    expect(projects.queryByText('View all', {hidden: true})).toBeNull();
+    expect(projects.queryByText('View all')).toBeNull();
   });
 
   it('shows the empty notebooks placeholder and no View all', () => {
@@ -282,9 +276,9 @@ describe('AppSidebar catalogue recent rows', () => {
     renderSidebar();
     const projects = navGroup('web-nav-projects');
     expect(
-      projects.getByText(`No ${config.notebookNamePlural}...`, {hidden: true})
+      projects.getByText(`No ${config.notebookNamePlural}...`)
     ).toBeDefined();
-    expect(projects.queryByText('View all', {hidden: true})).toBeNull();
+    expect(projects.queryByText('View all')).toBeNull();
     expect(screen.getByTestId('web-nav-projects').getAttribute('href')).toBe(
       '/projects'
     );
@@ -301,9 +295,7 @@ describe('AppSidebar catalogue recent rows', () => {
     }
     expect(links).not.toContain('/templates/template-11');
     expect(
-      templates
-        .getByRole('link', {name: 'View all', hidden: true})
-        .getAttribute('href')
+      templates.getByRole('link', {name: 'View all'}).getAttribute('href')
     ).toBe('/templates');
   });
 
@@ -313,16 +305,12 @@ describe('AppSidebar catalogue recent rows', () => {
     renderSidebar();
     const templates = navGroup('web-nav-templates');
     expect(
-      templates
-        .getByRole('link', {name: 'template 1', hidden: true})
-        .getAttribute('href')
+      templates.getByRole('link', {name: 'template 1'}).getAttribute('href')
     ).toBe('/templates/template-1');
     expect(
-      templates
-        .getByRole('link', {name: 'template 2', hidden: true})
-        .getAttribute('href')
+      templates.getByRole('link', {name: 'template 2'}).getAttribute('href')
     ).toBe('/templates/template-2');
-    expect(templates.queryByText('View all', {hidden: true})).toBeNull();
+    expect(templates.queryByText('View all')).toBeNull();
   });
 
   it('shows the empty templates placeholder and no View all', () => {
@@ -330,10 +318,8 @@ describe('AppSidebar catalogue recent rows', () => {
     queryState.templates = [];
     renderSidebar();
     const templates = navGroup('web-nav-templates');
-    expect(
-      templates.getByText('No templates...', {hidden: true})
-    ).toBeDefined();
-    expect(templates.queryByText('View all', {hidden: true})).toBeNull();
+    expect(templates.getByText('No templates...')).toBeDefined();
+    expect(templates.queryByText('View all')).toBeNull();
   });
 
   it('caps 11 teams at 10 names plus View all to /teams', () => {
@@ -347,9 +333,7 @@ describe('AppSidebar catalogue recent rows', () => {
     }
     expect(links).not.toContain('/teams/team-11');
     expect(
-      teams
-        .getByRole('link', {name: 'View all', hidden: true})
-        .getAttribute('href')
+      teams.getByRole('link', {name: 'View all'}).getAttribute('href')
     ).toBe('/teams');
   });
 
@@ -358,17 +342,13 @@ describe('AppSidebar catalogue recent rows', () => {
     queryState.teams = {teams: namedItems('team', 2)};
     renderSidebar();
     const teams = navGroup('web-nav-teams');
-    expect(
-      teams
-        .getByRole('link', {name: 'team 1', hidden: true})
-        .getAttribute('href')
-    ).toBe('/teams/team-1');
-    expect(
-      teams
-        .getByRole('link', {name: 'team 2', hidden: true})
-        .getAttribute('href')
-    ).toBe('/teams/team-2');
-    expect(teams.queryByText('View all', {hidden: true})).toBeNull();
+    expect(teams.getByRole('link', {name: 'team 1'}).getAttribute('href')).toBe(
+      '/teams/team-1'
+    );
+    expect(teams.getByRole('link', {name: 'team 2'}).getAttribute('href')).toBe(
+      '/teams/team-2'
+    );
+    expect(teams.queryByText('View all')).toBeNull();
   });
 
   it('shows the empty teams placeholder and no View all', () => {
@@ -376,8 +356,8 @@ describe('AppSidebar catalogue recent rows', () => {
     queryState.teams = {teams: []};
     renderSidebar();
     const teams = navGroup('web-nav-teams');
-    expect(teams.getByText('No teams...', {hidden: true})).toBeDefined();
-    expect(teams.queryByText('View all', {hidden: true})).toBeNull();
+    expect(teams.getByText('No teams...')).toBeDefined();
+    expect(teams.queryByText('View all')).toBeNull();
   });
 
   it('shows View all and not the empty placeholder when templates are empty with nextStartKey', () => {
@@ -385,11 +365,9 @@ describe('AppSidebar catalogue recent rows', () => {
     queryState.templates = {templates: [], nextStartKey: 'cursor'};
     renderSidebar();
     const templates = navGroup('web-nav-templates');
-    expect(templates.queryByText('No templates...', {hidden: true})).toBeNull();
+    expect(templates.queryByText('No templates...')).toBeNull();
     expect(
-      templates
-        .getByRole('link', {name: 'View all', hidden: true})
-        .getAttribute('href')
+      templates.getByRole('link', {name: 'View all'}).getAttribute('href')
     ).toBe('/templates');
   });
 
@@ -402,24 +380,16 @@ describe('AppSidebar catalogue recent rows', () => {
     renderSidebar();
     const templates = navGroup('web-nav-templates');
     expect(
-      templates
-        .getByRole('link', {name: 'template 1', hidden: true})
-        .getAttribute('href')
+      templates.getByRole('link', {name: 'template 1'}).getAttribute('href')
     ).toBe('/templates/template-1');
     expect(
-      templates
-        .getByRole('link', {name: 'template 2', hidden: true})
-        .getAttribute('href')
+      templates.getByRole('link', {name: 'template 2'}).getAttribute('href')
     ).toBe('/templates/template-2');
     expect(
-      templates
-        .getByRole('link', {name: 'template 3', hidden: true})
-        .getAttribute('href')
+      templates.getByRole('link', {name: 'template 3'}).getAttribute('href')
     ).toBe('/templates/template-3');
     expect(
-      templates
-        .getByRole('link', {name: 'View all', hidden: true})
-        .getAttribute('href')
+      templates.getByRole('link', {name: 'View all'}).getAttribute('href')
     ).toBe('/templates');
   });
 
@@ -453,10 +423,8 @@ describe('AppSidebar catalogue recent rows', () => {
       SIDEBAR_CATALOGUE_RECENT_LIMIT
     );
     for (const tab of visibleTabs) {
-      expect(
-        archive.getByText(ARCHIVE_TAB_LABELS[tab], {hidden: true})
-      ).toBeDefined();
+      expect(archive.getByText(ARCHIVE_TAB_LABELS[tab])).toBeDefined();
     }
-    expect(archive.queryByText('View all', {hidden: true})).toBeNull();
+    expect(archive.queryByText('View all')).toBeNull();
   });
 });
