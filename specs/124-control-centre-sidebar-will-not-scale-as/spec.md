@@ -87,5 +87,5 @@ This is listing / empty-vs-truncated logic in the authenticated shell, not a sty
 - None. “View all” copy is enough; do not wait on a total count. Pinning the active deep-linked item into the recent list is deferred (out of scope). Implement against the listing shape on the implementation branch (`templates[]` today, `{templates, nextStartKey}` after #77) without blocking on #77.
 
 ```json
-{ "risk": "med", "size": "m", "check": "code" }
+{"risk": "med", "size": "m", "check": "code"}
 ```
