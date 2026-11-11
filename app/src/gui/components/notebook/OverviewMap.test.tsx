@@ -5,7 +5,7 @@ import {
   type CompiledNotebookUiSpec,
   type NotebookUiSpec,
 } from '@faims3/data-model';
-import {act, render, renderHook, screen} from '@testing-library/react';
+import {act, render, screen} from '@testing-library/react';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import type {RecordFeatureCollection} from './recordFeatures';
 
@@ -80,8 +80,29 @@ vi.mock('./recordFeatures', () => ({
   }),
 }));
 
-import {useRecordFormLayerList, writeRecordFormLayerPrefs} from '@faims3/forms';
+import {MapComponent, useRecordFormLayerList} from '@faims3/forms';
 import {OverviewMap} from './OverviewMap';
+
+/** Same recordLayers / onUpdateRecordLayer wiring MapWrapper uses in the popup. */
+function CollectionPopup() {
+  const list = useRecordFormLayerList({
+    projectId: 'project-1',
+    descriptors: [
+      {formId: 'Observation', name: 'Observations'},
+      {formId: 'Site', name: 'Sites'},
+    ],
+    colorFormIds: ['Site', 'Observation'],
+  });
+  return (
+    <MapComponent
+      config={{} as never}
+      parentSetMap={() => undefined}
+      recordLayers={list.recordLayers}
+      onUpdateRecordLayer={list.updateRecordLayer}
+      onResetRecordLayers={list.resetRecordLayers}
+    />
+  );
+}
 
 const rawUiSpec: NotebookUiSpec = {
   fields: {
@@ -155,18 +176,14 @@ describe('OverviewMap record layers', () => {
     expect(layers.every(layer => layer.visible)).toBe(true);
   });
 
-  it('hides a form layer after the collection popup writes shared prefs', () => {
-    writeRecordFormLayerPrefs('project-1', {
-      'record-form:Site': {
+  it('hides a record-form layer on OverviewMap after the popup onUpdateRecordLayer', () => {
+    const {unmount} = render(<CollectionPopup />);
+    act(() => {
+      mapProps.current?.onUpdateRecordLayer?.('record-form:Site', {
         visible: false,
-        opacity: 1,
-        zIndex: 980,
-        stroke: '#2171b5',
-        fill: '#2171b580',
-        lineWidth: 4,
-        pointSize: 7,
-      },
+      });
     });
+    unmount();
 
     render(
       <OverviewMap
@@ -176,10 +193,10 @@ describe('OverviewMap record layers', () => {
       />
     );
 
-    const site = mapProps.current?.recordLayers?.find(
-      layer => layer.formId === 'Site'
-    );
-    expect(site?.visible).toBe(false);
+    expect(
+      mapProps.current?.recordLayers?.find(layer => layer.formId === 'Site')
+        ?.visible
+    ).toBe(false);
     expect(
       mapProps.current?.recordLayers?.find(
         layer => layer.formId === 'Observation'
@@ -187,7 +204,7 @@ describe('OverviewMap record layers', () => {
     ).toBe(true);
   });
 
-  it('collection popup prefs see a hide written through the overview map', () => {
+  it('hides a record-form layer on the collection popup after OverviewMap onUpdateRecordLayer', () => {
     const {unmount} = render(
       <OverviewMap
         uiSpec={uiSpec}
@@ -195,7 +212,6 @@ describe('OverviewMap record layers', () => {
         records={{allRecords: []}}
       />
     );
-
     act(() => {
       mapProps.current?.onUpdateRecordLayer?.('record-form:Site', {
         visible: false,
@@ -203,24 +219,16 @@ describe('OverviewMap record layers', () => {
     });
     unmount();
 
-    const {result} = renderHook(() =>
-      useRecordFormLayerList({
-        projectId: 'project-1',
-        descriptors: [
-          {formId: 'Observation', name: 'Observations'},
-          {formId: 'Site', name: 'Sites'},
-        ],
-        colorFormIds: ['Site', 'Observation'],
-      })
-    );
+    render(<CollectionPopup />);
 
     expect(
-      result.current.recordLayers.find(layer => layer.formId === 'Site')
+      mapProps.current?.recordLayers?.find(layer => layer.formId === 'Site')
         ?.visible
     ).toBe(false);
     expect(
-      result.current.recordLayers.find(layer => layer.formId === 'Observation')
-        ?.visible
+      mapProps.current?.recordLayers?.find(
+        layer => layer.formId === 'Observation'
+      )?.visible
     ).toBe(true);
   });
 
