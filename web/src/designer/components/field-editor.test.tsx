@@ -176,3 +176,72 @@ describe('FieldEditor delete existing-record warning', () => {
     ).toBeUndefined();
   });
 });
+
+describe('FieldEditor Conditional chip', () => {
+  const RICH_TEXT_ID = 'f_richtext';
+  const RICH_TEXT_DESIGNER_ID = 'designer-richtext';
+  const CHOICE_ID = 'f_choice';
+
+  it('shows the Conditional chip on a collapsed RichText field with a condition', () => {
+    const store = createDesignerStore();
+    const richText = getFieldSpec('RichText');
+    richText['component-parameters'].name = RICH_TEXT_ID;
+    richText['component-parameters'].label = 'Safety warning';
+    richText.exportName = 'Safety-warning';
+    richText.designerIdentifier = RICH_TEXT_DESIGNER_ID;
+    richText.condition = {
+      operator: 'equal',
+      field: CHOICE_ID,
+      value: 'Hazardous',
+    };
+
+    const choice = getFieldSpec('RadioGroup');
+    choice['component-parameters'].name = CHOICE_ID;
+    choice['component-parameters'].label = 'Site status';
+    choice.exportName = 'Site-status';
+    choice.designerIdentifier = 'designer-choice';
+
+    store.dispatch(
+      loaded({
+        fields: {[RICH_TEXT_ID]: richText, [CHOICE_ID]: choice},
+        views: {
+          sectionA: {label: 'Section A', fields: [CHOICE_ID, RICH_TEXT_ID]},
+        },
+        viewsets: {
+          formA: {label: 'Form A', views: ['sectionA'], summary_fields: []},
+        },
+        visible_types: ['formA'],
+        settings: {showQrCodeButton: false},
+        schemaVersion: CURRENT_NOTEBOOK_UI_SCHEMA_VERSION,
+      })
+    );
+
+    render(
+      <ThemeProvider theme={globalTheme}>
+        <Provider store={store}>
+          <DesignerEditingProvider value={{}}>
+            <DndContext>
+              <SortableContext
+                items={[RICH_TEXT_ID]}
+                strategy={verticalListSortingStrategy}
+              >
+                <FieldEditor
+                  designerIdentifier={RICH_TEXT_DESIGNER_ID}
+                  fieldName={RICH_TEXT_ID}
+                  viewSetId="formA"
+                  viewId="sectionA"
+                  expanded={false}
+                  addFieldCallback={() => {}}
+                  onExpandedChange={() => {}}
+                  moveFieldCallback={() => {}}
+                />
+              </SortableContext>
+            </DndContext>
+          </DesignerEditingProvider>
+        </Provider>
+      </ThemeProvider>
+    );
+
+    expect(screen.getByText('Conditional')).toBeTruthy();
+  });
+});

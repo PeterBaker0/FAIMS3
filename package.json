@@ -32,6 +32,7 @@
     "generate-build-config": "pnpm --filter=@faims3/build-config run generate",
     "validate-build-config": "pnpm --filter=@faims3/build-config run validate",
     "test:scripts": "bash scripts/test/deployment-scripts.test.sh",
+    "test:readme-architecture": "node --test scripts/test/readme-architecture.test.mjs",
     "dev": "turbo dev --filter=@faims3/app --filter=@faims3/web --filter=@faims3/api --filter=@faims3/data-model --filter=@faims3/build-config",
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
@@ -62,7 +63,8 @@
     "typescript": "^7.0.2"
   },
   "lint-staged": {
-    "*.{js,jsx,ts,tsx,mts,cts,mjs,cjs,json,jsonc,css,scss,less,md,mdx,yml,yaml,html,vue,svelte}": "oxfmt --write"
+    "!(specs)/**/*.{js,jsx,ts,tsx,mts,cts,mjs,cjs,json,jsonc,css,scss,less,md,mdx,yml,yaml,html,vue,svelte}": "oxfmt --write",
+    "./*.{js,jsx,ts,tsx,mts,cts,mjs,cjs,json,jsonc,css,scss,less,md,mdx,yml,yaml,html,vue,svelte}": "oxfmt --write"
   },
   "engines": {
     "node": "24"

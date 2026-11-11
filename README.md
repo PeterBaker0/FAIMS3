@@ -1,6 +1,42 @@
+Factory trial: this sentence was added by the control plane.
+
+Factory trial.
+
 # FAIMS3
 
 FAIMS3 is an open-source tool for offline field data-collection brought to you by the FAIMS Project. The FAIMS Project was funded by the ARDC ([https://dx.doi.org/10.47486/PL110]), Macquarie University, and CSIRO along with our other partners.
+
+## Architecture
+
+Field teams collect records offline in the field app (web, Android, and iOS)
+and sync them with CouchDB. Administrators design surveys and manage teams in
+the Control Centre, which includes the Designer. That UI calls the Conductor
+API for sign-in, permissions, and survey administration. The Conductor stores
+survey metadata in CouchDB and map-layer files in RustFS. A spatial worker
+reads ingest jobs from CouchDB and writes PMTiles back to RustFS. The field
+app downloads those layers directly from RustFS.
+
+```mermaid
+flowchart TB
+  App["Field app"]
+  Web["Control Centre and Designer"]
+  API["Conductor API"]
+  Couch[("CouchDB")]
+  Files[("RustFS")]
+  Worker["Spatial worker"]
+
+  App -->|sign in| API
+  App -->|sync records| Couch
+  Web -->|manage surveys| API
+  API -->|metadata| Couch
+  API -->|stage map layers| Files
+  Worker -->|read jobs| Couch
+  Worker -->|write PMTiles| Files
+```
+
+The field app, Control Centre, and Conductor share `library/data-model`,
+`library/forms`, and `library/build-config`. Deployment tooling lives in
+`infrastructure/`.
 
 ## Licence
 

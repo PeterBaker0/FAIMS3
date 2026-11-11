@@ -116,7 +116,8 @@ for code work.
 
 - Lint everything: `npx turbo lint` (or `pnpm lint`). The `@faims3/forms`
   circular-dependency notice is a pre-existing warning, not a failure.
-- Format: `pnpm format` (oxfmt) / `pnpm format:check`.
+- Format: `pnpm format` (oxfmt) / `pnpm format:check`. Factory
+  files under `specs/` are excluded from format checks.
 - Build everything: `pnpm build` (`npx turbo build`).
 - Tests per package (no single repo-wide test script):
   `pnpm --filter=@faims3/data-model test` (jest),

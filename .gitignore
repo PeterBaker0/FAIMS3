@@ -11,7 +11,8 @@ app/public/manifest.json
 .pnpm-store
 __pycache__/
 *.py[cod]
-.cursor
+.cursor/*
+!.cursor/environment.json
 # Ignore config files that might include secrets
 /config
 # sync-deployment-config.sh cache: environment -> config repo locator

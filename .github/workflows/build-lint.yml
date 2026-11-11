@@ -54,6 +54,9 @@ jobs:
       - name: License check
         run: pnpm run license-check
 
+      - name: README architecture diagram
+        run: pnpm run test:readme-architecture
+
       - name: Format check
         run: pnpm run format:check
 

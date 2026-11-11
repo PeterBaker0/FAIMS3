@@ -9,6 +9,10 @@ import {
   getDependantFields,
   isStringArray,
 } from '../src/uiSpecification/conditionals';
+import {
+  compileUiSpecConditionals,
+  getFieldsMatchingCondition,
+} from '../src/uiSpecification/utils';
 
 describe('get dependant fields', () => {
   it('finds dependant fields in a nested expression', () => {
@@ -454,5 +458,60 @@ describe('compiling expressions', () => {
       const res = isStringArray(shouldNot);
       expect(res).toBe(false);
     }
+  });
+});
+
+describe('RichText field.condition visibility', () => {
+  const RICH_TEXT_ID = 'Safety-Warning';
+  const STATUS_ID = 'Site-Status';
+  const VIEW = 'Survey-view';
+
+  const makeSpec = (condition?: {
+    operator: string;
+    field: string;
+    value: string;
+  }) => {
+    const spec: any = {
+      viewsets: {Survey: {views: [VIEW], label: 'Survey'}},
+      views: {
+        [VIEW]: {fields: [STATUS_ID, RICH_TEXT_ID], label: 'Survey'},
+      },
+      fields: {
+        [STATUS_ID]: {
+          'component-namespace': 'faims-custom',
+          'component-name': 'RadioGroup',
+          'type-returned': 'faims-core::String',
+          'component-parameters': {name: STATUS_ID, label: 'Site status'},
+        },
+        [RICH_TEXT_ID]: {
+          'component-namespace': 'faims-custom',
+          'component-name': 'RichText',
+          'type-returned': 'faims-core::String',
+          'component-parameters': {
+            name: RICH_TEXT_ID,
+            label: 'Safety warning',
+            content: 'Wear PPE',
+          },
+          ...(condition ? {condition} : {}),
+        },
+      },
+    };
+    compileUiSpecConditionals(spec);
+    return spec;
+  };
+
+  it('includes RichText when values match and excludes it when they do not', () => {
+    const spec = makeSpec({
+      operator: 'equal',
+      field: STATUS_ID,
+      value: 'Hazardous',
+    });
+
+    expect(
+      getFieldsMatchingCondition(spec, {[STATUS_ID]: 'Hazardous'}, VIEW)
+    ).toEqual([STATUS_ID, RICH_TEXT_ID]);
+    expect(
+      getFieldsMatchingCondition(spec, {[STATUS_ID]: 'Safe'}, VIEW)
+    ).toEqual([STATUS_ID]);
   });
 });

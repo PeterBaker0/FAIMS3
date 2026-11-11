@@ -25,6 +25,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import {
+  closeDesignerHostOverlay,
   toDesignerNotebookWithHistory,
   useDesignerSaveMutation,
 } from '@/designer/integration';
@@ -56,9 +57,9 @@ const TemplateActions = () => {
     return toDesignerNotebookWithHistory(data, 'template');
   }, [data]);
 
+  // Publish is in-editor; closing without a file must not PUT.
   const handleEditorClose = (file?: File) => {
-    if (file) saveTemplateNotebook.mutateAsyncWithToast(file);
-    setEditorOpen(false);
+    closeDesignerHostOverlay(() => setEditorOpen(false), file);
   };
 
   // Invalidate template query after notebook file upload from elsewhere in the UI.
@@ -287,6 +288,10 @@ const TemplateActions = () => {
         exportBaseName={data?.name}
         onClose={handleEditorClose}
         designerMode="template"
+        userId={user.user.id}
+        resourceKind="templates"
+        resourceId={templateId}
+        publishNotebook={saveTemplateNotebook.mutateAsyncWithToast}
       />
     </>
   );

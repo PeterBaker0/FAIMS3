@@ -1,0 +1,4 @@
+{
+  "name": "faims3",
+  "install": "node -v && corepack enable && corepack prepare pnpm@11.6.0 --activate && pnpm install --frozen-lockfile"
+}
