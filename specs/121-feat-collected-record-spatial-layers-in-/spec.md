@@ -104,5 +104,5 @@ Named manual check (optional, not required to merge): **Popup matches MAP tab** 
 2. If record hydration is lifted to notebook-route scope, should the MAP tab keep its own `useRecordFeatures` call (duplicate queries, simpler isolation) or always read the shared source? Spec does not require one; pick the option that keeps `OverviewMap.test.tsx` stable.
 
 ```json
-{ "risk": "med", "size": "m", "check": "code" }
+{"risk": "med", "size": "m", "check": "code"}
 ```
