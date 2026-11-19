@@ -805,7 +805,7 @@ describe('startup migration lock', () => {
     expect(lock._id).toBe(STARTUP_MIGRATION_LOCK_ID);
     expect(lock._rev).toEqual(expect.any(String));
     expect(lock.fingerprint).toBe('old-fingerprint');
-    expect(lock.history.at(-1)).toMatchObject({
+    expect(lock.history[lock.history.length - 1]).toMatchObject({
       holderId: 'old-api',
       status: 'failed',
       fingerprint: 'old-fingerprint',
@@ -845,6 +845,7 @@ describe('startup migration lock', () => {
         fingerprint: 'log-fingerprint',
         apiVersion: '1.11.0',
         pollIntervalMs: 15,
+        run: vi.fn(),
       });
 
       await new Promise(resolve => setTimeout(resolve, 40));
