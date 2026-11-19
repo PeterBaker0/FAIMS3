@@ -26,7 +26,7 @@ rolling update becomes a scale change mid-rollout:
 - **Live count below `desiredCapacity` (typical idle).** A prod deploy with
   live count 1 and template `desiredCapacity` 2 issued one `UpdateService`
   that both swapped the task definition and raised the count to 2. ECS ran
-  four tasks (200% of 2), including an extra *old* revision. That old task
+  four tasks (200% of 2), including an extra _old_ revision. That old task
   won the startup migration lock and marked it `complete`, so the new
   revision never migrated (the lock-side fix is #130). Autoscaling scaled
   back to 1 minutes later.
@@ -50,7 +50,7 @@ floor.
   `FaimsConductor`. `undefined` is what tells CDK to omit `DesiredCount`
   from the synthesised service. Do not substitute `1`, `minCapacity`, or any
   other fallback.
-- When `desiredCapacity` *is* set, synthesis must still emit
+- When `desiredCapacity` _is_ set, synthesis must still emit
   `DesiredCount` equal to that value (existing configs keep today's
   template).
 - If `desiredCapacity` is set, reject configs where it is outside
