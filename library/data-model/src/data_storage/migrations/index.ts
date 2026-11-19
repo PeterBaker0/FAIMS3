@@ -3,6 +3,7 @@ export * from './hooks';
 export * from './migrations';
 export * from './migrationService';
 export * from './startupMigrationFingerprint';
+export * from './startupMigrationAhead';
 export * from './types';
 export * from './notebookMigrations';
 export * from './uiSpecificationMigration';
