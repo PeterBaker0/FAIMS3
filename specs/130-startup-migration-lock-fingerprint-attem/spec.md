@@ -15,7 +15,6 @@ Any rolling deploy can boot mixed versions at once. The lock must only let a wai
 ## 2. Constraints
 
 - Fingerprint **what boot-migrate will do**, not the package version. Canonical input, in stable order:
-
   - every `DB_TARGET_VERSIONS` entry (`dbType` → `defaultVersion` and `targetVersion`)
   - every `DB_MIGRATIONS` row as `{dbType, from, to}` (not function bodies or descriptions)
   - `CURRENT_NOTEBOOK_UI_SCHEMA_VERSION`
@@ -28,7 +27,6 @@ Any rolling deploy can boot mixed versions at once. The lock must only let a wai
 - `apiVersion` is `config.apiVersion` (`api/package.json`). Store and log it. Never use it for waiter matching.
 
 - Add optional `fingerprint` and `apiVersion` to `StartupMigrationLockDoc` and `StartupMigrationLockAttempt` so pre-fingerprint Couch docs still parse. New writers always set both:
-
   - on claim (`tryClaim` puts `running`)
   - on settle (`complete` / `failed` history row; keep them on the doc)
   - on steal (`timed_out` history row copies the stolen attempt’s values when present)
@@ -36,7 +34,6 @@ Any rolling deploy can boot mixed versions at once. The lock must only let a wai
 - `StartupMigrationLockOptions` gains optional `fingerprint` and `apiVersion` so tests can simulate mixed binaries. Production (`runStartupMigrations`) always supplies this process’s values. When omitted in a unit test, fill from the data-model helper and `config.apiVersion` so existing same-process waiter tests keep matching.
 
 - In `waitForDoer`, when `doc.status` is `complete` or `failed`:
-
   - `doc.fingerprint === mine` → `{action: 'proceed'}` (today’s behaviour, including fail-open on matching `failed`)
   - missing fingerprint, or any other value → log `doer_settled_foreign_fingerprint` (include `instance`, `holder`, `status`, this process’s fingerprint, the doc fingerprint if any, and `apiVersion`s when present) and return `{action: 'retry'}`
 
@@ -111,9 +108,9 @@ Include the new data-model test file path in the first command if it is not pick
 
 ## 7. Open questions
 
-1. Should a waiter that sees a *running* lock with a foreign fingerprint steal before timeout? Spec says no (wait, then re-claim on settle) to avoid two concurrent `run()`s. Confirm only if operations want a faster cutover than `STARTUP_MIGRATION_LOCK_TIMEOUT_MS`.
+1. Should a waiter that sees a _running_ lock with a foreign fingerprint steal before timeout? Spec says no (wait, then re-claim on settle) to avoid two concurrent `run()`s. Confirm only if operations want a faster cutover than `STARTUP_MIGRATION_LOCK_TIMEOUT_MS`.
 2. Is 12 hex characters enough of SHA-256 for operators grepping logs, or should the lock store the full digest? Spec uses 12 as in the issue; collision risk across our registry size is negligible.
 
 ```json
-{ "risk": "med", "size": "m", "check": "code" }
+{"risk": "med", "size": "m", "check": "code"}
 ```
