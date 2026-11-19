@@ -36,9 +36,9 @@ tasks:
       - library/data-model/src/data_storage/dataDB/init.ts
     acceptance:
       - 6
-    risk: medium
+    risk: med
     size: m
-    tier: 1
+    tier: mid
   - key: fold-jwt-fingerprint
     title: Fold JWT public key into hash
     description: >
@@ -54,9 +54,9 @@ tasks:
       - api/test/startupMigrationFingerprint.test.ts
     acceptance:
       - 6
-    risk: medium
+    risk: med
     size: s
-    tier: 2
+    tier: cheap
   - key: lock-fields-and-wait
     title: Store fingerprint and match waiters
     description: >
@@ -75,9 +75,9 @@ tasks:
       - 2
       - 3
       - 4
-    risk: medium
+    risk: med
     size: m
-    tier: 2
+    tier: mid
   - key: lock-log-fingerprint
     title: Log fingerprint on lock events
     description: >
@@ -94,7 +94,7 @@ tasks:
       - 7
     risk: low
     size: s
-    tier: 3
+    tier: cheap
   - key: boot-pass-fingerprint
     title: Pass fingerprint at boot
     description: >
@@ -111,9 +111,9 @@ tasks:
       - 1
       - 6
       - 8
-    risk: medium
+    risk: med
     size: s
-    tier: 3
+    tier: cheap
   - key: debug-cli-fields
     title: Show fingerprint in debug CLI
     description: >
@@ -129,7 +129,7 @@ tasks:
       - 7
     risk: low
     size: s
-    tier: 3
+    tier: cheap
   - key: cover-lock-tests
     title: Cover settle and downgrade paths
     description: >
@@ -154,7 +154,7 @@ tasks:
       - 5
       - 7
       - 8
-    risk: medium
+    risk: med
     size: m
-    tier: 4
+    tier: mid
 ```
