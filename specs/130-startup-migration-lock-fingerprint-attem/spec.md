@@ -6,60 +6,48 @@ Issue: [#130](https://github.com/PeterBaker0/FAIMS3/issues/130)
 
 The clustered startup-migration lock (`api/src/couchdb/startupMigrationLock.ts`) records that a boot-migrate attempt finished (`complete` / `failed`), but not which code ran it. `waitForDoer` treats any settlement as authoritative: waiters return `{role: 'waiter'}` and never invoke `run`.
 
-During a rolling ECS deploy, an old-revision task can win the lock, apply the previous API’s `DB_TARGET_VERSIONS`, and settle `complete`. New-revision tasks that were waiting then attach without running their own migrations. The lock, steal timeout, and fail-open path all behave as designed; the schema target of the running code is still skipped.
+During a rolling ECS deploy, an old-revision task can win the lock, apply the previous API’s `DB_TARGET_VERSIONS`, write the previous design docs / JWT public key, and settle `complete`. New-revision tasks that were waiting then attach without running `runMigrationWork`, so a newer schema target, newer `_design/*` content, or a rotated Couch JWT key is never applied.
 
-This happened moving conductor 1.10.0 → 1.11.0 when `DB_TARGET_VERSIONS[AUTH].targetVersion` went 5 → 6. Old task A claimed, logged `Database already at target version; skipping { dbType: 'AUTH', version: 5 }`, and settled `complete`. New tasks B and C logged `doer_settled … status=complete` and attached. `auth` stayed at v5. A future non-trivial step would be skipped the same way.
+This happened moving conductor 1.10.0 → 1.11.0 when `DB_TARGET_VERSIONS[AUTH].targetVersion` went 5 → 6. Old task A claimed, logged `Database already at target version; skipping { dbType: 'AUTH', version: 5 }`, and settled `complete`. New tasks B and C logged `doer_settled … status=complete` and attached. `auth` stayed at v5. AUTH 5→6 is a no-op document migration; the real payload is new auth design views (`downloadGrants`, login lockout). A design-doc-only change (for example data-DB `validate_doc_update`) is documented as needing **no** `targetVersion` bump — if waiters skip `run()`, those views never land.
 
-The same skip applies to **DB initialisation**. `runStartupMigrations` calls `initialiseAndMigrateDBs({force: true, pushKeys: true})`, which runs `couchInitialiser` on every boot for auth and the other global DBs (and each project data DB). That is not a one-shot: with `forceWrite: true` it re-reads each design / default document and rewrites it only when stored content differs. AUTH 5→6 is a no-op document migration whose real payload is new auth design views (`downloadGrants`, login lockout). A design-doc-only change (for example `dataDB` `validate_doc_update`) is documented as needing **no** `targetVersion` bump — if waiters skip `run()`, those views never land.
+`runMigrationWork` (the locked callback) is: `initialiseDbAndKeys` (design/security docs + `initialiseJWTKey`) → `migrateDbs` → `validateDatabases`. Init is not a one-shot outside the lock: every doer boot still runs `couchInitialiser({forceWrite: true})` and skips the write when stored content already matches.
 
-Any rolling deploy can boot mixed versions at once. The lock must only let a waiter accept a settlement whose migration set **and** desired init content match its own.
+The fingerprint is the **intended end state of this binary**, not how much work is left. A doer that migrated some DBs and then died must keep the same fingerprint so a later matching process can re-claim and finish remaining steps (`migrateDbs` already skips DBs at target; init is content-match). Hashing live current versions or pending diffs would change the attempt identity after a partial success and is wrong.
 
 ## 2. Constraints
 
-- Fingerprint **what boot-migrate will do**, not the package version. Canonical input, in stable order:
-  - every `DB_TARGET_VERSIONS` entry (`dbType` → `defaultVersion` and `targetVersion`)
-  - every `DB_MIGRATIONS` row as `{dbType, from, to}` (not function bodies or descriptions)
-  - `CURRENT_NOTEBOOK_UI_SCHEMA_VERSION`
-  - every `NOTEBOOK_UI_SCHEMA_MIGRATIONS` row as `{from, to}`
-  - desired **init payloads** (the documents `couchInitialiser` would write), not live Couch `_rev`s:
-    - each global `init*DB` used by `initialiseDbAndKeys` (`initAuthDB`, `initDirectoryDB` **without** env `defaultConfig`, `initProjectsDB`, `initTemplatesDB`, `initPeopleDB`, `initInvitesDB`, `initTeamsDB`, `initMapAssetsDB`, `initTombstoneDB`, `initMigrationsDB`)
-    - `initDataDB({projectId})` with a **stable placeholder** `projectId` (do not enumerate projects)
-    - per factory: `{id, designDocuments, securityDocument, defaultDocument?}` with `_rev` omitted, JSON-stable (same round-trip as `hasSameStoredContent`)
+- Fingerprint these three inputs only, in stable order. Do **not** include live Couch versions, pending step lists, migration logs, `DB_MIGRATIONS` `{from,to}` rows, notebook step registries, `defaultVersion`, `apiVersion`, private keys, or directory env `default` identity.
+  1. **Target versions** — every `DB_TARGET_VERSIONS[dbType].targetVersion`, plus `CURRENT_NOTEBOOK_UI_SCHEMA_VERSION` (the uiSpec target used by `validateDatabases`).
+  2. **DB initialisation targets** — the documents this build would pass to `couchInitialiser`, not stored `_rev`s. Call each `init*DB` used by `initialiseDbAndKeys` (`initAuthDB`, `initDirectoryDB` without env `defaultConfig`, `initProjectsDB`, `initTemplatesDB`, `initPeopleDB`, `initInvitesDB`, `initTeamsDB`, `initMapAssetsDB`, `initTombstoneDB`, `initMigrationsDB`) and `initDataDB({projectId})` with a **stable placeholder** `projectId` (do not enumerate projects). Per factory, hash `{id, designDocuments, securityDocument, defaultDocument?}` with `_rev` omitted, JSON-stable (same round-trip as `hasSameStoredContent`).
+  3. **Keys** — the JWT material `initialiseJWTKey` would PUT to Couch `_config/jwt_keys/` (`rsa:${kid}` + public PEM). Never the private key. Compute from `keyService.getSigningKey()` in the API; do not read Couch `_config` to fingerprint.
 
-  Hash with SHA-256 and store the first 12 lowercase hex characters. Do not put `apiVersion` in the hash.
+  Hash the canonical payload with SHA-256 and store the first 12 lowercase hex characters.
 
-- Init content is a process constant (function `toString()` of design maps via `convertToCouchDBString`, plus static security / default docs). Do not read Couch to compute the fingerprint. Directory `default` identity (`conductorInstanceName`, `conductorUrl`, …) is env, not code — omit it so the hash is the same for every replica of a build.
-
-- Expose the fingerprint from `@faims3/data-model` so a data-model test can assert it changes when a target, registry row, or init design/security document changes. Hashing may use Node `crypto` (this package already does in tests). `runStartupMigrations` passes the string into the lock; do not recompute per poll.
+- The fingerprint is a process constant for this task’s code + signing public key. Compute once (data-model helper for (1)+(2), API folds in (3)) and pass into `withStartupMigrationLock`. Do not recompute per poll and do not read DB version documents to compute it.
 
 - `apiVersion` is `config.apiVersion` (`api/package.json`). Store and log it. Never use it for waiter matching.
 
-- Add optional `fingerprint` and `apiVersion` to `StartupMigrationLockDoc` and `StartupMigrationLockAttempt` so pre-fingerprint Couch docs still parse. New writers always set both:
-  - on claim (`tryClaim` puts `running`)
-  - on settle (`complete` / `failed` history row; keep them on the doc)
-  - on steal (`timed_out` history row copies the stolen attempt’s values when present)
+- Add optional `fingerprint` and `apiVersion` to `StartupMigrationLockDoc` and `StartupMigrationLockAttempt` so pre-fingerprint Couch docs still parse. New writers always set both: on claim (`running`), on settle (`complete` / `failed` history row; keep them on the doc), and on steal (`timed_out` row copies the stolen attempt’s values when present).
 
-- `StartupMigrationLockOptions` gains optional `fingerprint` and `apiVersion` so tests can simulate mixed binaries. Production (`runStartupMigrations`) always supplies this process’s values. When omitted in a unit test, fill from the data-model helper and `config.apiVersion` so existing same-process waiter tests keep matching.
+- `StartupMigrationLockOptions` gains optional `fingerprint` and `apiVersion` so tests can simulate mixed binaries. Production (`runStartupMigrations`) always supplies this process’s values. When omitted in a unit test, fill from the helper + `config.apiVersion` so existing same-process waiter tests keep matching. Key hashing may be stubbed in lock unit tests.
 
 - In `waitForDoer`, when `doc.status` is `complete` or `failed`:
   - `doc.fingerprint === mine` → `{action: 'proceed'}` (today’s behaviour, including fail-open on matching `failed`)
   - missing fingerprint, or any other value → log `doer_settled_foreign_fingerprint` (include `instance`, `holder`, `status`, this process’s fingerprint, the doc fingerprint if any, and `apiVersion`s when present) and return `{action: 'retry'}`
 
-  `tryClaim` already treats settled docs as claimable; the waiter becomes the doer and runs its own `run()`.
+  `tryClaim` already treats settled docs as claimable; the waiter becomes the doer and runs its own `run()`. Matching `failed` waiters still fail-open; a **later startup wave** still re-claims a settled lock and runs again so remaining migrate/init/key work can finish.
 
 - Do **not** steal a live `running` lock just because its fingerprint differs. Wait, then re-claim after settle. Timeout / steal / 409 / I/O retry / `settleLock` no-op-if-stolen stay as they are.
 
-- Do **not** skip `tryClaim` when a later startup wave finds a matching `complete` lock. Sequential boots still re-claim and run again (migrations are idempotent; init is content-match no-op; see the existing “later startup wave” test).
-
 - Include `fingerprint` on at least these `[startup-migration]` lines: `begin`, `claimed`, `wait_for_doer`, `still_waiting`, `doer_settled`, `doer_settled_foreign_fingerprint`, `settled`, `finish`. Prefer adding it to every `logStartupMigration` call in the lock module.
 
-- `api/scripts/debugMigrationLock.ts`: human lock output (`formatLockHuman`) shows `fingerprint` and `apiVersion` on the current doc and each history row. JSON already dumps the doc; keep the new fields on the type so they appear. Admin `claim` stamps this process’s fingerprint/`apiVersion` so the CLI does not write a legacy blank lock. `unlock` preserves the doc’s existing fields and copies them onto the new history row.
+- `api/scripts/debugMigrationLock.ts`: human lock output (`formatLockHuman`) shows `fingerprint` and `apiVersion` on the current doc and each history row. JSON already dumps the doc. Admin `claim` stamps this process’s fingerprint/`apiVersion`. `unlock` preserves them on the doc and copies them onto the new history row.
 
-- Old-after-new: if an older binary re-claims after a newer one has migrated, `identifyMigrations` already throws `Cannot downgrade databases…`. `runAsDoer` must still catch that, settle `failed`, return without throwing, and leave a readable lock (`status: 'failed'`, history capped, `_id` / `_rev` intact). `runStartupMigrations` still resolves so the old task can attach. Do not add a downgrade path. Init of older design docs over newer ones is possible on that path; that is existing `forceWrite` behaviour, not this issue.
+- Old-after-new: if an older binary re-claims after a newer one has migrated, `identifyMigrations` already throws `Cannot downgrade databases…`. `runAsDoer` must still catch that, settle `failed`, return without throwing, and leave a readable lock. `runStartupMigrations` still resolves so the old task can attach. Do not add a downgrade path.
 
-- Changing a **migration function body** without changing `from`/`to`/`targetVersion` does not change the fingerprint. Changing a **design-doc map / `validate_doc_update` / security document** does, even with no target bump (`couchInitialiser` is the propagation path).
+- Changing a **migration function body** without changing `targetVersion` does not change the fingerprint. Changing a **design-doc map / `validate_doc_update` / security document** or the **JWT public key / kid** does, even with no target bump.
 
-- No Couch schema migration of the lock document itself: new fields are additive.
+- No Couch schema migration of the lock document itself: new fields are additive. Do not store the private key, full PEM in logs, or raw key material on the lock beyond the 12-hex fingerprint.
 
 ## 3. Acceptance criteria
 
@@ -73,24 +61,25 @@ Any rolling deploy can boot mixed versions at once. The lock must only let a wai
 
 5. Old-after-new: a lock settled `complete` under fingerprint `new`, then a caller with fingerprint `old` whose `run` throws `Cannot downgrade databases`, returns `{role: 'doer', status: 'failed'}`, does not reject, and leaves `status: 'failed'` with a consistent history row. Covered in `api/test/startupMigrationLock.test.ts`. `library/data-model/tests/migrationService.test.ts` already throws when current version exceeds target; keep that test green.
 
-6. The fingerprint string changes when any of these change in a cloned canonical input (do not mutate live registries without restoring them):
-   - `DB_TARGET_VERSIONS[dbType].targetVersion` or `defaultVersion`
-   - a `DB_MIGRATIONS` `{dbType, from, to}` or notebook `{from, to}` / `CURRENT_NOTEBOOK_UI_SCHEMA_VERSION`
+6. The fingerprint string, from a cloned canonical input, changes when any of these change, and does **not** change when only remaining/pending work or current DB versions change:
+   - any `DB_TARGET_VERSIONS[dbType].targetVersion`
+   - `CURRENT_NOTEBOOK_UI_SCHEMA_VERSION`
    - a hashed init `designDocuments[]` entry (for example an auth view `map` string) or `securityDocument`
-     It does not change when only `apiVersion` / `package.json` version changes, when only directory env `defaultConfig` changes, or when only the data-DB `projectId` placeholder’s live project list changes. Test in `@faims3/data-model`.
+   - JWT `kid` or public PEM
+     It does not change when only `apiVersion` / `package.json` version, `defaultVersion`, a `DB_MIGRATIONS` `{from,to}` row with unchanged targets, directory env `defaultConfig`, the live project list, or private key bytes change. Tests: `@faims3/data-model` for (targets + init); `@faims3/api` for the key fold-in (stub `keyService`).
 
-7. Spying `console.log` (or the existing `logKeyValue` path) during a lock run, the events listed in Constraints include `fingerprint=`. `formatLockHuman` output contains both `fingerprint` and `apiVersion` for a doc that has them. Covered in `api/test/startupMigrationLock.test.ts` and `api/test/debugMigrationLock.test.ts`.
+7. Spying `console.log` (or the existing `logKeyValue` path) during a lock run, the events listed in Constraints include `fingerprint=`. `formatLockHuman` output contains both `fingerprint` and `apiVersion` for a doc that has them. Covered in `api/test/startupMigrationLock.test.ts` and `api/test/debugMigrationLock.test.ts`. Logs must not print the private key or full PEM.
 
-8. Existing lock tests in `api/test/startupMigrationLock.test.ts` still pass: first claimer runs, matching waiter does not, matching `failed` waiters proceed, steal-on-timeout, 409 race, I/O retry/fail, stolen doer cannot settle. Command: `pnpm --filter=@faims3/api exec vitest --run test/startupMigrationLock.test.ts test/startupMigrations.test.ts test/debugMigrationLock.test.ts`.
+8. Existing lock tests in `api/test/startupMigrationLock.test.ts` still pass: first claimer runs, matching waiter does not, matching `failed` waiters proceed, steal-on-timeout, 409 race, I/O retry/fail, stolen doer cannot settle, later startup wave re-claims a settled matching lock and runs again. Command: `pnpm --filter=@faims3/api exec vitest --run test/startupMigrationLock.test.ts test/startupMigrations.test.ts test/debugMigrationLock.test.ts`.
 
 ## 4. Out of scope
 
-- Changing `infrastructure/aws-cdk/lib/components/conductor.ts` `desiredCount` / autoscaling (the separate infra cause of extra old-revision tasks mid-deploy).
+- Changing `infrastructure/aws-cdk/lib/components/conductor.ts` `desiredCount` / autoscaling.
 - Heartbeats, cancelling a live doer, or new concurrency rules beyond fingerprint matching on **settled** docs.
-- Matching or hashing `apiVersion`, migration function source, notebook migration function bodies, JWT keys (`pushKeys` / `initialiseJWTKey`), or live Couch documents / `_rev`s.
-- Hashing directory `default` instance identity or other env-injected init fields; hashing every project’s `initDataDB({projectId})` payload.
+- Hashing live Couch versions, pending diffs, `DB_MIGRATIONS` registry rows, notebook step registries, `defaultVersion`, `apiVersion`, private keys, or directory `default` instance identity.
+- Hashing every project’s concrete `initDataDB({projectId})` payload (placeholder only).
 - Rewriting existing lock documents in Couch; running `migrate-with-keys` / forcing a deploy as immediate remediation.
-- `DISABLE_MIGRATE_ON_STARTUP` / lock-disabled local boot, notebook downgrade behaviour beyond the existing throw, and Control Centre / app UI.
+- `DISABLE_MIGRATE_ON_STARTUP` / lock-disabled local boot, and Control Centre / app UI.
 - Browser e2e.
 
 ## 5. Test plan
@@ -101,10 +90,10 @@ This is boot-lock and migration-identity logic. Automated tests are required. No
 
 Add or extend:
 
-1. `@faims3/data-model` — fingerprint helper: stable 12-hex output; clone-and-tweak `targetVersion` / registry `{from,to}` / an auth (or other) design-doc `map` string / a `securityDocument` field changes the hash; `apiVersion`, directory env `defaultConfig`, and project listing do not.
-2. `api/test/startupMigrationLock.test.ts` — matching settle (criterion 3); mismatched settle re-claims and runs (criterion 2); legacy missing fingerprint re-claims (criterion 4); old-after-new downgrade throw settles `failed` with a consistent doc (criterion 5); claimed/settled docs carry `fingerprint` and `apiVersion` (criterion 1); named log events include `fingerprint` (criterion 7). Inject `fingerprint` / `apiVersion` on `withStartupMigrationLock` options. Keep the existing waiter / steal / I/O cases.
-3. `api/test/debugMigrationLock.test.ts` — `formatLockHuman` (and JSON lock payload if asserted) includes both fields on the doc and a history row.
-4. `api/test/startupMigrations.test.ts` — `runStartupMigrations` passes fingerprint and `apiVersion` into `withStartupMigrationLock` when the lock is enabled (extend the existing options assertion).
+1. `@faims3/data-model` — helper over targets + init payloads: stable 12-hex; clone-and-tweak `targetVersion`, notebook target, or an init design/security field changes the hash; `defaultVersion`, registry `{from,to}` only, directory env `defaultConfig`, and a fake “current version / pending steps” object do not.
+2. `@faims3/api` — folding in JWT `kid` + public PEM changes the process fingerprint; private key is not an input; `runStartupMigrations` passes fingerprint and `apiVersion` into `withStartupMigrationLock`.
+3. `api/test/startupMigrationLock.test.ts` — matching settle (criterion 3); mismatched settle re-claims and runs (criterion 2); legacy missing fingerprint re-claims (criterion 4); old-after-new downgrade throw settles `failed` (criterion 5); claimed/settled docs carry `fingerprint` and `apiVersion` (criterion 1); named log events include `fingerprint` and do not include PEM (criterion 7); later-wave re-claim still runs (criterion 8). Inject `fingerprint` / `apiVersion` on options.
+4. `api/test/debugMigrationLock.test.ts` — `formatLockHuman` includes both fields on the doc and a history row.
 
 Run:
 
@@ -117,13 +106,12 @@ Include the new data-model test file path in the first command if it is not pick
 
 ## 6. Risk class and why
 
-**Med.** This is the production clustered boot path. A wrong match still skips a newer schema target or a newer design-doc set (the incident, plus init-only view changes). A too-aggressive mismatch (for example treating a live foreign `running` lock as stealable, or refusing matching `complete`) can start two migrators or turn every replica into a doer during a deploy. Residual cases: old binaries after a new migrate must fail-open without corrupting the lock; the first deploy of this change will re-claim every legacy (no-fingerprint) `complete` lock once, which is intended; including design-map `toString()` means a Node-only `Function.prototype.toString` drift would re-claim and let `forceWrite` no-op or rewrite. Not high: no data-doc rewrite, migrations stay idempotent, init stays content-match, steal/timeout/fail-open are unchanged. Not low: mixed-version ECS attach depends on this comparison.
+**Med.** This is the production clustered boot path. A wrong match still skips a newer schema target, design-doc set, or JWT public key. A too-aggressive mismatch can start two migrators during a deploy. Residual cases: old binaries after a new migrate must fail-open without corrupting the lock; the first deploy of this change re-claims every legacy (no-fingerprint) `complete` lock once; key rotation changes the fingerprint (intended); design-map `toString()` drift would re-claim and let `forceWrite` no-op or rewrite. Partial migrate does **not** change the hash, so matching waiters still skip until a later wave re-claims — recovery relies on existing later-boot re-run plus idempotent migrate/init, not on a new pending-work identity. Not high: no data-doc rewrite, steal/timeout/fail-open unchanged. Not low: mixed-version ECS attach depends on this comparison.
 
 ## 7. Open questions
 
-1. Should a waiter that sees a _running_ lock with a foreign fingerprint steal before timeout? Spec says no (wait, then re-claim on settle) to avoid two concurrent `run()`s. Confirm only if operations want a faster cutover than `STARTUP_MIGRATION_LOCK_TIMEOUT_MS`.
-2. Is 12 hex characters enough of SHA-256 for operators grepping logs, or should the lock store the full digest? Spec uses 12 as in the issue; collision risk across our registry size is negligible.
-3. Should directory `default` (instance name / public URL) be in the hash after all? Spec omits it so the fingerprint is build-scoped. A config-only task-definition change would not force waiters to re-init; `forceWrite` on a later matching boot still rewrites that one document.
+1. Should a waiter that sees a _running_ lock with a foreign fingerprint steal before timeout? Spec says no (wait, then re-claim on settle) to avoid two concurrent `run()`s.
+2. Is 12 hex characters enough of SHA-256 for operators grepping logs, or should the lock store the full digest? Spec uses 12 as in the issue.
 
 ```json
 {"risk": "med", "size": "m", "check": "code"}
