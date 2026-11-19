@@ -814,6 +814,196 @@ describe('startup migration lock', () => {
     expect(lock.history.length).toBeLessThanOrEqual(10);
   });
 
+  it('skips becoming doer when a foreign complete lock is already ahead', async () => {
+    const db = freshDb();
+    await withStartupMigrationLock({
+      db: asStore(db),
+      instanceId: 'new-api',
+      run: vi.fn(),
+      fingerprint: 'new-fingerprint',
+      apiVersion: '1.11.0',
+      pollIntervalMs: 10,
+    });
+    const before = await readLock(db);
+    const run = vi.fn();
+    const isClusterAhead = vi.fn(async () => true);
+    const logs: string[] = [];
+    const logSpy = vi
+      .spyOn(console, 'log')
+      .mockImplementation((message?: unknown) => {
+        logs.push(String(message ?? ''));
+      });
+
+    try {
+      const result = await withStartupMigrationLock({
+        db: asStore(db),
+        instanceId: 'old-api',
+        run,
+        fingerprint: 'old-fingerprint',
+        apiVersion: '1.10.0',
+        pollIntervalMs: 10,
+        isClusterAhead,
+      });
+
+      expect(result).toEqual({role: 'waiter', status: 'complete'});
+      expect(run).not.toHaveBeenCalled();
+      expect(isClusterAhead).toHaveBeenCalled();
+      expect(logs.some(line => line.includes('skip_doer_cluster_ahead'))).toBe(
+        true
+      );
+    } finally {
+      logSpy.mockRestore();
+    }
+
+    const after = await readLock(db);
+    expect(after.fingerprint).toBe('new-fingerprint');
+    expect(after.status).toBe('complete');
+    expect(after._rev).toBe(before._rev);
+    expect(after.holderId).toBe('new-api');
+  });
+
+  it('waiter observing a foreign complete skips claim when the cluster is ahead', async () => {
+    const db = freshDb();
+    const started = deferred();
+    const finish = deferred();
+    const runNew = vi.fn(async () => {
+      started.resolve();
+      await finish.promise;
+    });
+    const runOld = vi.fn();
+    const isClusterAhead = vi.fn(async () => true);
+
+    const doer = withStartupMigrationLock({
+      db: asStore(db),
+      instanceId: 'new-api',
+      run: runNew,
+      fingerprint: 'new-fingerprint',
+      apiVersion: '1.11.0',
+      pollIntervalMs: 15,
+    });
+    await started.promise;
+
+    const waiter = withStartupMigrationLock({
+      db: asStore(db),
+      instanceId: 'old-api',
+      run: runOld,
+      fingerprint: 'old-fingerprint',
+      apiVersion: '1.10.0',
+      pollIntervalMs: 15,
+      isClusterAhead,
+    });
+
+    finish.resolve();
+    const [doerResult, waiterResult] = await Promise.all([doer, waiter]);
+
+    expect(doerResult).toEqual({role: 'doer', status: 'complete'});
+    expect(waiterResult).toEqual({role: 'waiter', status: 'complete'});
+    expect(runOld).not.toHaveBeenCalled();
+    expect(isClusterAhead).toHaveBeenCalled();
+    const lock = await readLock(db);
+    expect(lock.fingerprint).toBe('new-fingerprint');
+    expect(lock.status).toBe('complete');
+    expect(lock.holderId).toBe('new-api');
+  });
+
+  it('still re-claims a foreign complete when the cluster is not ahead', async () => {
+    const db = freshDb();
+    await withStartupMigrationLock({
+      db: asStore(db),
+      instanceId: 'old-api',
+      run: vi.fn(),
+      fingerprint: 'old-fingerprint',
+      apiVersion: '1.10.0',
+      pollIntervalMs: 10,
+    });
+    const run = vi.fn();
+
+    const result = await withStartupMigrationLock({
+      db: asStore(db),
+      instanceId: 'new-api',
+      run,
+      fingerprint: 'new-fingerprint',
+      apiVersion: '1.11.0',
+      pollIntervalMs: 10,
+      isClusterAhead: async () => false,
+    });
+
+    expect(result).toEqual({role: 'doer', status: 'complete'});
+    expect(run).toHaveBeenCalledOnce();
+    const lock = await readLock(db);
+    expect(lock.fingerprint).toBe('new-fingerprint');
+    expect(lock.holderId).toBe('new-api');
+  });
+
+  it('re-claims a foreign complete when isClusterAhead throws', async () => {
+    const db = freshDb();
+    await withStartupMigrationLock({
+      db: asStore(db),
+      instanceId: 'new-api',
+      run: vi.fn(),
+      fingerprint: 'new-fingerprint',
+      apiVersion: '1.11.0',
+      pollIntervalMs: 10,
+    });
+    const run = vi.fn();
+    const logs: string[] = [];
+    const logSpy = vi
+      .spyOn(console, 'log')
+      .mockImplementation((message?: unknown) => {
+        logs.push(String(message ?? ''));
+      });
+
+    try {
+      const result = await withStartupMigrationLock({
+        db: asStore(db),
+        instanceId: 'old-api',
+        run,
+        fingerprint: 'old-fingerprint',
+        apiVersion: '1.10.0',
+        pollIntervalMs: 10,
+        isClusterAhead: async () => {
+          throw new Error('listing failed');
+        },
+      });
+
+      expect(result).toEqual({role: 'doer', status: 'complete'});
+      expect(run).toHaveBeenCalledOnce();
+      expect(
+        logs.some(line => line.includes('cluster_ahead_check_failed'))
+      ).toBe(true);
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it('matching fingerprint still re-claims even when isClusterAhead is true', async () => {
+    const db = freshDb();
+    await withStartupMigrationLock({
+      db: asStore(db),
+      instanceId: 'api-a',
+      run: vi.fn(),
+      fingerprint: 'same-fingerprint',
+      apiVersion: '1.11.0',
+      pollIntervalMs: 10,
+    });
+    const run = vi.fn();
+    const isClusterAhead = vi.fn(async () => true);
+
+    const result = await withStartupMigrationLock({
+      db: asStore(db),
+      instanceId: 'api-b',
+      run,
+      fingerprint: 'same-fingerprint',
+      apiVersion: '1.11.0',
+      pollIntervalMs: 10,
+      isClusterAhead,
+    });
+
+    expect(result).toEqual({role: 'doer', status: 'complete'});
+    expect(run).toHaveBeenCalledOnce();
+    expect(isClusterAhead).not.toHaveBeenCalled();
+  });
+
   it('named lock events include fingerprint=', async () => {
     const db = freshDb();
     const started = deferred();

@@ -7,6 +7,7 @@ const initialiseAndMigrateDBs = vi.hoisted(() => vi.fn());
 const validateDatabases = vi.hoisted(() => vi.fn());
 const withStartupMigrationLock = vi.hoisted(() => vi.fn());
 const getStartupMigrationFingerprint = vi.hoisted(() => vi.fn());
+const isStartupMigrationClusterAhead = vi.hoisted(() => vi.fn());
 const PROCESS_FINGERPRINT = 'aabbccddeeff';
 const configMock = vi.hoisted(() => ({
   disableMigrateOnStartup: false,
@@ -30,6 +31,10 @@ vi.mock('../src/couchdb/validateDatabases', () => ({
 
 vi.mock('../src/couchdb/startupMigrationFingerprint', () => ({
   getStartupMigrationFingerprint,
+}));
+
+vi.mock('../src/couchdb/startupMigrationAhead', () => ({
+  isStartupMigrationClusterAhead,
 }));
 
 vi.mock('../src/couchdb/startupMigrationLock', async importOriginal => {
@@ -81,6 +86,7 @@ describe('runStartupMigrations', () => {
     expect(options.instanceId).toContain(`:${process.pid}:`);
     expect(options.fingerprint).toBe(PROCESS_FINGERPRINT);
     expect(options.apiVersion).toBe('1.11.0');
+    expect(options.isClusterAhead).toBe(isStartupMigrationClusterAhead);
     expect(getStartupMigrationFingerprint).toHaveBeenCalledOnce();
 
     expect(initialiseAndMigrateDBs).toHaveBeenCalledOnce();

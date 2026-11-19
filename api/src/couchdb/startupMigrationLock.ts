@@ -30,6 +30,9 @@
  * finds a settled lock therefore re-claims and runs again — migrations are
  * idempotent. Waiters who already joined a live attempt do not re-run while
  * that attempt is still young; they proceed once it writes `complete`/`failed`.
+ * After a *foreign* settlement, {@link StartupMigrationLockOptions.isClusterAhead}
+ * can skip becoming doer when live DB/notebook versions are already past this
+ * process — the lock stays as the newer settlement.
  *
  * Timeout is not "give up and attach". After
  * {@link StartupMigrationLockOptions.timeoutMs} a waiter returns to
@@ -199,6 +202,15 @@ export type StartupMigrationLockOptions = {
    * `version` (same source as `config.apiVersion`).
    */
   apiVersion?: string;
+  /**
+   * After a foreign `complete`/`failed` lock, return true when live Couch
+   * or notebook versions are already past this process. The waiter then
+   * proceeds without claiming, so an older replica cannot `forceWrite`
+   * init or stamp `failed` over the newer settlement. Matching
+   * fingerprints still re-claim (later startup waves). Omitted: always
+   * re-claim a foreign settlement (unit-test default).
+   */
+  isClusterAhead?: () => Promise<boolean>;
 };
 
 /**
@@ -363,13 +375,52 @@ async function readLock(
   }
 }
 
+type TryClaimResult =
+  | {result: 'claimed'}
+  | {result: 'wait'}
+  | {
+      result: 'skip_ahead';
+      status: 'complete' | 'failed';
+      error?: string;
+    };
+
+/**
+ * True when a settled lock was written by a different fingerprint and live
+ * versions are already past this process. Check failures log and return
+ * false so a broken listing still falls through to the existing re-claim.
+ */
+async function clusterIsAheadOfThisProcess(options: {
+  instanceId: string;
+  fingerprint: string;
+  apiVersion: string;
+  isClusterAhead?: () => Promise<boolean>;
+}): Promise<boolean> {
+  const {instanceId, fingerprint, apiVersion, isClusterAhead} = options;
+  if (!isClusterAhead) {
+    return false;
+  }
+  try {
+    return await isClusterAhead();
+  } catch (error) {
+    logStartupMigration('cluster_ahead_check_failed', {
+      instance: instanceId,
+      fingerprint,
+      apiVersion,
+      error: errorMessage(error),
+    });
+    return false;
+  }
+}
+
 /**
  * Try to become the doer.
  *
  * Returns `claimed` after a successful put of `status: 'running'`. Returns
  * `wait` when another instance holds a non-expired `running` lock, or when
- * the put loses a 409 race. Missing, settled, and expired documents are
- * claimable. Non-409 put/get errors propagate as I/O.
+ * the put loses a 409 race. Returns `skip_ahead` when a settled foreign
+ * lock is already past this process's targets. Missing, matching-settled,
+ * and expired documents are claimable. Non-409 put/get errors propagate
+ * as I/O.
  */
 async function tryClaim(options: {
   db: StartupMigrationLockStore;
@@ -378,8 +429,17 @@ async function tryClaim(options: {
   apiVersion: string;
   timeoutMs: number;
   nowMs: number;
-}): Promise<'claimed' | 'wait'> {
-  const {db, instanceId, fingerprint, apiVersion, timeoutMs, nowMs} = options;
+  isClusterAhead?: () => Promise<boolean>;
+}): Promise<TryClaimResult> {
+  const {
+    db,
+    instanceId,
+    fingerprint,
+    apiVersion,
+    timeoutMs,
+    nowMs,
+    isClusterAhead,
+  } = options;
   const existing = await readLock(db);
 
   if (
@@ -398,7 +458,34 @@ async function tryClaim(options: {
       ageMs: nowMs - existing.startedAtMs,
       timeoutMs,
     });
-    return 'wait';
+    return {result: 'wait'};
+  }
+
+  if (
+    existing &&
+    (existing.status === 'complete' || existing.status === 'failed') &&
+    existing.fingerprint !== fingerprint &&
+    (await clusterIsAheadOfThisProcess({
+      instanceId,
+      fingerprint,
+      apiVersion,
+      isClusterAhead,
+    }))
+  ) {
+    logStartupMigration('skip_doer_cluster_ahead', {
+      instance: instanceId,
+      fingerprint,
+      apiVersion,
+      holder: existing.holderId,
+      status: existing.status,
+      docFingerprint: existing.fingerprint,
+      docApiVersion: existing.apiVersion,
+    });
+    return {
+      result: 'skip_ahead',
+      status: existing.status,
+      error: existing.error,
+    };
   }
 
   const next: StartupMigrationLockDoc = {
@@ -426,7 +513,7 @@ async function tryClaim(options: {
         previousHolder: existing?.holderId,
         previousStatus: existing?.status,
       });
-      return 'wait';
+      return {result: 'wait'};
     }
     throw error;
   }
@@ -440,7 +527,7 @@ async function tryClaim(options: {
     previousHolder: existing?.holderId,
     previousStatus: existing?.status,
   });
-  return 'claimed';
+  return {result: 'claimed'};
 }
 
 /**
@@ -584,6 +671,7 @@ async function waitForDoer(options: {
   ioBackoffMs: (consecutiveErrors: number) => number;
   now: () => number;
   sleep: (ms: number) => Promise<void>;
+  isClusterAhead?: () => Promise<boolean>;
 }): Promise<
   | {action: 'proceed'; status: 'complete' | 'failed'; error?: string}
   | {action: 'retry'}
@@ -599,6 +687,7 @@ async function waitForDoer(options: {
     ioBackoffMs,
     now,
     sleep,
+    isClusterAhead,
   } = options;
   let polls = 0;
   let consecutiveErrors = 0;
@@ -659,6 +748,25 @@ async function waitForDoer(options: {
         apiVersion,
         docApiVersion: doc.apiVersion,
       });
+      if (
+        await clusterIsAheadOfThisProcess({
+          instanceId,
+          fingerprint,
+          apiVersion,
+          isClusterAhead,
+        })
+      ) {
+        logStartupMigration('skip_doer_cluster_ahead', {
+          instance: instanceId,
+          fingerprint,
+          apiVersion,
+          holder: doc.holderId,
+          status: doc.status,
+          docFingerprint: doc.fingerprint,
+          docApiVersion: doc.apiVersion,
+        });
+        return {action: 'proceed', status: doc.status, error: doc.error};
+      }
       return {action: 'retry'};
     }
 
@@ -703,8 +811,11 @@ async function waitForDoer(options: {
  *
  * Waiters accept `complete`/`failed` only when `doc.fingerprint` equals this
  * process's fingerprint. A missing or different fingerprint logs
- * `doer_settled_foreign_fingerprint` and retries into {@link tryClaim}. A
- * live `running` lock is never stolen just because its fingerprint differs.
+ * `doer_settled_foreign_fingerprint`. When live versions are already past
+ * this process ({@link StartupMigrationLockOptions.isClusterAhead}), the
+ * waiter proceeds and leaves the lock alone; otherwise it retries into
+ * {@link tryClaim}. A live `running` lock is never stolen just because its
+ * fingerprint differs.
  *
  * @returns Who ran and how the attempt settled. Waiters never invoke `run`.
  */
@@ -732,7 +843,7 @@ export async function withStartupMigrationLock(
   });
 
   while (true) {
-    let claim: 'claimed' | 'wait';
+    let claim: TryClaimResult;
     try {
       claim = await tryClaim({
         db: options.db,
@@ -741,6 +852,7 @@ export async function withStartupMigrationLock(
         apiVersion,
         timeoutMs,
         nowMs: now(),
+        isClusterAhead: options.isClusterAhead,
       });
       consecutiveClaimErrors = 0;
     } catch (error) {
@@ -758,7 +870,24 @@ export async function withStartupMigrationLock(
       continue;
     }
 
-    if (claim === 'claimed') {
+    if (claim.result === 'skip_ahead') {
+      const result: StartupMigrationResult = {
+        role: 'waiter',
+        status: claim.status,
+        error: claim.error,
+      };
+      logStartupMigration('finish', {
+        instance: options.instanceId,
+        fingerprint,
+        apiVersion,
+        role: result.role,
+        status: result.status,
+        error: result.error,
+      });
+      return result;
+    }
+
+    if (claim.result === 'claimed') {
       const result = await runAsDoer(resolved, now);
       logStartupMigration('finish', {
         instance: options.instanceId,
@@ -782,6 +911,7 @@ export async function withStartupMigrationLock(
       ioBackoffMs,
       now,
       sleep,
+      isClusterAhead: options.isClusterAhead,
     });
 
     if (wait.action === 'proceed') {
