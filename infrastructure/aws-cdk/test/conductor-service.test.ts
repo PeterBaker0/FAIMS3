@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Template assertions for the conductor Fargate service DesiredCount
  * wiring. When autoScaling.desiredCapacity is omitted, CDK must leave
