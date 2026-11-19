@@ -26,6 +26,7 @@
  */
 import {config} from '../buildconfig';
 import {getMigrationDb, initialiseAndMigrateDBs} from '.';
+import {getStartupMigrationFingerprint} from './startupMigrationFingerprint';
 import {
   createStartupInstanceId,
   logStartupMigration,
@@ -76,6 +77,8 @@ export async function runStartupMigrations(): Promise<void> {
       db: getMigrationDb() as unknown as StartupMigrationLockStore,
       instanceId,
       timeoutMs: config.startupMigrationLockTimeoutMs,
+      fingerprint: await getStartupMigrationFingerprint(),
+      apiVersion: config.apiVersion,
       run: () => runMigrationWork(instanceId),
     });
   } catch (error) {
