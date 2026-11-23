@@ -296,7 +296,7 @@ export function attachFullApi(app: express.Express): void {
     } else {
       res.render('fallback', {
         report: databaseValidityReport,
-        couchdb_url: config.couchdbInternalUrl,
+        couchdb_url: config.couchdbPublicUrl,
         layout: 'fallback',
       });
     }
