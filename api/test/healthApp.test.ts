@@ -2,7 +2,11 @@
 import {afterEach, describe, expect, it} from 'vitest';
 import request from 'supertest';
 import {config} from '../src/buildconfig';
-import {databaseValidityReport} from '../src/couchdb';
+import {
+  databaseValidityReport,
+  publicFacingDatabaseReport,
+  verifyCouchDBConnection,
+} from '../src/couchdb';
 import {attachFullApi} from '../src/expressSetup';
 import {createHealthApp} from '../src/healthApp';
 
@@ -85,8 +89,12 @@ describe('GET / fallback HTML', () => {
 
     config.couchdbPublicUrl = 'https://db.example.com:443';
     config.couchdbInternalUrl = 'http://couchdb.internal.example.com:5984';
-    databaseValidityReport.valid = false;
-    databaseValidityReport.server_msg = 'Unable to connect to CouchDB';
+
+    const report = await verifyCouchDBConnection();
+    expect(report.valid).toBe(false);
+    expect(report.server_msg).toContain(
+      'http://couchdb.internal.example.com:5984'
+    );
 
     const result = await request(app).get('/');
     expect(result.statusCode).toBe(200);
@@ -95,5 +103,29 @@ describe('GET / fallback HTML', () => {
     expect(result.text).not.toContain(
       'http://couchdb.internal.example.com:5984'
     );
+  });
+
+  it('redacts the internal hostname from server_msg and database_errors', () => {
+    config.couchdbPublicUrl = 'https://db.example.com:443';
+    config.couchdbInternalUrl = 'http://couchdb.internal.example.com:5984';
+
+    const publicReport = publicFacingDatabaseReport({
+      valid: false,
+      server_msg:
+        'Unable to connect to CouchDB server at http://couchdb.internal.example.com:5984',
+      database_errors: [
+        'Unable to connect to CouchDB database people: getaddrinfo ENOTFOUND couchdb.internal.example.com',
+      ],
+      validate_error:
+        'failed HEAD http://couchdb.internal.example.com:5984/_up',
+    });
+
+    expect(publicReport.server_msg).toContain('https://db.example.com:443');
+    expect(publicReport.server_msg).not.toContain('couchdb.internal');
+    expect(publicReport.database_errors?.join(' ')).toContain('db.example.com');
+    expect(publicReport.database_errors?.join(' ')).not.toContain(
+      'couchdb.internal'
+    );
+    expect(publicReport.validate_error).not.toContain('couchdb.internal');
   });
 });
