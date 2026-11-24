@@ -184,6 +184,11 @@ td {
   vertical-align: top;
 }
 
+/* Metric tables (five columns): keep the Status value, e.g. "Build (M)", on one line. */
+table:has(th:nth-child(5):last-child) td:last-child {
+  white-space: nowrap;
+}
+
 tbody tr:nth-child(even) td {
   background: #f7f9fa;
 }

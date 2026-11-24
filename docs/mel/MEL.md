@@ -59,11 +59,14 @@ and one-click exports plus API integration.
 This branch is documentation only. It does not change application code.
 
 1. Document the MEL questions and break each one down into:
-   - **indicators**: what would tell us the question is being answered well;
-   - **measures**: a quantity or judgement against an indicator, with the
-     **time span** it should be reported over;
-   - **proxy metrics**: concrete things we can count or collect, with the
-     **source** they come from and whether that source exists today.
+   - **indicators**: observable changes in the world that suggest DASS is
+     having its intended impact;
+   - **measures**: a quantity or judgement against an indicator, with its
+     **frequency** (how often it is measured) and **span** (the period it
+     covers);
+   - **proxy metrics**: concrete things we can count or collect, with a
+     **unit**, a **goal**, the **source** they come from and whether that
+     source exists today.
 2. Do not limit the list to what we can collect today. Where a metric needs
    new instrumentation, say so, so the gap list can feed the roadmap.
 3. Provide a markdown-to-PDF pipeline, so drafts can be circulated to people
@@ -111,10 +114,14 @@ chromium-headless-shell`). The headless shell is the most reliable choice
 - The source codes used in `mel-metrics.md` (for example "Admin stats" or
   "Audit logs") are defined once in its source catalogue section.
 - Each metric is tagged **Now** (collectable today), **Derive** (the data
-  exists but needs a query or script) or **Build** (needs new
-  instrumentation or a new process).
+  exists but needs a query or script) or **Build (L/M/H)** (needs new
+  instrumentation or a new process, with a rough effort rating).
+- The MEL framework's DAP dashboard is not relevant to DASS. DASS metrics
+  feed standard reporting and a DASS metrics dashboard instead.
+- Review comments are made as PDF highlights (for example `feedback.pdf`)
+  and addressed in the markdown source.
 - Follow-up work, once the draft is agreed, is likely to be:
   - scripts that produce the **Derive** metrics from CouchDB and CloudWatch;
   - deciding which **Build** items are worth the privacy and engineering
     cost (most notably opt-in client telemetry);
-  - a periodic export of these metrics into the DAP dashboard.
+  - a periodic snapshot of these metrics for standard reporting.

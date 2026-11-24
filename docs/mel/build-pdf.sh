@@ -125,6 +125,7 @@ for md in "${FILES[@]}"; do
     --from markdown \
     --to html5 \
     --standalone \
+    --columns 10000 \
     --embed-resources \
     ${TOC[@]+"${TOC[@]}"} \
     --metadata lang=en-AU \
