@@ -119,7 +119,8 @@ chromium-headless-shell`). The headless shell is the most reliable choice
 - The MEL framework's DAP dashboard is not relevant to DASS. DASS metrics
   feed standard reporting and a DASS metrics dashboard instead.
 - Review comments are made as PDF highlights (for example `feedback.pdf`)
-  and addressed in the markdown source.
+  and addressed in the markdown source. Rebuilding overwrites `out/`, so
+  copy an annotated PDF out of `out/` before rebuilding.
 - Follow-up work, once the draft is agreed, is likely to be:
   - scripts that produce the **Derive** metrics from CouchDB and CloudWatch;
   - deciding which **Build** items are worth the privacy and engineering

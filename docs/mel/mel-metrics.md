@@ -67,6 +67,93 @@ adoption. Trends should use annual spans, and event-related measures should be
 reported per event. Infrastructure and support measures should be read with
 surge load in mind.
 
+# Privacy risks
+
+Agencies own the data they collect in DASS. The DASS team operates the
+platform and so has technical access to it, but MEL metrics must never depend
+on looking at that data. Several metrics in this document carry privacy
+risks that need managing before they are collected.
+
+**Risks**
+
+- **Looking inside records.** Some metrics read record contents, even if only
+  to count (for example records with a location, or records by state). Those
+  are marked "agreed with custodians" in the tables. Even aggregated,
+  locations of damaged properties are sensitive.
+- **Monitoring individual staff.** Per-user activity (for example records per
+  surveyor) could be read as performance monitoring of agency staff and
+  volunteers. Such metrics should only be reported in aggregate, never by
+  named individual.
+- **Small numbers.** With few agencies onboarded, a "by jurisdiction" or "by
+  agency" figure can identify a single organisation or person.
+- **Logs.** Audit logs include user IDs, IP addresses and browser details.
+  Keeping them longer for MEL (gap 2) increases that exposure, so they should
+  be reduced to the fields metrics need before long-term retention.
+- **Telemetry.** Any client telemetry (gap 13) would collect new data from
+  devices and must be opt-in and designed for privacy from the start.
+
+**Privacy policy and terms of service**
+
+DASS should have its own privacy policy and terms of service that state
+plainly what the DASS team does and does not look at. They should say that
+the team uses **aggregated metadata metrics** (for example record counts,
+active users and feature usage) to understand and improve how the platform
+is used, and that this gives **no visibility into the actual data
+collected**. Agencies should agree to this when they onboard. The field app
+already links to a configurable privacy policy (`VITE_APP_PRIVACY_POLICY_URL`),
+which DASS should point at its own policy.
+
+**Principles**
+
+- **Counts, not content.** Use document metadata (timestamps, counts, which
+  template a survey came from), not the contents of records. Any metric that
+  looks inside records must be agreed with data custodians first.
+- **Aggregate and suppress.** Report geography at state or territory level at
+  most. Suppress any cell with fewer than five agencies or users when it is
+  shared beyond the DASS team.
+- **No individual performance reporting.** Per-user figures are inputs to
+  aggregate metrics only.
+- **Keep only what is needed.** Strip personal details from anything kept
+  for trend analysis, and set a retention period for it.
+
+# User surveys in an early adoption phase
+
+Several metrics rely on a user survey or post-event debrief. These are
+useful but hard to do well while DASS is still being adopted:
+
+- **Small, uneven population.** Few agencies are onboarded, so response
+  numbers will be too small for scores to be statistically meaningful, and
+  one agency's experience can dominate the result.
+- **Users at different stages.** Some users have only seen DASS in training
+  or one event. Their answers reflect onboarding friction more than
+  steady-state use, and the product itself is changing between surveys.
+- **Timing around events.** The best time to ask is soon after field use,
+  which is also when responders are busiest and most fatigued. Asking
+  between events relies on memory.
+- **Survey fatigue.** Emergency services staff are asked to complete many
+  surveys, so response rates may be low.
+- **Reaching field users.** Field users may be volunteers or seasonal staff,
+  and we usually reach them only through agency administrators.
+- **Bias.** Engaged champions are more likely to respond than people who
+  stopped using DASS. Early partners may also be reluctant to criticise a
+  project they are invested in.
+- **Baseline.** Comparisons with "how agencies did this before DASS" need a
+  baseline captured at onboarding, because it cannot be reconstructed later.
+
+To reduce these problems:
+
+- Keep surveys short, with a small fixed set of core questions so results
+  can be compared over time.
+- While responses are few (say under 30), report counts and themes from
+  comments rather than average scores.
+- Treat early results as formative input to improve DASS, not as a baseline
+  for judging success.
+- Fit the post-event debrief into agencies' existing after-action processes
+  rather than adding a separate request, and consider running it as a DASS
+  survey.
+- Complement surveys with anecdotal feedback logged in Twenty CRM (see
+  1.3-A1), which costs users nothing.
+
 # Sources
 
 ## MEL framework sources
@@ -109,20 +196,6 @@ provides or could provide.
 | Client telemetry  | **Build (H).** Opt-in, privacy-preserving app signals: platform, app version, sync success, time from capture to sync, offline duration                                                                                                                                           | Does not exist. App version and platform currently stay on the device                                                                                     |
 | Uptime monitor    | **Build (L).** External availability check on the API, field app and Control Centre                                                                                                                                                                                               | Does not exist yet                                                                                                                                        |
 | Support desk      | **Build (L)** (or adopt). A ticketing process with categories, so support load and themes can be counted                                                                                                                                                                          | Support is currently email-based                                                                                                                          |
-
-## Principles for platform metrics
-
-- **Counts, not content.** Agencies own their data. Platform metrics should
-  use document metadata (timestamps, counts, which template a survey came
-  from), not the contents of records. Any metric that looks inside records
-  (for example, field completeness) should be agreed with data custodians
-  first and reported only in aggregate.
-- **Aggregate and suppress.** Report geography at state or territory level at
-  most. Suppress any cell with fewer than five agencies or users when it is
-  shared beyond the DASS team.
-- **Record a baseline.** Several measures compare against "how agencies did
-  this before DASS". That baseline must be captured at onboarding, because it
-  cannot be reconstructed later.
 
 # Theme 1: Adoption {.theme}
 
@@ -344,7 +417,6 @@ period.
 | Proxy metric                                             | Unit  | Goal     | Source                     | Status    |
 | -------------------------------------------------------- | ----- | -------- | -------------------------- | --------- |
 | Registered users                                         | count | Maximise | Admin stats                | Now       |
-| Disabled users                                           | count | Monitor  | Admin stats                | Now       |
 | New users (first invite redemption as a proxy)           | count | Maximise | CouchDB query              | Derive    |
 | New users (from account creation date, not stored today) | count | Maximise | `createdAt` on user record | Build (L) |
 
@@ -359,6 +431,11 @@ event, and annual.
 | Users currently logged in (holding a valid session) | count | Monitor  | Admin stats                  | Now       |
 | Users who signed in                                 | count | Maximise | `lastLoginAt` on user record | Build (L) |
 | Peak concurrent field users during an event         | count | Monitor  | CouchDB query                | Derive    |
+
+The app does not report sessions to the server, so peak concurrency is
+derived from record creation times: for each hour of the event, count the
+distinct users who created a record in that hour, and take the highest
+hourly count. This approximates concurrency as "active in the same hour".
 
 #### 1.2-B3 Devices and platforms
 
@@ -386,11 +463,17 @@ event, and annual.
 **Frequency:** quarterly. **Span:** point in time, plus additions in the
 period.
 
-| Proxy metric                                                   | Unit  | Goal     | Source                | Status    |
-| -------------------------------------------------------------- | ----- | -------- | --------------------- | --------- |
-| Surveys (active and archived), templates, records, attachments | count | Maximise | Admin stats           | Now       |
-| Data stored, overall and per team                              | GB    | Monitor  | Admin stats           | Now       |
-| The same figures as a time series                              | count | Maximise | Admin stats snapshots | Build (L) |
+| Proxy metric                      | Unit  | Goal     | Source      | Status |
+| --------------------------------- | ----- | -------- | ----------- | ------ |
+| Active surveys                    | count | Maximise | Admin stats | Now    |
+| Archived surveys                  | count | Monitor  | Admin stats | Now    |
+| Templates                         | count | Maximise | Admin stats | Now    |
+| Records                           | count | Maximise | Admin stats | Now    |
+| Attachments (photos and files)    | count | Maximise | Admin stats | Now    |
+| Data stored, overall and per team | GB    | Monitor  | Admin stats | Now    |
+
+Each value can be read from admin stats today. Reporting how it changes over
+time needs the scheduled admin stats snapshot (gap 1, Build (L)).
 
 #### 1.2-C2 Feature breadth
 
@@ -447,9 +530,6 @@ other hazards.
 > What has been the reception of NBIC tools, products and services once
 > adopted?
 
-The framework notes it is unclear whether pain points are collected. This
-draft recommends collecting them explicitly (indicator 1.3-C).
-
 ### Indicator 1.3-A: Users are satisfied and find DASS usable
 
 #### 1.3-A1 Satisfaction
@@ -457,12 +537,20 @@ draft recommends collecting them explicitly (indicator 1.3-C).
 **Frequency:** annual survey, plus per-event debrief. **Span:** annual, and
 per event.
 
-| Proxy metric                           | Unit                | Goal     | Source                            | Status    |
-| -------------------------------------- | ------------------- | -------- | --------------------------------- | --------- |
-| Satisfaction (CSAT), by role           | score (1 to 5)      | Maximise | User survey                       | Build (M) |
-| Likelihood to recommend (NPS), by role | score (-100 to 100) | Maximise | User survey                       | Build (M) |
-| App store rating                       | score (1 to 5)      | Maximise | App stores                        | Now       |
-| Qualitative satisfaction statements    | narrative           | Monitor  | Use case investigations, MEL form | Now       |
+| Proxy metric                                                                                        | Unit             | Goal     | Source                                                       | Status    |
+| --------------------------------------------------------------------------------------------------- | ---------------- | -------- | ------------------------------------------------------------ | --------- |
+| Overall satisfaction with DASS ("How satisfied are you with DASS?"), by role                        | score (1 to 10)  | Maximise | User survey                                                  | Build (M) |
+| Likelihood to recommend DASS to a colleague (0 = not at all likely, 10 = extremely likely), by role | score (0 to 10)  | Maximise | User survey                                                  | Build (M) |
+| App store rating                                                                                    | score (1 to 5)   | Maximise | App stores                                                   | Now       |
+| Feedback about DASS, positive and negative, by theme                                                | count, narrative | Monitor  | Twenty CRM (feedback log), use case investigations, MEL form | Build (L) |
+
+We should start using Twenty CRM to explicitly track **all** feedback we hear
+about DASS, including anecdotal comments. In meetings we often hear things
+like "it was really usable" or "this part was hard", and today those
+comments are lost. Logging each one in Twenty CRM against the organisation,
+with a short theme, turns them into countable evidence for this question
+at no cost to users. See also the section on user surveys in an early
+adoption phase, which explains why surveys alone will not be enough.
 
 #### 1.3-A2 Usability and onboarding
 
@@ -471,7 +559,7 @@ period.
 
 | Proxy metric                                                            | Unit             | Goal     | Source                    | Status    |
 | ----------------------------------------------------------------------- | ---------------- | -------- | ------------------------- | --------- |
-| System Usability Scale (SUS)                                            | score (0 to 100) | Maximise | User survey               | Build (M) |
+| System Usability Scale (a standard 10-question usability questionnaire) | score (0 to 100) | Maximise | User survey               | Build (M) |
 | Invites redeemed, as a share of invites created                         | %                | Maximise | Audit logs, CouchDB query | Derive    |
 | Users who created a record, as a share of users who redeemed an invite  | %                | Maximise | CouchDB query             | Derive    |
 | Median time from a user's first invite redemption to their first record | days             | Minimise | CouchDB query             | Derive    |
@@ -483,11 +571,10 @@ period.
 **Frequency:** monthly (operational), per event. **Span:** period, per event,
 and annual.
 
-| Proxy metric                           | Unit                     | Goal     | Source                 | Status |
-| -------------------------------------- | ------------------------ | -------- | ---------------------- | ------ |
-| Crash-free users, by platform          | %                        | Maximise | Bugsnag, app stores    | Now    |
-| Errors per 1,000 records created       | errors per 1,000 records | Minimise | Bugsnag, CouchDB query | Derive |
-| New error types introduced per release | count                    | Minimise | Bugsnag                | Now    |
+| Proxy metric                   | Unit                   | Goal     | Source                 | Status |
+| ------------------------------ | ---------------------- | -------- | ---------------------- | ------ |
+| Crash-free users, by platform  | %                      | Maximise | Bugsnag, app stores    | Now    |
+| Errors per 100 records created | errors per 100 records | Minimise | Bugsnag, CouchDB query | Derive |
 
 #### 1.3-B2 Sync and data safety
 
@@ -527,12 +614,13 @@ period.
 
 **Frequency:** monthly (volume); quarterly (themes). **Span:** period.
 
-| Proxy metric                                      | Unit                | Goal     | Source               | Status    |
-| ------------------------------------------------- | ------------------- | -------- | -------------------- | --------- |
-| In-app feedback messages, by theme                | count               | Monitor  | Feedback inbox       | Derive    |
-| Support requests per active agency, by category   | requests per agency | Minimise | Support desk         | Build (L) |
-| Issues raised from DASS feedback, open and closed | count               | Monitor  | GitHub (label)       | Derive    |
-| Median time to resolve reported problems          | days                | Minimise | GitHub, support desk | Derive    |
+| Proxy metric                                              | Unit                | Goal     | Source                    | Status    |
+| --------------------------------------------------------- | ------------------- | -------- | ------------------------- | --------- |
+| In-app feedback messages, by theme                        | count               | Monitor  | Feedback inbox            | Derive    |
+| Pain points heard in meetings and conversations, by theme | count               | Monitor  | Twenty CRM (feedback log) | Build (L) |
+| Support requests per active agency, by category           | requests per agency | Minimise | Support desk              | Build (L) |
+| Issues raised from DASS feedback, open and closed         | count               | Monitor  | GitHub (label)            | Derive    |
+| Median time to resolve reported problems                  | days                | Minimise | GitHub, support desk      | Derive    |
 
 #### 1.3-C2 Disengagement signals
 
@@ -988,25 +1076,26 @@ These **Build** items unlock the most metrics. They are listed roughly by
 value for effort. Most would land upstream in FAIMS3 behind DASS
 configuration.
 
-| #   | Gap                                                                                                                       | Unlocks                              | Effort |
-| --- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ | ------ |
-| 1   | Scheduled snapshot of admin stats (for example monthly) to S3 or a CouchDB database                                       | Every trend line in 1.2 and 4.2      | L      |
-| 2   | Keep audit logs longer than one month (export to S3, or longer CloudWatch retention)                                      | Exports, invites, map layer metrics  | L      |
-| 3   | Metrics extraction script that writes the **Derive** platform metrics to CSV for standard reporting                       | Most of themes 1 and 2               | M      |
-| 4   | Team metadata: agency, jurisdiction, sector (including Indigenous organisation)                                           | 1.2-A, 3.1-C, 3.2                    | L      |
-| 5   | Survey purpose flag: post-impact, preparedness (for example fuel hazard), exercise, research                              | 1.1-A1, 1.1-A2, 1.2-D                | L      |
-| 6   | User `createdAt` and `lastLoginAt`                                                                                        | 1.2-B                                | L      |
-| 7   | Event register (in Twenty CRM or a separate database), linked to surveys                                                  | 1.1-B1, 1.1-B4                       | M      |
-| 8   | National template flag, plus template lineage and version recorded when a survey is created                               | 1.1-A2, 1.1-B3, 1.2-C3, 2.2-C, 3.1-B | M      |
-| 9   | Server-side record of app version and platform when a client refreshes its session (aggregated)                           | 1.2-B3, version-support decisions    | L      |
-| 10  | External uptime monitor on the API and apps                                                                               | 1.3-B3, 2.2-A3                       | L      |
-| 11  | Server receipt timestamp on synced records                                                                                | 1.1-B4                               | M      |
-| 12  | Stored validation status on records                                                                                       | 1.1-B2                               | M      |
-| 13  | Opt-in, privacy-preserving client telemetry for sync success and capture-to-sync time                                     | 1.1-B4, 1.3-B2                       | H      |
-| 14  | Standard post-event debrief and annual user survey (could run as DASS surveys)                                            | 1.1-B5, 1.1-B6, 1.3-A, 2.2-B, 4.2-C  | M      |
-| 15  | Support desk with categories, and GitHub labels linking issues to stakeholders and strategy                               | 1.3-C, 2.2-B, 4.2-B, 4.3-B           | L      |
-| 16  | Twenty CRM additions: pipeline stages, link to DASS teams, data agreements, data requests, onboarding baseline and effort | 1.1-B6, 1.2-A1, 3.1-C, 3.2, 4.2-B    | L      |
-| 17  | Pulse questions in leadership retros (ways of working, purpose, effort split)                                             | 4.1-B, 4.2-B, 4.3-A                  | L      |
+| #   | Gap                                                                                                                                     | Unlocks                                           | Effort |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- | ------ |
+| 1   | Scheduled snapshot of admin stats (for example monthly) to S3 or a CouchDB database                                                     | Every trend line in 1.2 and 4.2                   | L      |
+| 2   | Keep audit logs longer than one month (export to S3, or longer CloudWatch retention)                                                    | Exports, invites, map layer metrics               | L      |
+| 3   | Metrics extraction script that writes the **Derive** platform metrics to CSV for standard reporting                                     | Most of themes 1 and 2                            | M      |
+| 4   | Team metadata: agency, jurisdiction, sector (including Indigenous organisation)                                                         | 1.2-A, 3.1-C, 3.2                                 | L      |
+| 5   | Survey purpose flag: post-impact, preparedness (for example fuel hazard), exercise, research                                            | 1.1-A1, 1.1-A2, 1.2-D                             | L      |
+| 6   | User `createdAt` and `lastLoginAt`                                                                                                      | 1.2-B                                             | L      |
+| 7   | Event register (in Twenty CRM or a separate database), linked to surveys                                                                | 1.1-B1, 1.1-B4                                    | M      |
+| 8   | National template flag, plus template lineage and version recorded when a survey is created                                             | 1.1-A2, 1.1-B3, 1.2-C3, 2.2-C, 3.1-B              | M      |
+| 9   | Server-side record of app version and platform when a client refreshes its session (aggregated)                                         | 1.2-B3, version-support decisions                 | L      |
+| 10  | External uptime monitor on the API and apps                                                                                             | 1.3-B3, 2.2-A3                                    | L      |
+| 11  | Server receipt timestamp on synced records                                                                                              | 1.1-B4                                            | M      |
+| 12  | Stored validation status on records                                                                                                     | 1.1-B2                                            | M      |
+| 13  | Opt-in, privacy-preserving client telemetry for sync success and capture-to-sync time                                                   | 1.1-B4, 1.3-B2                                    | H      |
+| 14  | Standard post-event debrief and annual user survey (could run as DASS surveys)                                                          | 1.1-B5, 1.1-B6, 1.3-A, 2.2-B, 4.2-C               | M      |
+| 15  | Support desk with categories, and GitHub labels linking issues to stakeholders and strategy                                             | 1.3-C, 2.2-B, 4.2-B, 4.3-B                        | L      |
+| 16  | Twenty CRM additions: feedback log, pipeline stages, link to DASS teams, data agreements, data requests, onboarding baseline and effort | 1.1-B6, 1.2-A1, 1.3-A1, 1.3-C1, 3.1-C, 3.2, 4.2-B | L      |
+| 18  | DASS privacy policy and terms of service covering aggregated usage metrics (see Privacy risks)                                          | Every metric marked "agreed with custodians"      | L      |
+| 17  | Pulse questions in leadership retros (ways of working, purpose, effort split)                                                           | 4.1-B, 4.2-B, 4.3-A                               | L      |
 
 # Reporting rhythm
 
