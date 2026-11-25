@@ -40,14 +40,15 @@ discussion and standard reporting refer to a specific line.
 
 ## Frequency and span
 
-| Frequency        | How often the measure is taken                      |
-| ---------------- | --------------------------------------------------- |
-| Live             | Always current, from a dashboard or on-demand query |
-| Monthly          | Once a month                                        |
-| Quarterly        | Once a quarter                                      |
-| Governance cycle | Three times a year, ahead of governance meetings    |
-| Annual           | Once a year, ahead of the strategic review          |
-| Per event        | After each significant event that DASS was used for |
+| Frequency              | How often the measure is taken                                        |
+| ---------------------- | --------------------------------------------------------------------- |
+| Live                   | Always current, from a dashboard or on-demand query                   |
+| Monthly                | Once a month                                                          |
+| Quarterly              | Once a quarter                                                        |
+| Governance cycle       | Three times a year, ahead of governance meetings                      |
+| Deliverable milestones | Aligned with the deliverable schedule, typically every 6 or 12 months |
+| Annual                 | Once a year, ahead of the strategic review                            |
+| Per event              | After each significant event that DASS was used for                   |
 
 | Span          | The period the value covers                                         |
 | ------------- | ------------------------------------------------------------------- |
@@ -178,24 +179,28 @@ marked **Uncertain** need that confirmed.
 These are sources that DASS, the FAIMS3 code it runs, or the DASS team
 provides or could provide.
 
-| Source            | What it is                                                                                                                                                                                                                                                                        | Limits today                                                                                                                                              |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Admin stats       | `GET /api/admin/stats` and the Control Centre Stats page. Counts of teams, users, surveys, templates, records, attachments, bytes, map layers, logged-in users, invites, long-lived API tokens and deleted surveys, with per-team and per-person breakdowns                       | Point-in-time only. No history unless we snapshot it                                                                                                      |
-| CouchDB query     | Timestamps already stored on documents: survey and template `createdAt`/`createdBy`, team `createdAt`, record and revision `created`/`created_by`, invite redemptions (`uses[].usedAt`), map layer uploads, deleted-survey tombstones, long-lived API token `lastUsedTimestampMs` | Users have no created or last-login time. Expired sessions, invites, email codes and download grants are deleted by TTL cleanup, so their history is lost |
-| Audit logs        | Structured JSON log lines: `[InviteAudit]` (create, lookup, consume, revoke), `[DownloadAudit]` (export minted and downloaded, with format), `[MapAssetProcessing]` (upload stages, timings, outcome), `[Impersonation]`                                                          | CloudWatch log retention is one month. Year-on-year analysis needs export or longer retention                                                             |
-| CloudWatch        | CouchDB dashboard and alarms (CPU, memory, disk, status, 5XX), load balancer request count and response time, ECS Container Insights, TTL cleanup failure alerts, AWS Backup jobs                                                                                                 | No external uptime check. No CloudFront or load balancer access logs                                                                                      |
-| Bugsnag           | Errors from the API, field app and Control Centre, with app version; version-mismatch events from the app                                                                                                                                                                         | Errors only, not usage                                                                                                                                    |
-| Feedback inbox    | In-app feedback (`POST /api/feedback`) emailed to support, with app version                                                                                                                                                                                                       | Unstructured email; needs manual tagging                                                                                                                  |
-| App stores        | App Store Connect and Google Play Console: installs, active devices, ratings, reviews, crash rates, version spread                                                                                                                                                                | Native apps only; web users invisible                                                                                                                     |
-| GitHub            | DASS fork and upstream FAIMS3: releases, changelog, issues (including incident and security issues), pull requests, milestones, Actions runs, deployments                                                                                                                         | Labelling conventions needed for some metrics                                                                                                             |
-| AWS Cost Explorer | Infrastructure spend by service and month, for the DASS AWS account                                                                                                                                                                                                               | Needs cost allocation tags to split shared costs                                                                                                          |
-| CDK configuration | The DASS infrastructure code and deployed AWS configuration (regions, backups, log retention)                                                                                                                                                                                     | Read by review, not automatically                                                                                                                         |
-| Bibliometrics     | Publications, citations of the FAIMS3 software DOIs (`CITATION.cff`), dataset DOIs                                                                                                                                                                                                | Manual collation                                                                                                                                          |
-| Event register    | **Build (M).** A list of events DASS was used for (name, start date, area, agencies), linked to surveys. Could live in Twenty CRM or a separate database we maintain                                                                                                              | Does not exist yet                                                                                                                                        |
-| User survey       | **Build (M).** Short periodic survey of agency users and administrators (satisfaction, usability, perceived value), plus a standard post-event debrief                                                                                                                            | Does not exist yet. Could itself run as a DASS survey                                                                                                     |
-| Client telemetry  | **Build (H).** Opt-in, privacy-preserving app signals: platform, app version, sync success, time from capture to sync, offline duration                                                                                                                                           | Does not exist. App version and platform currently stay on the device                                                                                     |
-| Uptime monitor    | **Build (L).** External availability check on the API, field app and Control Centre                                                                                                                                                                                               | Does not exist yet                                                                                                                                        |
-| Support desk      | **Build (L)** (or adopt). A ticketing process with categories, so support load and themes can be counted                                                                                                                                                                          | Support is currently email-based                                                                                                                          |
+| Source                         | What it is                                                                                                                                                                                                                                                                        | Limits today                                                                                                                                              |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Admin stats                    | `GET /api/admin/stats` and the Control Centre Stats page. Counts of teams, users, surveys, templates, records, attachments, bytes, map layers, logged-in users, invites, long-lived API tokens and deleted surveys, with per-team and per-person breakdowns                       | Point-in-time only. No history unless we snapshot it                                                                                                      |
+| CouchDB query                  | Timestamps already stored on documents: survey and template `createdAt`/`createdBy`, team `createdAt`, record and revision `created`/`created_by`, invite redemptions (`uses[].usedAt`), map layer uploads, deleted-survey tombstones, long-lived API token `lastUsedTimestampMs` | Users have no created or last-login time. Expired sessions, invites, email codes and download grants are deleted by TTL cleanup, so their history is lost |
+| Audit logs                     | Structured JSON log lines: `[InviteAudit]` (create, lookup, consume, revoke), `[DownloadAudit]` (export minted and downloaded, with format), `[MapAssetProcessing]` (upload stages, timings, outcome), `[Impersonation]`                                                          | CloudWatch log retention is one month. Year-on-year analysis needs export or longer retention                                                             |
+| CloudWatch                     | CouchDB dashboard and alarms (CPU, memory, disk, status, 5XX), load balancer request count and response time, ECS Container Insights, TTL cleanup failure alerts, AWS Backup jobs                                                                                                 | No external uptime check. No CloudFront or load balancer access logs                                                                                      |
+| Bugsnag                        | Errors from the API, field app and Control Centre, with app version; version-mismatch events from the app                                                                                                                                                                         | Errors only, not usage                                                                                                                                    |
+| Feedback inbox                 | NBICGeneral@csiro.au, which receives in-app feedback (`POST /api/feedback`, with app version) and direct emails                                                                                                                                                                   | Unstructured email; needs manual tagging                                                                                                                  |
+| App stores                     | App Store Connect and Google Play Console: installs, active devices, ratings, reviews, crash rates, version spread                                                                                                                                                                | Native apps only; web users invisible                                                                                                                     |
+| GitHub                         | DASS fork and upstream FAIMS3: releases, changelog, issues (including bugs and security issues), pull requests, Actions runs and deployment timings                                                                                                                               | Labelling conventions needed for some metrics                                                                                                             |
+| AWS Cost Explorer              | Infrastructure spend by service and month, for the DASS AWS account                                                                                                                                                                                                               | Needs cost allocation tags to split shared costs                                                                                                          |
+| CDK configuration              | The DASS infrastructure code and deployed AWS configuration (regions, backups, log retention)                                                                                                                                                                                     | Read by review, not automatically                                                                                                                         |
+| Bibliometrics                  | Publications, citations of the FAIMS3 software DOIs (`CITATION.cff`), dataset DOIs                                                                                                                                                                                                | Manual collation                                                                                                                                          |
+| Event register                 | **Build (M).** A list of events DASS was used for (name, start date, area, agencies), linked to surveys. Could live in Twenty CRM or a separate database we maintain                                                                                                              | Does not exist yet                                                                                                                                        |
+| User survey                    | **Build (M).** Short periodic survey of agency users and administrators (satisfaction, usability, perceived value), plus a standard post-event debrief                                                                                                                            | Does not exist yet. Could itself run as a DASS survey                                                                                                     |
+| Client telemetry               | **Build (H).** Opt-in, privacy-preserving app signals: platform, app version, sync success, time from capture to sync, offline duration                                                                                                                                           | Does not exist. App version and platform currently stay on the device                                                                                     |
+| Uptime monitor                 | **Build (L).** External availability check on the API, field app and Control Centre                                                                                                                                                                                               | Does not exist yet                                                                                                                                        |
+| Progress and milestone reports | Progress reports and deliverable milestone reports, including feedback from funding bodies                                                                                                                                                                                        | Produced on the deliverable schedule                                                                                                                      |
+| Risk register                  | The NBIC risk register                                                                                                                                                                                                                                                            | Maintained outside this repository                                                                                                                        |
+| Miro                           | Team planning boards: roadmap, backlog, blockers and stakeholder requests                                                                                                                                                                                                         | Not structured for automatic counting                                                                                                                     |
+| Release and incident log       | **Build (L).** One row per production release (version, date, whether an issue was found) and per incident (start, acknowledged, resolved, review done). Could be kept in Twenty CRM or a simple spreadsheet                                                                      | Does not exist yet                                                                                                                                        |
+| Support desk                   | **Build (L)** (or adopt). A ticketing process with categories, so support load and themes can be counted                                                                                                                                                                          | Support is currently email-based                                                                                                                          |
 
 # Theme 1: Adoption {.theme}
 
@@ -222,12 +227,12 @@ preparedness models and plans.
 Agencies using DASS for pre-event work, such as Fuel Hazard Assessments, and
 how much of that work is captured in DASS.
 
-| Proxy metric                                                          | Unit             | Goal     | Source                                 | Status    |
-| --------------------------------------------------------------------- | ---------------- | -------- | -------------------------------------- | --------- |
-| Agencies with an active preparedness survey (for example fuel hazard) | count            | Maximise | CouchDB query plus survey purpose flag | Build (L) |
-| Preparedness records created                                          | count            | Maximise | CouchDB query plus survey purpose flag | Build (L) |
-| Preparedness templates available in the national library              | count            | Monitor  | CouchDB query plus national flag       | Build (M) |
-| Documented planning decisions informed by DASS preparedness data      | count, narrative | Maximise | Use case investigations, MEL form      | Now       |
+| Proxy metric                                                          | Unit             | Goal     | Source                                  | Status    |
+| --------------------------------------------------------------------- | ---------------- | -------- | --------------------------------------- | --------- |
+| Agencies with an active preparedness survey (for example fuel hazard) | count            | Maximise | CouchDB query plus survey purpose flag  | Build (L) |
+| Preparedness records created                                          | count            | Maximise | CouchDB query plus survey purpose flag  | Build (L) |
+| Preparedness templates available in the national library              | count            | Monitor  | CouchDB query plus public template flag | Build (M) |
+| Documented planning decisions informed by DASS preparedness data      | count, narrative | Maximise | Use case investigations, MEL form       | Now       |
 
 #### 1.1-A2 Readiness to deploy
 
@@ -304,12 +309,12 @@ How much is captured per surveyor, and how complete each record is.
 How far collected data follows the national templates, which is what makes it
 comparable across time and jurisdictions.
 
-| Proxy metric                                                                      | Unit              | Goal     | Source                           | Status    |
-| --------------------------------------------------------------------------------- | ----------------- | -------- | -------------------------------- | --------- |
-| Active surveys created from a national template                                   | %                 | Maximise | CouchDB query plus national flag | Build (M) |
-| Distinct template variants in use for the same purpose                            | count per purpose | Minimise | CouchDB query                    | Derive    |
-| Template drift: fields added, removed or changed relative to the national version | fields per survey | Minimise | CouchDB query plus lineage       | Build (M) |
-| Records collected in surveys aligned to the current data standard                 | %                 | Maximise | CouchDB query plus lineage       | Build (M) |
+| Proxy metric                                                                      | Unit              | Goal     | Source                                  | Status    |
+| --------------------------------------------------------------------------------- | ----------------- | -------- | --------------------------------------- | --------- |
+| Active surveys created from a national template                                   | %                 | Maximise | CouchDB query plus public template flag | Build (M) |
+| Distinct template variants in use for the same purpose                            | count per purpose | Minimise | CouchDB query                           | Derive    |
+| Template drift: fields added, removed or changed relative to the national version | fields per survey | Minimise | CouchDB query plus lineage              | Build (M) |
+| Records collected in surveys aligned to the current data standard                 | %                 | Maximise | CouchDB query plus lineage              | Build (M) |
 
 #### 1.1-B4 Time to usable data
 
@@ -495,11 +500,11 @@ integration.
 
 **Frequency:** annual. **Span:** annual.
 
-| Proxy metric                                        | Unit  | Goal     | Source                           | Status    |
-| --------------------------------------------------- | ----- | -------- | -------------------------------- | --------- |
-| Surveys created from each national template         | count | Maximise | CouchDB query plus national flag | Build (M) |
-| Agencies that customised a template in the designer | count | Monitor  | CouchDB query                    | Derive    |
-| Templates created or edited, by team                | count | Monitor  | CouchDB query                    | Derive    |
+| Proxy metric                                        | Unit  | Goal     | Source                                  | Status    |
+| --------------------------------------------------- | ----- | -------- | --------------------------------------- | --------- |
+| Surveys created from each national template         | count | Maximise | CouchDB query plus public template flag | Build (M) |
+| Agencies that customised a template in the designer | count | Monitor  | CouchDB query                           | Derive    |
+| Templates created or edited, by team                | count | Monitor  | CouchDB query                           | Derive    |
 
 #### 1.2-C4 Collaboration on the platform
 
@@ -581,23 +586,25 @@ and annual.
 **Frequency:** per event; monthly (operational). **Span:** per event, and
 period.
 
-| Proxy metric                                | Unit  | Goal      | Source                       | Status    |
-| ------------------------------------------- | ----- | --------- | ---------------------------- | --------- |
-| Sync attempts that succeed                  | %     | Maximise  | Client telemetry             | Build (H) |
-| Longest time a device held unsynced records | hours | Monitor   | Client telemetry             | Build (H) |
-| Reported data-loss incidents                | count | Target: 0 | Support desk, feedback inbox | Derive    |
-| Records with unresolved edit conflicts      | count | Minimise  | CouchDB query                | Derive    |
+| Proxy metric                                                 | Unit             | Goal      | Source                                        | Status    |
+| ------------------------------------------------------------ | ---------------- | --------- | --------------------------------------------- | --------- |
+| Median delay between a record being created and being synced | hours            | Minimise  | Server receipt timestamp, or client telemetry | Build (M) |
+| Time devices spend in a sync error state                     | hours per device | Minimise  | Client telemetry                              | Build (H) |
+| Longest time a device held unsynced records                  | hours            | Monitor   | Client telemetry                              | Build (H) |
+| Reported data-loss incidents                                 | count            | Target: 0 | Feedback inbox, support desk (tentative)      | Derive    |
+| Records with unresolved edit conflicts                       | count            | Minimise  | CouchDB query                                 | Derive    |
 
-#### 1.3-B3 Service availability
+#### 1.3-B3 Service availability and responsiveness
 
 **Frequency:** monthly, and per event. **Span:** period, and per event.
 
-| Proxy metric                            | Unit          | Goal        | Source                         | Status    |
-| --------------------------------------- | ------------- | ----------- | ------------------------------ | --------- |
-| API availability from an external check | %             | Target: TBD | Uptime monitor                 | Build (L) |
-| Server error (5XX) responses            | % of requests | Minimise    | CloudWatch                     | Now       |
-| p95 API response time                   | milliseconds  | Minimise    | CloudWatch                     | Now       |
-| Incidents and alarm events              | count         | Minimise    | CloudWatch, GitHub (incidents) | Derive    |
+| Proxy metric                            | Unit          | Goal     | Source                   | Status    |
+| --------------------------------------- | ------------- | -------- | ------------------------ | --------- |
+| API availability from an external check | %             | Maximise | Uptime monitor           | Build (L) |
+| Server error (5XX) responses            | % of requests | Minimise | CloudWatch               | Now       |
+| p95 API response time                   | milliseconds  | Minimise | CloudWatch               | Now       |
+| Alarm events                            | count         | Minimise | CloudWatch               | Derive    |
+| Incidents                               | count         | Minimise | Release and incident log | Build (L) |
 
 #### 1.3-B4 Map layer processing
 
@@ -614,13 +621,19 @@ period.
 
 **Frequency:** monthly (volume); quarterly (themes). **Span:** period.
 
-| Proxy metric                                              | Unit                | Goal     | Source                    | Status    |
-| --------------------------------------------------------- | ------------------- | -------- | ------------------------- | --------- |
-| In-app feedback messages, by theme                        | count               | Monitor  | Feedback inbox            | Derive    |
-| Pain points heard in meetings and conversations, by theme | count               | Monitor  | Twenty CRM (feedback log) | Build (L) |
-| Support requests per active agency, by category           | requests per agency | Minimise | Support desk              | Build (L) |
-| Issues raised from DASS feedback, open and closed         | count               | Monitor  | GitHub (label)            | Derive    |
-| Median time to resolve reported problems                  | days                | Minimise | GitHub, support desk      | Derive    |
+| Proxy metric                                                  | Unit                | Goal     | Source                                  | Status    |
+| ------------------------------------------------------------- | ------------------- | -------- | --------------------------------------- | --------- |
+| In-app feedback messages, by theme                            | count               | Monitor  | Feedback inbox (NBICGeneral@csiro.au)   | Derive    |
+| Pain points heard in meetings and conversations, by theme     | count               | Monitor  | Twenty CRM (feedback log)               | Build (L) |
+| Support requests that reflect a pain point, per active agency | requests per agency | Minimise | Support desk (tentative)                | Build (L) |
+| Issues raised from DASS feedback, open and closed             | count               | Monitor  | GitHub (label, if applied consistently) | Derive    |
+| Median time to resolve reported problems                      | days                | Minimise | GitHub, support desk (tentative)        | Derive    |
+
+Not every support request is a problem: a request can be a positive signal,
+such as an agency wanting to do more with DASS. Only requests that reflect a
+pain point count towards this measure. Feedback is not yet consistently
+linked to GitHub issues, and the support desk does not exist yet, so the
+metrics that depend on them are tentative.
 
 #### 1.3-C2 Disengagement signals
 
@@ -629,17 +642,16 @@ period.
 | Proxy metric                                                 | Unit      | Goal     | Source                              | Status |
 | ------------------------------------------------------------ | --------- | -------- | ----------------------------------- | ------ |
 | Agencies with no activity for a full year after being active | count     | Minimise | CouchDB query                       | Derive |
-| Deleted surveys                                              | count     | Monitor  | Admin stats                         | Now    |
 | Stated reasons for disengagement                             | narrative | Monitor  | Use case investigations, Twenty CRM | Derive |
 
 #### 1.3-C3 Advocacy
 
 **Frequency:** annual. **Span:** annual.
 
-| Proxy metric                                         | Unit  | Goal     | Source                           | Status    |
-| ---------------------------------------------------- | ----- | -------- | -------------------------------- | --------- |
-| Agencies referred by another agency                  | count | Maximise | Twenty CRM (referral field)      | Build (L) |
-| Unsolicited endorsements and requests to extend DASS | count | Maximise | Activity lead meetings, MEL form | Derive    |
+| Proxy metric                                         | Unit  | Goal     | Source                                                       | Status |
+| ---------------------------------------------------- | ----- | -------- | ------------------------------------------------------------ | ------ |
+| Agencies referred by another agency                  | count | Maximise | Twenty CRM                                                   | Derive |
+| Unsolicited endorsements and requests to extend DASS | count | Maximise | Ad hoc conversations and meetings, Twenty CRM (feedback log) | Derive |
 
 # Theme 2: Deliverables {.theme}
 
@@ -651,13 +663,13 @@ period.
 
 #### 2.1-A1 Milestone delivery rate
 
-**Frequency:** governance cycle. **Span:** period.
+**Frequency:** deliverable milestones. **Span:** period.
 
-| Proxy metric                                     | Unit  | Goal     | Source                      | Status |
-| ------------------------------------------------ | ----- | -------- | --------------------------- | ------ |
-| Milestones delivered on or before their due date | %     | Maximise | Governance meetings, GitHub | Derive |
-| Slippage on late milestones                      | days  | Minimise | Governance meetings, GitHub | Derive |
-| Milestones re-baselined                          | count | Minimise | Governance meetings         | Derive |
+| Proxy metric                                     | Unit  | Goal     | Source                         | Status |
+| ------------------------------------------------ | ----- | -------- | ------------------------------ | ------ |
+| Milestones delivered on or before their due date | %     | Maximise | Progress and milestone reports | Derive |
+| Slippage on late milestones                      | days  | Minimise | Progress and milestone reports | Derive |
+| Milestones re-baselined                          | count | Minimise | Progress and milestone reports | Derive |
 
 #### 2.1-A2 Release cadence
 
@@ -671,37 +683,50 @@ period.
 
 ### Indicator 2.1-B: The delivery process is healthy
 
-#### 2.1-B1 Delivery performance (DORA measures)
+#### 2.1-B1 Delivery performance
 
 **Frequency:** quarterly. **Span:** period.
 
-| Proxy metric                                                | Unit              | Goal     | Source                         | Status |
-| ----------------------------------------------------------- | ----------------- | -------- | ------------------------------ | ------ |
-| Deployment frequency                                        | deploys per month | Maximise | GitHub Actions                 | Derive |
-| Lead time from pull request opened to deployed              | days              | Minimise | GitHub                         | Derive |
-| Releases needing a hotfix or rollback (change failure rate) | %                 | Minimise | GitHub                         | Derive |
-| Time to restore service after an incident                   | hours             | Minimise | GitHub (incidents), CloudWatch | Derive |
+These follow the four software delivery measures defined by Google's DevOps
+Research and Assessment (DORA) programme: how often we deploy, how quickly a
+change reaches production, how often a release causes problems, and how fast
+we recover. Here a **deployment** is a discrete release of a specific version
+into production.
+
+| Proxy metric                                                                 | Unit                  | Goal     | Source                               | Status    |
+| ---------------------------------------------------------------------------- | --------------------- | -------- | ------------------------------------ | --------- |
+| Deployment frequency                                                         | deployments per month | Maximise | GitHub Actions (deployment runs)     | Derive    |
+| Lead time from pull request opened to merged                                 | days                  | Minimise | GitHub                               | Derive    |
+| Problematic releases: releases where we identified an issue after deployment | count, % of releases  | Minimise | Release and incident log             | Build (L) |
+| Time to restore service after an incident                                    | hours                 | Minimise | Release and incident log, CloudWatch | Build (L) |
+
+The release and incident log does not exist yet. It could be kept in Twenty
+CRM or a simple shared spreadsheet: one row per release (version, date,
+whether an issue was found and what it was) and one per incident.
 
 #### 2.1-B2 Backlog health
 
 **Frequency:** monthly. **Span:** point in time.
 
-| Proxy metric                    | Unit  | Goal     | Source | Status |
-| ------------------------------- | ----- | -------- | ------ | ------ |
-| Open bugs, by severity          | count | Minimise | GitHub | Derive |
-| Median age of open bugs         | days  | Minimise | GitHub | Derive |
-| Planned roadmap items completed | %     | Maximise | GitHub | Derive |
+| Proxy metric                    | Unit  | Goal     | Source                   | Status    |
+| ------------------------------- | ----- | -------- | ------------------------ | --------- |
+| Open bugs, by severity          | count | Minimise | GitHub or Miro           | Derive    |
+| Median age of open bugs         | days  | Minimise | GitHub or Miro           | Derive    |
+| Planned roadmap items completed | %     | Maximise | Roadmap (Miro or GitHub) | Build (L) |
 
-### Indicator 2.1-C: Delivery risks are visible
+The roadmap is not yet defined clearly enough to measure progress against,
+so roadmap completion needs a roadmap with discrete, dated items first.
+
+### Indicator 2.1-C: Delivery risks are managed
 
 #### 2.1-C1 Risks and dependencies
 
-**Frequency:** governance cycle. **Span:** point in time.
+**Frequency:** deliverable milestones. **Span:** point in time.
 
-| Proxy metric                                                         | Unit  | Goal     | Source              | Status |
-| -------------------------------------------------------------------- | ----- | -------- | ------------------- | ------ |
-| Open and overdue risks, by rating                                    | count | Minimise | Governance meetings | Derive |
-| Items blocked on external dependencies (agencies, vendors, upstream) | count | Minimise | GitHub              | Derive |
+| Proxy metric                                                                        | Unit  | Goal     | Source                                        | Status |
+| ----------------------------------------------------------------------------------- | ----- | -------- | --------------------------------------------- | ------ |
+| Open and overdue risks, by rating                                                   | count | Minimise | Risk register, progress and milestone reports | Derive |
+| Items blocked on external dependencies (agencies, technical stakeholders, upstream) | count | Minimise | Miro, GitHub                                  | Derive |
 
 ## 2.2 Deliverables meeting expectations
 
@@ -709,19 +734,19 @@ period.
 
 ### Indicator 2.2-A: Deliverables meet quality requirements
 
-#### 2.2-A1 Acceptance and escaped defects
+#### 2.2-A1 Acceptance, and bugs found after release
 
-**Frequency:** per release, summarised quarterly. **Span:** per release.
+**Frequency:** deliverable milestones (acceptance); per release, summarised
+quarterly (bugs). **Span:** period, and per release.
 
-| Proxy metric                                           | Unit             | Goal     | Source                                      | Status |
-| ------------------------------------------------------ | ---------------- | -------- | ------------------------------------------- | ------ |
-| Deliverables accepted without rework                   | %                | Maximise | Governance meetings, activity lead meetings | Derive |
-| Bugs reported within 30 days of a release              | bugs per release | Minimise | GitHub, Bugsnag                             | Derive |
-| CI and end-to-end test pass rate on the release branch | %                | Maximise | GitHub Actions                              | Now    |
+| Proxy metric                              | Unit             | Goal     | Source                                                | Status |
+| ----------------------------------------- | ---------------- | -------- | ----------------------------------------------------- | ------ |
+| Deliverables accepted without rework      | %                | Maximise | Progress and milestone reports, funding body feedback | Derive |
+| Bugs reported within 30 days of a release | bugs per release | Minimise | Feedback inbox, Bugsnag                               | Derive |
 
 #### 2.2-A2 Security, sovereignty and resilience
 
-**Frequency:** quarterly, plus an annual attestation. **Span:** point in time.
+**Frequency:** quarterly, plus an annual review. **Span:** point in time.
 
 | Proxy metric                                       | Unit  | Goal         | Source                               | Status    |
 | -------------------------------------------------- | ----- | ------------ | ------------------------------------ | --------- |
@@ -746,21 +771,24 @@ period.
 
 #### 2.2-B1 Stakeholder assessment
 
-**Frequency:** governance cycle, plus annual survey. **Span:** period.
+**Frequency:** deliverable milestones, plus annual survey. **Span:** period.
 
 | Proxy metric                                                | Unit           | Goal     | Source                           | Status    |
 | ----------------------------------------------------------- | -------------- | -------- | -------------------------------- | --------- |
 | Stakeholder rating of recent deliverables                   | score (1 to 5) | Maximise | User survey, governance meetings | Build (M) |
-| Stakeholder requests delivered or closed, of those received | %              | Maximise | Twenty CRM, GitHub (label)       | Derive    |
+| Stakeholder requests delivered or closed, of those received | %              | Maximise | Twenty CRM, Miro, GitHub (label) | Derive    |
 
 #### 2.2-B2 Uptake of new features
 
 **Frequency:** once, 90 days after each feature release. **Span:** the 90 days
 after release.
 
-| Proxy metric                                    | Unit | Goal     | Source                             | Status |
-| ----------------------------------------------- | ---- | -------- | ---------------------------------- | ------ |
-| Active teams using a new feature within 90 days | %    | Maximise | CouchDB query (data and templates) | Derive |
+| Proxy metric                                         | Unit | Goal     | Source                             | Status |
+| ---------------------------------------------------- | ---- | -------- | ---------------------------------- | ------ |
+| Active teams using the new feature                   | %    | Maximise | CouchDB query (data and templates) | Derive |
+| Active users using the new feature                   | %    | Maximise | CouchDB query (data and templates) | Derive |
+| Time from feature release to the first team using it | days | Minimise | CouchDB query (data and templates) | Derive |
+| Time from feature release to the first user using it | days | Minimise | CouchDB query (data and templates) | Derive |
 
 ### Indicator 2.2-C: The data produced meets the national data goal
 
@@ -770,11 +798,15 @@ after release.
 
 This is the outcome DASS exists for: consistent, comparable impact data.
 
-| Proxy metric                                               | Unit  | Goal     | Source                                 | Status    |
-| ---------------------------------------------------------- | ----- | -------- | -------------------------------------- | --------- |
-| Records conforming to the national data standard           | %     | Maximise | CouchDB query plus lineage             | Build (M) |
-| Completeness of the national core fields (aggregate)       | %     | Maximise | CouchDB query (agreed with custodians) | Derive    |
-| Agencies contributing data to a cross-jurisdiction dataset | count | Maximise | Twenty CRM (data agreements)           | Build (L) |
+| Proxy metric                                                                                        | Unit  | Goal     | Source                                 | Status    |
+| --------------------------------------------------------------------------------------------------- | ----- | -------- | -------------------------------------- | --------- |
+| Records collected using a CSIRO-provided template, or a comparable extension or modification of one | %     | Maximise | CouchDB query plus lineage             | Build (M) |
+| Completeness of the national core fields (aggregate)                                                | %     | Maximise | CouchDB query (agreed with custodians) | Derive    |
+| Agencies contributing data to a cross-jurisdiction dataset                                          | count | Maximise | Use case investigations                | Derive    |
+
+Cross-jurisdiction data arrangements are still tentative, so it is not yet
+clear how they will be tracked. For now they are best captured as use case
+studies.
 
 # Theme 3: Engagement {.theme}
 
@@ -809,21 +841,22 @@ This is the outcome DASS exists for: consistent, comparable impact data.
 
 **Frequency:** governance cycle. **Span:** cumulative.
 
-| Proxy metric                                                                 | Unit  | Goal     | Source                           | Status    |
-| ---------------------------------------------------------------------------- | ----- | -------- | -------------------------------- | --------- |
-| National templates published, and versions released                          | count | Monitor  | CouchDB query plus national flag | Build (M) |
-| Agencies using each national template                                        | count | Maximise | CouchDB query plus national flag | Build (M) |
-| Assessment methods (for example damage classification) developed or endorsed | count | Maximise | Governance meetings, MEL form    | Derive    |
+| Proxy metric                                                                 | Unit  | Goal     | Source                                  | Status    |
+| ---------------------------------------------------------------------------- | ----- | -------- | --------------------------------------- | --------- |
+| National templates published, and versions released                          | count | Monitor  | CouchDB query plus public template flag | Build (M) |
+| Agencies using each national template                                        | count | Maximise | CouchDB query plus public template flag | Build (M) |
+| Assessment methods (for example damage classification) developed or endorsed | count | Maximise | Governance meetings, MEL form           | Derive    |
 
 #### 3.1-B2 Open-source contribution
 
 **Frequency:** quarterly. **Span:** period.
 
-| Proxy metric                                                 | Unit    | Goal     | Source | Status |
-| ------------------------------------------------------------ | ------- | -------- | ------ | ------ |
-| Pull requests from the DASS team merged into upstream FAIMS3 | count   | Maximise | GitHub | Derive |
-| Commits the DASS fork is behind upstream                     | commits | Minimise | GitHub | Derive |
-| External contributors and other FAIMS3 deployments           | count   | Maximise | GitHub | Now    |
+| Proxy metric                                                 | Unit    | Goal     | Source                     | Status |
+| ------------------------------------------------------------ | ------- | -------- | -------------------------- | ------ |
+| Pull requests from the DASS team merged into upstream FAIMS3 | count   | Maximise | GitHub                     | Derive |
+| Commits the DASS fork is behind upstream                     | commits | Minimise | GitHub                     | Derive |
+| External contributors to FAIMS3                              | count   | Maximise | GitHub                     | Now    |
+| Other known deployments of FAIMS3                            | count   | Maximise | GitHub (forks), Twenty CRM | Derive |
 
 ### Indicator 3.1-C: Researchers use the platform and data
 
@@ -835,9 +868,25 @@ This is the outcome DASS exists for: consistent, comparable impact data.
 | ------------------------------------------------------------------- | ---------------- | -------- | ---------------------------- | --------- |
 | Research teams using DASS                                           | count            | Maximise | Team metadata, Twenty CRM    | Build (L) |
 | Data access requests for research                                   | count            | Monitor  | Twenty CRM (request records) | Build (L) |
-| Median time to fulfil a data access request                         | days             | Minimise | Twenty CRM (request records) | Build (L) |
 | Models or analyses fed by DASS data (for example house-loss models) | count, narrative | Maximise | Use case investigations      | Now       |
 | Co-authored outputs with agencies or universities                   | count            | Maximise | Bibliometrics                | Derive    |
+
+### Indicator 3.1-D: DASS enables or uplifts stakeholder research projects
+
+#### 3.1-D1 Research projects enabled or uplifted
+
+**Frequency:** annual. **Span:** annual, plus cumulative.
+
+Research projects run by stakeholders (agencies, universities and other
+research groups) that DASS made possible, or made better, for example by
+providing the data collection platform or by extending DASS for the project.
+
+| Proxy metric                                                           | Unit      | Goal     | Source                              | Status    |
+| ---------------------------------------------------------------------- | --------- | -------- | ----------------------------------- | --------- |
+| Stakeholder research projects using DASS for data collection           | count     | Maximise | Twenty CRM, use case investigations | Derive    |
+| Projects where DASS was extended or customised to support the research | count     | Maximise | Twenty CRM (collaboration log)      | Build (L) |
+| Outputs from those projects (papers, reports, datasets)                | count     | Maximise | Bibliometrics                       | Derive    |
+| Researchers' accounts of what DASS made possible                       | narrative | Monitor  | Use case investigations             | Now       |
 
 ## 3.2 External stakeholders and business opportunities
 
@@ -850,13 +899,13 @@ This is the outcome DASS exists for: consistent, comparable impact data.
 
 **Frequency:** quarterly. **Span:** period, plus cumulative.
 
-| Proxy metric                                                       | Unit  | Goal     | Source     | Status |
-| ------------------------------------------------------------------ | ----- | -------- | ---------- | ------ |
-| Engagements, by sector and jurisdiction                            | count | Maximise | Twenty CRM | Now    |
-| Organisations engaged, by sector and jurisdiction                  | count | Maximise | Twenty CRM | Now    |
-| New organisations engaged, as a share of all organisations engaged | %     | Monitor  | Twenty CRM | Derive |
-| Training sessions, webinars and conference activities              | count | Maximise | Twenty CRM | Derive |
-| Attendees at those activities                                      | count | Maximise | Twenty CRM | Derive |
+| Proxy metric                                                                 | Unit  | Goal     | Source     | Status |
+| ---------------------------------------------------------------------------- | ----- | -------- | ---------- | ------ |
+| Engagements, by sector (including Indigenous organisations) and jurisdiction | count | Maximise | Twenty CRM | Now    |
+| Organisations engaged, by sector and jurisdiction                            | count | Maximise | Twenty CRM | Now    |
+| New organisations engaged, as a share of all organisations engaged           | %     | Monitor  | Twenty CRM | Derive |
+| Training sessions, webinars and conference activities                        | count | Maximise | Twenty CRM | Derive |
+| Attendees at those activities                                                | count | Maximise | Twenty CRM | Derive |
 
 #### 3.2-A2 Depth of engagement
 
@@ -885,37 +934,20 @@ linked to Twenty CRM organisations.
 | Templates shared between agencies                            | count | Maximise | CouchDB query plus lineage       | Build (M) |
 | Data-sharing agreements between agencies involving DASS data | count | Maximise | Twenty CRM (data agreements)     | Build (L) |
 
-### Indicator 3.2-C: Indigenous stakeholders are engaged on their terms
+### Indicator 3.2-C: DASS creates business and partnership opportunities
 
-Measures here should be designed with Indigenous partners and follow the CARE
-principles for Indigenous data governance. Counts are a weak proxy; the
-qualitative account matters more.
-
-#### 3.2-C1 Engagement with Indigenous organisations
-
-**Frequency:** quarterly (counts); annual (narrative). **Span:** period, and
-annual.
-
-| Proxy metric                                                                   | Unit      | Goal     | Source                        | Status    |
-| ------------------------------------------------------------------------------ | --------- | -------- | ----------------------------- | --------- |
-| Engagements with Indigenous organisations, ranger groups or Traditional Owners | count     | Maximise | Twenty CRM (sector tag)       | Derive    |
-| Indigenous ranger or community teams onboarded and active                      | count     | Maximise | Team metadata                 | Build (L) |
-| Templates or fields co-designed with Indigenous partners                       | count     | Maximise | Governance meetings, MEL form | Derive    |
-| Data governance agreements reflecting Indigenous data sovereignty              | count     | Maximise | Twenty CRM (data agreements)  | Build (L) |
-| Partner accounts of the engagement                                             | narrative | Monitor  | Use case investigations       | Now       |
-
-### Indicator 3.2-D: DASS creates business and partnership opportunities
-
-#### 3.2-D1 Opportunities and partnerships
+#### 3.2-C1 Opportunities and partnerships
 
 **Frequency:** governance cycle. **Span:** period, plus cumulative.
 
-| Proxy metric                                                        | Unit         | Goal     | Source                           | Status    |
-| ------------------------------------------------------------------- | ------------ | -------- | -------------------------------- | --------- |
-| Partnership, funding or co-investment proposals                     | count, AUD   | Maximise | Twenty CRM                       | Derive    |
-| MoUs and data-sharing agreements signed                             | count        | Maximise | Twenty CRM (data agreements)     | Build (L) |
-| Requests to extend DASS to other hazards or uses                    | count        | Maximise | Twenty CRM, MEL form             | Derive    |
-| Infrastructure cost per active agency (for sustainability planning) | AUD per year | Minimise | AWS Cost Explorer, CouchDB query | Derive    |
+| Proxy metric                                                                                               | Unit       | Goal     | Source                         | Status    |
+| ---------------------------------------------------------------------------------------------------------- | ---------- | -------- | ------------------------------ | --------- |
+| Partnership, funding or co-investment proposals                                                            | count, AUD | Maximise | Twenty CRM                     | Derive    |
+| Requests for quote (RFQs) or contract proposals involving DASS                                             | count, AUD | Maximise | Twenty CRM                     | Derive    |
+| Contracts involving DASS that were won (converted from those proposals)                                    | count, AUD | Maximise | Twenty CRM                     | Derive    |
+| Collaborations, such as supporting an agency to build something in DASS, or an agency contributing to DASS | count      | Maximise | Twenty CRM (collaboration log) | Build (L) |
+| MoUs and data-sharing agreements signed                                                                    | count      | Maximise | Twenty CRM (data agreements)   | Build (L) |
+| Requests to extend DASS to other hazards or uses                                                           | count      | Maximise | Twenty CRM, MEL form           | Derive    |
 
 # Theme 4: Operations {.theme}
 
@@ -966,12 +998,12 @@ annual.
 
 **Frequency:** monthly, and per event. **Span:** period, and per event.
 
-| Proxy metric                                     | Unit    | Goal         | Source                         | Status    |
-| ------------------------------------------------ | ------- | ------------ | ------------------------------ | --------- |
-| Median time to acknowledge an alarm or incident  | minutes | Minimise     | CloudWatch, GitHub (incidents) | Derive    |
-| Median time to resolve an incident               | hours   | Minimise     | GitHub (incidents)             | Derive    |
-| Incidents with a completed post-incident review  | %       | Target: 100% | GitHub (incidents)             | Derive    |
-| Support requests answered within the agreed time | %       | Maximise     | Support desk                   | Build (L) |
+| Proxy metric                                     | Unit    | Goal         | Source                               | Status    |
+| ------------------------------------------------ | ------- | ------------ | ------------------------------------ | --------- |
+| Median time to acknowledge an alarm or incident  | minutes | Minimise     | CloudWatch, release and incident log | Build (L) |
+| Median time to resolve an incident               | hours   | Minimise     | Release and incident log             | Build (L) |
+| Incidents with a completed post-incident review  | %       | Target: 100% | Release and incident log             | Build (L) |
+| Support requests answered within the agreed time | %       | Maximise     | Support desk (tentative)             | Build (L) |
 
 ## 4.2 Benefit compared with time, resources and workload
 
@@ -987,6 +1019,7 @@ annual.
 | Proxy metric                   | Unit                  | Goal     | Source                           | Status |
 | ------------------------------ | --------------------- | -------- | -------------------------------- | ------ |
 | AWS spend for DASS, by service | AUD per month         | Minimise | AWS Cost Explorer                | Now    |
+| Platform cost per active user  | AUD per user per year | Minimise | AWS Cost Explorer, CouchDB query | Derive |
 | Cost per active agency         | AUD per agency        | Minimise | AWS Cost Explorer, CouchDB query | Derive |
 | Cost per 1,000 records         | AUD per 1,000 records | Minimise | AWS Cost Explorer, admin stats   | Derive |
 | Cost per GB stored             | AUD per GB            | Minimise | AWS Cost Explorer, admin stats   | Derive |
@@ -1076,26 +1109,28 @@ These **Build** items unlock the most metrics. They are listed roughly by
 value for effort. Most would land upstream in FAIMS3 behind DASS
 configuration.
 
-| #   | Gap                                                                                                                                     | Unlocks                                           | Effort |
-| --- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- | ------ |
-| 1   | Scheduled snapshot of admin stats (for example monthly) to S3 or a CouchDB database                                                     | Every trend line in 1.2 and 4.2                   | L      |
-| 2   | Keep audit logs longer than one month (export to S3, or longer CloudWatch retention)                                                    | Exports, invites, map layer metrics               | L      |
-| 3   | Metrics extraction script that writes the **Derive** platform metrics to CSV for standard reporting                                     | Most of themes 1 and 2                            | M      |
-| 4   | Team metadata: agency, jurisdiction, sector (including Indigenous organisation)                                                         | 1.2-A, 3.1-C, 3.2                                 | L      |
-| 5   | Survey purpose flag: post-impact, preparedness (for example fuel hazard), exercise, research                                            | 1.1-A1, 1.1-A2, 1.2-D                             | L      |
-| 6   | User `createdAt` and `lastLoginAt`                                                                                                      | 1.2-B                                             | L      |
-| 7   | Event register (in Twenty CRM or a separate database), linked to surveys                                                                | 1.1-B1, 1.1-B4                                    | M      |
-| 8   | National template flag, plus template lineage and version recorded when a survey is created                                             | 1.1-A2, 1.1-B3, 1.2-C3, 2.2-C, 3.1-B              | M      |
-| 9   | Server-side record of app version and platform when a client refreshes its session (aggregated)                                         | 1.2-B3, version-support decisions                 | L      |
-| 10  | External uptime monitor on the API and apps                                                                                             | 1.3-B3, 2.2-A3                                    | L      |
-| 11  | Server receipt timestamp on synced records                                                                                              | 1.1-B4                                            | M      |
-| 12  | Stored validation status on records                                                                                                     | 1.1-B2                                            | M      |
-| 13  | Opt-in, privacy-preserving client telemetry for sync success and capture-to-sync time                                                   | 1.1-B4, 1.3-B2                                    | H      |
-| 14  | Standard post-event debrief and annual user survey (could run as DASS surveys)                                                          | 1.1-B5, 1.1-B6, 1.3-A, 2.2-B, 4.2-C               | M      |
-| 15  | Support desk with categories, and GitHub labels linking issues to stakeholders and strategy                                             | 1.3-C, 2.2-B, 4.2-B, 4.3-B                        | L      |
-| 16  | Twenty CRM additions: feedback log, pipeline stages, link to DASS teams, data agreements, data requests, onboarding baseline and effort | 1.1-B6, 1.2-A1, 1.3-A1, 1.3-C1, 3.1-C, 3.2, 4.2-B | L      |
-| 18  | DASS privacy policy and terms of service covering aggregated usage metrics (see Privacy risks)                                          | Every metric marked "agreed with custodians"      | L      |
-| 17  | Pulse questions in leadership retros (ways of working, purpose, effort split)                                                           | 4.1-B, 4.2-B, 4.3-A                               | L      |
+| #   | Gap                                                                                                                                                        | Unlocks                                                  | Effort |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | ------ |
+| 1   | Scheduled snapshot of admin stats (for example monthly) to S3 or a CouchDB database                                                                        | Every trend line in 1.2 and 4.2                          | L      |
+| 2   | Keep audit logs longer than one month (export to S3, or longer CloudWatch retention)                                                                       | Exports, invites, map layer metrics                      | L      |
+| 3   | Metrics extraction script that writes the **Derive** platform metrics to CSV for standard reporting                                                        | Most of themes 1 and 2                                   | M      |
+| 4   | Team metadata: agency, jurisdiction, sector (including Indigenous organisation)                                                                            | 1.2-A, 3.1-C, 3.2                                        | L      |
+| 5   | Survey purpose flag: post-impact, preparedness (for example fuel hazard), exercise, research                                                               | 1.1-A1, 1.1-A2, 1.2-D                                    | L      |
+| 6   | User `createdAt` and `lastLoginAt`                                                                                                                         | 1.2-B                                                    | L      |
+| 7   | Event register (in Twenty CRM or a separate database), linked to surveys                                                                                   | 1.1-B1, 1.1-B4                                           | M      |
+| 8   | Public template flag (marking the CSIRO-provided templates), plus template lineage and version recorded when a survey is created                           | 1.1-A2, 1.1-B3, 1.2-C3, 2.2-C, 3.1-B                     | M      |
+| 9   | Server-side record of app version and platform when a client refreshes its session (aggregated)                                                            | 1.2-B3, version-support decisions                        | L      |
+| 10  | External uptime monitor on the API and apps                                                                                                                | 1.3-B3, 2.2-A3                                           | L      |
+| 11  | Server receipt timestamp on synced records                                                                                                                 | 1.1-B4                                                   | M      |
+| 12  | Stored validation status on records                                                                                                                        | 1.1-B2                                                   | M      |
+| 13  | Opt-in, privacy-preserving client telemetry for capture-to-sync delay and time in a sync error state                                                       | 1.1-B4, 1.3-B2                                           | H      |
+| 14  | Standard post-event debrief and annual user survey (could run as DASS surveys)                                                                             | 1.1-B5, 1.1-B6, 1.3-A, 2.2-B, 4.2-C                      | M      |
+| 15  | Support desk with categories, and GitHub labels linking issues to stakeholders and strategy                                                                | 1.3-C, 2.2-B, 4.2-B, 4.3-B                               | L      |
+| 16  | Twenty CRM additions: feedback log, collaboration log, pipeline stages, link to DASS teams, data agreements, data requests, onboarding baseline and effort | 1.1-B6, 1.2-A1, 1.3-A1, 1.3-C1, 3.1-C, 3.1-D, 3.2, 4.2-B | L      |
+| 17  | Pulse questions in leadership retros (ways of working, purpose, effort split)                                                                              | 4.1-B, 4.2-B, 4.3-A                                      | L      |
+| 18  | DASS privacy policy and terms of service covering aggregated usage metrics (see Privacy risks)                                                             | Every metric marked "agreed with custodians"             | L      |
+| 19  | Release and incident log (Twenty CRM or a simple spreadsheet)                                                                                              | 1.3-B3, 2.1-B1, 4.1-D1                                   | L      |
+| 20  | A roadmap with discrete, dated items that progress can be measured against                                                                                 | 2.1-B2, 4.3-B1                                           | L      |
 
 # Reporting rhythm
 
@@ -1106,7 +1141,8 @@ How the metrics above could feed each reporting activity.
 | DASS metrics dashboard | Live, snapshotted monthly | All **Now** and scripted **Derive** platform metrics: readiness, teams, users, records, exports, errors, cost |
 | Activity lead meetings | Monthly or as held        | Operational view: active agencies and users, incidents, feedback themes, delivery status                      |
 | Leadership retros      | Per retro                 | Ways-of-working pulse, action follow-through, effort split                                                    |
-| Governance meetings    | Three times a year        | Milestones and risks, adoption trends, stakeholder engagement, service levels, security posture               |
+| Governance meetings    | Three times a year        | Adoption trends, stakeholder engagement, service levels, security posture                                     |
+| Deliverable milestones | Every 6 or 12 months      | Milestone delivery, risks and dependencies, acceptance of deliverables, stakeholder assessment                |
 | Per event              | After each event          | Speed of deployment, throughput, time to usable data, debrief responses, availability during event            |
 | Strategic review       | Annual or biannual        | Annual trends, use case synthesis, decision-change evidence, value for effort, gaps list                      |
 
@@ -1117,11 +1153,13 @@ How the metrics above could feed each reporting activity.
 - **Event register.** Should events live in Twenty CRM or in a separate
   database, and who keeps it up to date during an event?
 - **National templates.** How is "endorsed national template" decided today,
-  and who maintains the list? This determines how the national flag (gap 8)
+  and who maintains the list? This determines how the public template flag (gap 8)
   is set.
 - **Targets.** What is the target list of agencies per jurisdiction for
   measuring coverage (1.2-A1), and what availability target should DASS
-  commit to (1.3-B3, 2.2-A3)?
+  commit to (2.2-A3)?
+- **Roadmap.** Who owns the roadmap, and where should it live (Miro or
+  GitHub) so that delivery against it can be measured (2.1-B2)?
 - **Custodian consent.** Which metrics that look inside records (location,
   completeness) are acceptable to agencies, and does that need to be written
   into data agreements?

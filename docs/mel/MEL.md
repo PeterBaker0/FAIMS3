@@ -74,13 +74,14 @@ This branch is documentation only. It does not change application code.
 
 # Files
 
-| File                | What it is                                   |
-| ------------------- | -------------------------------------------- |
-| `MEL.md`            | This file: task and branch context           |
-| `mel-metrics.md`    | The metrics draft, by question               |
-| `build-pdf.sh`      | Builds a PDF from one or more markdown files |
-| `assets/mel.css`    | Print stylesheet used for the PDF            |
-| `out/` (gitignored) | Generated HTML and PDF output                |
+| File                  | What it is                                                                  |
+| --------------------- | --------------------------------------------------------------------------- |
+| `MEL.md`              | This file: task and branch context                                          |
+| `mel-metrics.md`      | The metrics draft, by question                                              |
+| `build-pdf.sh`        | Builds a PDF from one or more markdown files                                |
+| `extract-comments.py` | Prints the highlight and note comments in a reviewed PDF, with page numbers |
+| `assets/mel.css`      | Print stylesheet used for the PDF                                           |
+| `out/` (gitignored)   | Generated HTML and PDF output                                               |
 
 # Building the PDF
 
@@ -120,7 +121,9 @@ chromium-headless-shell`). The headless shell is the most reliable choice
   feed standard reporting and a DASS metrics dashboard instead.
 - Review comments are made as PDF highlights (for example `feedback.pdf`)
   and addressed in the markdown source. Rebuilding overwrites `out/`, so
-  copy an annotated PDF out of `out/` before rebuilding.
+  copy an annotated PDF out of `out/` before rebuilding. List its comments
+  with `python3 docs/mel/extract-comments.py docs/mel/feedback.pdf` (Python
+  standard library only).
 - Follow-up work, once the draft is agreed, is likely to be:
   - scripts that produce the **Derive** metrics from CouchDB and CloudWatch;
   - deciding which **Build** items are worth the privacy and engineering
