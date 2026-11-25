@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DASS production AWS cost exploration — last 12 months</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --ink: #1c2430;
+    --muted: #5c6778;
+    --line: #d9dee6;
+    --paper: #f6f4ef;
+    --card: #ffffff;
+    --accent: #0b6b5a;
+    --accent-2: #1f4e79;
+    --warn: #9a3412;
+    --good: #166534;
+    --gold: #b45309;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink);
+    font: 16px/1.5 "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif; }
+  h1,h2,h3 { font-family: "Source Serif 4", "Iowan Old Style", Georgia, serif; font-weight: 650; letter-spacing: -0.02em; }
+  h1 { font-size: 2.1rem; line-height: 1.2; margin: 0 0 0.4rem; }
+  h2 { font-size: 1.45rem; margin: 2.4rem 0 0.7rem; border-bottom: 1px solid var(--line); padding-bottom: 0.35rem; }
+  h3 { font-size: 1.08rem; margin: 1.4rem 0 0.45rem; }
+  a { color: var(--accent-2); }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 2.2rem 1.4rem 4rem; }
+  header.hero { display: grid; gap: 0.6rem; margin-bottom: 1.6rem; }
+  .kicker { text-transform: uppercase; letter-spacing: 0.14em; font-size: 0.72rem; color: var(--accent); font-family: ui-sans-serif, system-ui, sans-serif; font-weight: 700; }
+  .sub { color: var(--muted); max-width: 70ch; }
+  .meta { display: flex; flex-wrap: wrap; gap: 0.45rem 1.1rem; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.82rem; color: var(--muted); }
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin: 1.2rem 0 1.6rem; }
+  .kpi { background: var(--card); border: 1px solid var(--line); padding: 0.9rem 1rem 0.85rem; }
+  .kpi .label { font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+  .kpi .val { font-size: 1.55rem; font-weight: 650; line-height: 1.2; margin-top: 0.2rem; }
+  .kpi .hint { font-size: 0.82rem; color: var(--muted); margin-top: 0.15rem; }
+  .grid-2 { display: grid; grid-template-columns: 1.4fr 1fr; gap: 1rem; }
+  .card { background: var(--card); border: 1px solid var(--line); padding: 1rem 1.1rem 1.15rem; }
+  .chart-box { position: relative; height: 340px; }
+  .chart-box.tall { height: 400px; }
+  .chart-box.short { height: 260px; }
+  figcaption, .caption { font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.78rem; color: var(--muted); margin-top: 0.4rem; }
+  table { width: 100%; border-collapse: collapse; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.8rem; }
+  th, td { padding: 0.38rem 0.4rem; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; white-space: normal; }
+  thead th { position: sticky; top: 0; background: #eef1f4; font-weight: 650; }
+  tr.est td { color: var(--gold); }
+  .scroll { overflow-x: auto; }
+  ul.tight { margin: 0.3rem 0 0.8rem 1.1rem; padding: 0; }
+  ul.tight li { margin: 0.25rem 0; }
+  .callout { border-left: 4px solid var(--accent); background: #fff; padding: 0.7rem 1rem; margin: 0.8rem 0 1rem; }
+  .callout.warn { border-left-color: var(--warn); }
+  .pill { display: inline-block; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.72rem; padding: 0.12rem 0.45rem; border: 1px solid var(--line); background: #fff; }
+  .toc { font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.88rem; columns: 2; gap: 2rem; }
+  .toc a { text-decoration: none; }
+  footer { margin-top: 3rem; color: var(--muted); font-size: 0.85rem; }
+  .bar { height: 8px; background: #e6ebe8; position: relative; }
+  .bar > span { display: block; height: 100%; background: var(--accent); }
+  @media (max-width: 900px) {
+    .kpis, .grid-2, .toc { grid-template-columns: 1fr; columns: 1; }
+  }
+  @media print {
+    body { background: #fff; }
+    .wrap { max-width: none; padding: 0; }
+    .chart-box { break-inside: avoid; }
+    a { color: inherit; text-decoration: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="hero">
+  <div class="kicker">FinOps briefing · DASS production</div>
+  <h1>AWS cost exploration, last 12 months</h1>
+  <p class="sub">Read-only look at account <strong>405894845938</strong> (Cost Explorer linked-account name <strong>BSS-PROD-grmp</strong>), focused on the <strong>DASS-prod</strong> CloudFormation stack and the untagged services that actually run it (ECS Fargate conductor, ALB, CloudWatch, VPC). Figures are unblended USD from Cost Explorer.</p>
+  <div class="meta">
+    <span>Profile <code>cursor-readonly-prod</code></span>
+    <span>Region mix: 92% ap-southeast-2 (Sydney)</span>
+    <span>Window: 1 Nov 2025 – 25 Nov 2026</span>
+    <span>Generated 25 Nov 2026 from Cost Explorer</span>
+  </div>
+</header>
+
+<section class="kpis">
+  <div class="kpi">
+    <div class="label">12 complete months</div>
+    <div class="val">$5,364.04</div>
+    <div class="hint">Nov 2025 – Oct 2026 unblended</div>
+  </div>
+  <div class="kpi">
+    <div class="label">Average / peak month</div>
+    <div class="val">$447.00 <span style="font-size:0.9rem;color:var(--muted)">/ $523.45</span></div>
+    <div class="hint">Peak Jul 26 · trough Nov 25 $284.07</div>
+  </div>
+  <div class="kpi">
+    <div class="label">November 2026 MTD</div>
+    <div class="val">$331.56</div>
+    <div class="hint">Estimated · CE forecast full month $411.89</div>
+  </div>
+  <div class="kpi">
+    <div class="label">Current run-rate</div>
+    <div class="val">~$412/mo</div>
+    <div class="hint">Down 21% from the Jul peak after Fargate was scaled back</div>
+  </div>
+</section>
+
+<nav class="toc">
+  <div><a href="#story">1. What the year did</a></div>
+  <div><a href="#services">2. Where the money went</a></div>
+  <div><a href="#workloads">3. Workloads mapped to cost</a></div>
+  <div><a href="#timeline">4. What changed, and when</a></div>
+  <div><a href="#daily">5. Last 90 days</a></div>
+  <div><a href="#allocation">6. Tags, tax, region</a></div>
+  <div><a href="#optimize">7. Savings opportunities</a></div>
+  <div><a href="#tables">8. Data tables</a></div>
+  <div><a href="#method">9. Method and caveats</a></div>
+</nav>
+
+<h2 id="story">1. What the year did</h2>
+<p>DASS production is a small, always-on Sydney account: one CouchDB EC2, one Fargate conductor service, a shared ALB, CloudWatch, and a CSIRO security baseline (Security Hub, GuardDuty, Inspector, Config). There is also a separate <strong>Uptime Kuma</strong> t3.micro (~$10.76/month). There are no Reserved Instances and no Savings Plans.</p>
+<div class="grid-2">
+  <div class="card">
+    <h3>Monthly unblended cost</h3>
+    <div class="chart-box"><canvas id="chartMonthly"></canvas></div>
+    <p class="caption">Source: AWS Cost Explorer · UnblendedCost · monthly · 1 Nov 2025 – 25 Nov 2026. November 2026 is estimated month-to-date; the dashed marker is the CE mean forecast for the full month ($411.89).</p>
+  </div>
+  <div class="card">
+    <h3>The shape in one paragraph</h3>
+    <p>Spend sat around <strong>$284.07–$291.77</strong> at the end of 2025, then stepped up twice: CouchDB was resized from <strong>m5.large → m5.xlarge</strong> in mid-January 2026 (and its data volume from ~150&nbsp;GB to 300&nbsp;GB), and Fargate was doubled from <strong>2 vCPU / 4&nbsp;GB to 4 vCPU / 8&nbsp;GB</strong> through February–March. The plateau of <strong>~$523/month</strong> held from March to August. On about <strong>21 September 2026</strong> Fargate returned to 2 vCPU, and October landed at <strong>$422.21</strong>. November is tracking toward ~$412.</p>
+    <p>Month-on-month, the only structurally large moves are those two capacity changes. Data-transfer and ALB LCU stay in the noise (a few dollars). First-of-month daily spikes in the 90-day view are billing cadence, not incidents.</p>
+  </div>
+</div>
+
+<div class="callout">
+  <strong>Takeaway.</strong> This account does not have a usage-driven cost problem. It has a <em>capacity configuration</em> problem. Almost all of the +$239.37 rise from Nov 2025 to the July peak is CouchDB instance/volume size and Fargate task size, plus the GST that rides on them. Scale the compute back (or cover it with a Compute Savings Plan) and the bill follows.
+</div>
+
+<h2 id="services">2. Where the money went</h2>
+<div class="grid-2">
+  <div class="card">
+    <h3>Service mix over time</h3>
+    <div class="chart-box tall"><canvas id="chartStacked"></canvas></div>
+    <p class="caption">Source: Cost Explorer · group by SERVICE · UnblendedCost. “Other” is Secrets Manager, Security Hub, Inspector, Config, GuardDuty, SSM, Route 53, S3, CloudFront, and leftover cents.</p>
+  </div>
+  <div class="card">
+    <h3>Share of the 12 complete months ($5,364.04)</h3>
+    <table>
+      <thead><tr><th>Service</th><th>12 months</th><th>Share</th></tr></thead>
+      <tbody>
+<tr><td>EC2 compute (CouchDB + Kuma)</td><td>$1,981.73</td><td>36.9%</td></tr>
+<tr><td>ECS Fargate (conductor)</td><td>$1,684.11</td><td>31.4%</td></tr>
+<tr><td>EC2 other (EBS, snapshots)</td><td>$379.65</td><td>7.1%</td></tr>
+<tr><td>Tax (AU GST on AWS)</td><td>$376.08</td><td>7.0%</td></tr>
+<tr><td>CloudWatch</td><td>$266.95</td><td>5.0%</td></tr>
+<tr><td>VPC (mostly public IPv4)</td><td>$247.42</td><td>4.6%</td></tr>
+<tr><td>Elastic Load Balancing</td><td>$244.66</td><td>4.6%</td></tr>
+<tr><td>Secrets Manager</td><td>$59.04</td><td>1.1%</td></tr>
+<tr><td>Security Hub</td><td>$43.07</td><td>0.8%</td></tr>
+<tr><td>Inspector</td><td>$30.49</td><td>0.6%</td></tr>
+<tr><td>Config</td><td>$24.23</td><td>0.5%</td></tr>
+<tr><td>GuardDuty</td><td>$19.90</td><td>0.4%</td></tr>
+<tr><td>Systems Manager</td><td>$10.29</td><td>0.2%</td></tr>
+<tr><td>Route 53</td><td>$7.97</td><td>0.1%</td></tr>
+
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<p>EC2 compute and ECS Fargate together are <strong>68%</strong> of the year. Everything else is the supporting ring: EBS, the ALB, public IPv4 at $0.005/hour, CloudWatch, GST, and the security baseline.</p>
+
+<h2 id="workloads">3. Workloads mapped to cost</h2>
+<p>Cost Explorer’s <code>aws:cloudformation:stack-name</code> tag only tells part of the story. ECS, ALB, VPC IPv4, most of CloudWatch, GST and the security tools are <strong>untagged</strong>, even though they belong to DASS. The table below maps live resources (read on 25 Nov 2026) to the bill.</p>
+<table>
+  <thead><tr><th>Workload</th><th>Live resource</th><th>Typical monthly cost (current size)</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td>CouchDB</td><td>EC2 <code>i-0fc686ab4bb4b6d85</code> m5.xlarge (4 vCPU, 16 GiB) + 300&nbsp;GB gp3 + 8&nbsp;GB gp2 root</td><td>~$207.92 compute+gp3 at full month</td><td>Tagged DASS-prod. Upgraded mid-Jan 2026 from m5.large + ~150&nbsp;GB. AWS rightsizing says max CPU 23%, max memory 7% over 14 days.</td></tr>
+    <tr><td>Conductor API</td><td>ECS Fargate task 2048 CPU / 4096 MiB, desired 1, cluster <code>DASS-prod-conductor…</code></td><td>~$88.17 Fargate vCPU+GB in Oct</td><td>Untagged. Ran at 4 vCPU / 8&nbsp;GB Mar–Aug, then returned to 2 vCPU around 21 Sep.</td></tr>
+    <tr><td>Spatial capacity manager</td><td>Fargate 256 CPU / 512 MiB, desired 1</td><td>A few dollars (folded into ECS)</td><td>Present now; Nov implied Fargate is 2.23 vCPU, i.e. 2.00 conductor + 0.25 manager.</td></tr>
+    <tr><td>Application Load Balancer</td><td>internet-facing ALB, 2 AZs (ap-southeast-2a/b)</td><td>~$18.75 ALB-hour + ~$0.30–1.00 LCU</td><td>Untagged. LCU is small — this ALB is idle most of the time.</td></tr>
+    <tr><td>Public IPv4</td><td>~5 addresses today (2 ALB + Kuma EIP + Fargate ENIs). No NAT Gateway.</td><td>~$19.04 in Oct</td><td>Cheaper than a NAT Gateway (~$32 + data). Extra Fargate tasks in Mar–Aug added a sixth IP.</td></tr>
+    <tr><td>Uptime Kuma</td><td>t3.micro <code>i-0860445993a35cebe</code> + 30&nbsp;GB gp2 + EIP</td><td>~$11.66</td><td>Stack <code>UptimeKumaAwsCdkStack</code>. Flat all year.</td></tr>
+    <tr><td>Observability</td><td>CloudWatch metrics, 1 dashboard, Container Insights (1-day retention), CouchDB log group 1.2&nbsp;GB with no retention</td><td>~$23.15 in Oct</td><td>Custom metrics appeared in Feb 2026 (~120 then ~169 metric-months) and added ~$12/month.</td></tr>
+    <tr><td>Secrets</td><td>Secrets Manager</td><td>~$5.64 in Oct</td><td>Secret-months went 10 → 14 between Feb and July.</td></tr>
+    <tr><td>Backups</td><td>AWS Backup vault <code>dass-prod-backup-vault</code>, 30 recovery points, 300&nbsp;GB snapshots daily</td><td>~$0.99 snapshot-GB in Oct</td><td>Cheap relative to the 300&nbsp;GB disk. 31 account snapshots totalling 9.3&nbsp;TB-GB listed.</td></tr>
+    <tr><td>Security baseline</td><td>Security Hub, GuardDuty, Inspector, Config</td><td>~$11.57 in Oct</td><td>Mostly untagged. Inspector is the only one that tags against DASS-prod (EC2 scanning).</td></tr>
+  </tbody>
+</table>
+
+<div class="card" style="margin-top:1rem">
+  <h3>Fargate vCPU actually running</h3>
+  <div class="chart-box short"><canvas id="chartFargate"></canvas></div>
+  <p class="caption">Derived from APS2-Fargate-vCPU-Hours ÷ hours in month. Mar–Aug is a clean 4.00 vCPU floor. September is a partial month (3.34). October is 2.00. November MTD is 2.23 because the 0.25 vCPU capacity-manager task is now always on.</p>
+</div>
+
+<h2 id="timeline">4. What changed, and when</h2>
+<table>
+  <thead><tr><th>When</th><th>Change</th><th>Bill impact</th></tr></thead>
+  <tbody>
+    <tr><td>Nov–Dec 2025</td><td>Steady state: CouchDB m5.large, Fargate 2 vCPU / 4&nbsp;GB, ~150&nbsp;GB gp3, 5 public IPv4.</td><td>$284.07 / $291.77</td></tr>
+    <tr><td>Mid-Jan 2026</td><td>CouchDB <strong>m5.large → m5.xlarge</strong> (241 h xlarge + 503 h large in January). Data volume ~150&nbsp;GB → 300&nbsp;GB gp3 (GB-months 158 → 308 by February).</td><td>EC2 compute $95.94 → $170.17 by February. EBS gp3 $15.17 → $29.57.</td></tr>
+    <tr><td>Feb–Mar 2026</td><td>Fargate ramps 2.00 → 3.44 (Feb) → <strong>4.00 vCPU / 8&nbsp;GB</strong> (Mar). Public IPv4 5 → 6. CloudWatch custom metrics appear (0 → 121 → 169 metric-months).</td><td>ECS $85.41 → $177.05. CloudWatch $12.09 → $26.13. Account total $284.07 → $522.54.</td></tr>
+    <tr><td>Mar–Aug 2026</td><td>Plateau. No further structural change. Jul/Aug are the peak months.</td><td>$522.54 to $523.17 per month.</td></tr>
+    <tr><td>~21 Sep 2026</td><td>Daily spend drops from ~$15.70 to ~$12.70 and stays there. Fargate hours in October imply 2.00 vCPU again.</td><td>ECS $176.94 (Aug) → $88.62 (Oct). Account $523.17 → $422.21.</td></tr>
+    <tr><td>Oct–Nov 2026</td><td>Capacity manager (0.25 vCPU) is running. CouchDB still m5.xlarge. CE Nov mean forecast $411.89.</td><td>Run-rate ~$412/month, still ~$127.82 above late-2025 because CouchDB and CloudWatch did not scale back.</td></tr>
+  </tbody>
+</table>
+
+<div class="grid-2" style="margin-top:1rem">
+  <div class="card">
+    <h3>Nov 2025 vs peak vs now</h3>
+    <table>
+      <thead><tr><th>Service</th><th>Nov 25</th><th>Jul 26 peak</th><th>Oct 26</th><th>Peak Δ</th></tr></thead>
+      <tbody>
+<tr><td>EC2 compute</td><td>$95.94</td><td>$187.97</td><td>$188.35</td><td>$92.03</td></tr>
+<tr><td>ECS Fargate</td><td>$85.41</td><td>$177.26</td><td>$88.62</td><td>$91.85</td></tr>
+<tr><td>EC2 other (EBS/EIP)</td><td>$20.05</td><td>$35.00</td><td>$35.13</td><td>$14.95</td></tr>
+<tr><td>CloudWatch</td><td>$12.09</td><td>$26.38</td><td>$23.15</td><td>$14.29</td></tr>
+<tr><td>VPC / public IPv4</td><td>$18.01</td><td>$22.35</td><td>$19.05</td><td>$4.34</td></tr>
+<tr><td>Load balancing</td><td>$18.46</td><td>$21.17</td><td>$19.93</td><td>$2.71</td></tr>
+<tr><td>Tax</td><td>$20.06</td><td>$36.51</td><td>$29.44</td><td>$16.45</td></tr>
+<tr><td>Secrets Manager</td><td>$3.96</td><td>$5.65</td><td>$5.64</td><td>$1.68</td></tr>
+<tr><td><strong>Account total</strong></td><td><strong>$284.07</strong></td><td><strong>$523.45</strong></td><td><strong>$422.21</strong></td><td><strong>$239.37</strong></td></tr>
+
+      </tbody>
+    </table>
+  </div>
+  <div class="card">
+    <h3>Attribution of the +$239.37 peak</h3>
+    <ul class="tight">
+      <li><strong>CouchDB compute</strong> (~$91.71): m5.large $0.12/h → m5.xlarge $0.24/h, ~+$90/month.</li>
+      <li><strong>Fargate</strong> (~$91.85): 2 vCPU → 4 vCPU, ~+$92/month.</li>
+      <li><strong>EBS gp3</strong> (~$14.40): 150&nbsp;GB → 300&nbsp;GB.</li>
+      <li><strong>CloudWatch</strong> (~$14.29): new custom metrics from February.</li>
+      <li><strong>Tax</strong> (~$16.45): GST scales with the rest of the bill.</li>
+      <li><strong>Public IPv4 + ALB + secrets</strong>: a few dollars each.</li>
+    </ul>
+    <p class="caption">Kuma t3.micro is unchanged to the cent, so it is not in this attribution.</p>
+  </div>
+</div>
+
+<h2 id="daily">5. Last 90 days</h2>
+<div class="card">
+  <div class="chart-box"><canvas id="chartDaily"></canvas></div>
+  <p class="caption">Source: Cost Explorer · UnblendedCost · daily · 27 Aug 2026 – 25 Nov 2026. The 1st-of-month spikes (Sep 1 $49.23, Oct 1 $41.97, Nov 1 $35.70) are monthly billing (CloudWatch metrics, dashboards, Security Hub, Config), not traffic events. The step-down on 21 Sep is the Fargate shrink. 24–25 Nov are incomplete estimated days.</p>
+</div>
+<p>Ignoring the 1st-of-month artefacts and the incomplete last two days, typical daily spend is about <strong>$15.60</strong> before 21 Sep and about <strong>$12.60–13.40</strong> after. That $3/day is ~$90/month, which matches the ECS line falling from $176.94 in August to $88.62 in October.</p>
+
+<h2 id="allocation">6. Tags, tax, region</h2>
+<div class="grid-2">
+  <div class="card">
+    <h3>CloudFormation stack tag (misleading)</h3>
+    <div class="chart-box short"><canvas id="chartStack"></canvas></div>
+    <p class="caption">Empty/untagged is the largest bucket because ECS, ALB, VPC, CloudWatch, tax and security tools do not carry <code>aws:cloudformation:stack-name</code>. They are still DASS. Only CouchDB EC2/EBS and a slice of Inspector/Secrets are tagged <code>DASS-prod</code>.</p>
+  </div>
+  <div class="card">
+    <h3>13-month totals by tag</h3>
+    <table>
+      <thead><tr><th>Stack tag</th><th>Total</th><th>Share</th></tr></thead>
+      <tbody>
+        <tr><td>(untagged)</td><td>$3,190.22</td><td>56.0%</td></tr>
+        <tr><td>DASS-prod</td><td>$2,365.42</td><td>41.5%</td></tr>
+        <tr><td>UptimeKumaAwsCdkStack</td><td>$139.89</td><td>2.5%</td></tr>
+        <tr><td>CDKToolkit</td><td>$0.07</td><td>0.0%</td></tr>
+      </tbody>
+    </table>
+    <h3>Record type</h3>
+    <p>Almost the entire bill is <strong>Usage</strong> plus <strong>Tax</strong>. Credits and refunds over the window are -$13.62 (April includes a -$4.74 refund). No Support, no RI/SP amortization (unblended = amortized on this account).</p>
+    <h3>Region</h3>
+    <p>ap-southeast-2 is $5,243.46 (92.1%). NoRegion is tax. <code>global</code> is $49.13 (Route 53, CloudFront, some CloudWatch). us-east-1 is $1.64 — not a leak, just CloudFront/us-east metering.</p>
+  </div>
+</div>
+
+<div class="callout warn">
+  <strong>Tagging gap.</strong> <code>cpt_service</code> is unused for cost (only a zero-dollar <code>security_baseline</code> value). If DASS ever shares this account, propagate the CDK stack name onto the ECS service, ALB, log groups and ENIs, or Cost Explorer will keep calling the majority of DASS “untagged”.
+</div>
+
+<h2 id="optimize">7. Savings opportunities</h2>
+<p>AWS Cost Explorer recommendations on this account, plus a few that CE will not suggest. None of these are applied; this profile is read-only.</p>
+<table>
+  <thead><tr><th>Opportunity</th><th>Est. monthly</th><th>Confidence / caveat</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>Downsize CouchDB m5.xlarge → m5.large</strong><br>CE rightsizing (14-day lookback, generated 24 Nov 2026). Max CPU 23.0%, max memory 7.4%. Current on-demand $172.93/month → $86.46.</td>
+      <td>$64.85</td>
+      <td>CE is confident on CPU. Treat the 7% memory figure with care: CouchDB caches on the 300&nbsp;GB volume, which does not show up as instance RAM. Network ~6–8&nbsp;MB/s and EBS write ~20&nbsp;MB/s in the lookback — validate against CouchDB CPU steal and disk queue before moving. This is a revert of the Jan 2026 upgrade.</td>
+    </tr>
+    <tr>
+      <td><strong>1-year Compute Savings Plan</strong>, no upfront, $0.243/hour commitment (~$177.39/month). CE, 60-day lookback, generated 19 Nov 2026. Covers EC2 + Fargate. Estimated utilisation 100%, ROI 24%.</td>
+      <td>$32.24</td>
+      <td>Do this <em>after</em> deciding CouchDB size and Fargate size, or you will over-commit. Not stackable at the quoted amount if you also downsize the instance.</td>
+    </tr>
+    <tr>
+      <td><strong>Keep Fargate at 2 vCPU</strong> (already done). Going back to the Mar–Aug 4 vCPU floor would re-add ~$88.32/month.</td>
+      <td>already realised ~$88.32</td>
+      <td>Confirm conductor autoscaling max cannot silently return to 4 vCPU.</td>
+    </tr>
+    <tr>
+      <td><strong>CloudWatch custom metrics</strong> (~169 metric-months, $8.70 in Oct, plus $9.91 metric-monitor).</td>
+      <td>up to ~$11.15</td>
+      <td>February is when they appeared. Likely Container Insights custom metrics or application EMF. 1-day retention on the Insights performance group is already tight; the cost is the metric catalogue, not log storage.</td>
+    </tr>
+    <tr>
+      <td><strong>gp2 → gp3</strong> on the 30&nbsp;GB Kuma volume and 8&nbsp;GB CouchDB root.</td>
+      <td>~$0.91</td>
+      <td>Trivial. gp3 is already used for the 300&nbsp;GB data volume.</td>
+    </tr>
+    <tr>
+      <td><strong>Public IPv4</strong> ($0.005/h × ~5 addresses).</td>
+      <td>$19.04</td>
+      <td>Do not “fix” this with a NAT Gateway — that would cost more. Options: IPv6, fewer Fargate public IPs (private subnets + ALB only), release unused EIPs. Kuma’s EIP is required if it stays in a public subnet.</td>
+    </tr>
+    <tr>
+      <td><strong>No Reserved Instance</strong> on the CouchDB host. A 1-year standard RI on m5.xlarge (or m5.large if downsized) is the instance-family alternative to a Compute SP.</td>
+      <td>typically 20–30% vs on-demand if size is stable</td>
+      <td>A Compute SP is more flexible because it also covers Fargate. Prefer SP unless CouchDB is the only long-lived EC2 you will keep.</td>
+    </tr>
+  </tbody>
+</table>
+<p>Combining CouchDB downsize <em>and</em> the quoted $0.243/h SP would double-count. A realistic bundle, if CouchDB really can return to m5.large and Fargate stays at 2.25 vCPU, is roughly <strong>$65 instance + a smaller SP on the remaining Fargate/Kuma</strong>, landing the account closer to the late-2025 $284.07–$291.77 band plus GST and the extra CloudWatch/secrets that did not exist then — call it <strong>~$320–360/month</strong> rather than today’s ~$412 forecast.</p>
+
+<h3>Things that are fine</h3>
+<ul class="tight">
+  <li>ALB LCU is tiny. Do not spend engineering time on request-path efficiency for cost.</li>
+  <li>Data transfer out is $6.27 over 13 months. Not a lever.</li>
+  <li>S3, CloudFront, Lambda, Glue, KMS, Step Functions are cents.</li>
+  <li>Cost anomalies since 27 Aug are noise: CloudWatch +$0.39, Security Hub +$0.15, S3 +$0.17, GuardDuty cents. The account name on those events is <strong>BSS-PROD-grmp</strong>.</li>
+  <li>Daily AWS Backup of the 300&nbsp;GB volume is cheap; the disk itself is the cost.</li>
+</ul>
+
+<h2 id="tables">8. Data tables</h2>
+<h3>Monthly account total</h3>
+<div class="scroll">
+<table>
+  <thead><tr><th>Month</th><th>Unblended</th><th>MoM</th><th>Usage</th><th>Tax</th><th>Credit+refund</th><th>Status</th></tr></thead>
+  <tbody>
+<tr><td>Nov 25</td><td>$284.07</td><td>—</td><td>$264.18</td><td>$20.06</td><td>-$0.17</td><td>Final</td></tr>
+<tr><td>Dec 25</td><td>$291.77</td><td>+2.7%</td><td>$271.29</td><td>$20.64</td><td>-$0.16</td><td>Final</td></tr>
+<tr><td>Jan 26</td><td>$332.03</td><td>+13.8%</td><td>$308.93</td><td>$23.46</td><td>-$0.36</td><td>Final</td></tr>
+<tr><td>Feb 26</td><td>$454.15</td><td>+36.8%</td><td>$425.31</td><td>$32.00</td><td>-$3.16</td><td>Final</td></tr>
+<tr><td>Mar 26</td><td>$522.54</td><td>+15.1%</td><td>$486.46</td><td>$36.89</td><td>-$0.81</td><td>Final</td></tr>
+<tr><td>Apr 26</td><td>$503.69</td><td>-3.6%</td><td>$473.20</td><td>$35.48</td><td>-$4.99</td><td>Final</td></tr>
+<tr><td>May 26</td><td>$521.53</td><td>+3.5%</td><td>$485.40</td><td>$36.38</td><td>-$0.25</td><td>Final</td></tr>
+<tr><td>Jun 26</td><td>$507.30</td><td>-2.7%</td><td>$472.57</td><td>$35.41</td><td>-$0.68</td><td>Final</td></tr>
+<tr><td>Jul 26</td><td>$523.45</td><td>+3.2%</td><td>$487.74</td><td>$36.51</td><td>-$0.80</td><td>Final</td></tr>
+<tr><td>Aug 26</td><td>$523.17</td><td>-0.1%</td><td>$487.15</td><td>$36.48</td><td>-$0.46</td><td>Final</td></tr>
+<tr><td>Sep 26</td><td>$478.13</td><td>-8.6%</td><td>$446.03</td><td>$33.33</td><td>-$1.23</td><td>Final</td></tr>
+<tr><td>Oct 26</td><td>$422.21</td><td>-11.7%</td><td>$393.32</td><td>$29.44</td><td>-$0.55</td><td>Final</td></tr>
+<tr class="est"><td>Nov 26*</td><td>$331.56</td><td>-21.5%</td><td>$308.43</td><td>$23.13</td><td>$0.00</td><td>Estimated MTD</td></tr>
+
+  </tbody>
+</table>
+</div>
+<p class="caption">November 2026 MTD as of 25 Nov; 24–25 Nov daily figures are still catching up. CE forecast for Nov 2026 is $411.89, then $444.64 (Dec) and $443.18 (Jan 2027).</p>
+
+<h3>Top usage types (unblended USD)</h3>
+<div class="scroll">
+<table>
+  <thead><tr><th>Usage type</th><th>Nov 25</th><th>Dec 25</th><th>Jan 26</th><th>Feb 26</th><th>Mar 26</th><th>Apr 26</th><th>May 26</th><th>Jun 26</th><th>Jul 26</th><th>Aug 26</th><th>Sep 26</th><th>Oct 26</th><th>Nov 26*</th><th>Total</th></tr></thead>
+  <tbody>
+<tr><td>APS2-BoxUsage:m5.xlarge</td><td>0.00</td><td>0.00</td><td>57.95</td><td>161.28</td><td>178.56</td><td>170.41</td><td>178.56</td><td>172.80</td><td>178.14</td><td>178.55</td><td>172.57</td><td>178.35</td><td>133.11</td><td>1760.28</td></tr>
+<tr><td>APS2-Fargate-vCPU-Hours:perCPU</td><td>69.93</td><td>72.26</td><td>72.27</td><td>112.26</td><td>144.52</td><td>137.98</td><td>144.52</td><td>139.86</td><td>144.52</td><td>144.51</td><td>116.62</td><td>72.32</td><td>60.03</td><td>1431.59</td></tr>
+<tr><td>NoUsageType</td><td>20.07</td><td>20.64</td><td>23.46</td><td>32.00</td><td>36.89</td><td>35.96</td><td>36.38</td><td>35.41</td><td>36.51</td><td>36.48</td><td>33.33</td><td>29.49</td><td>23.13</td><td>399.75</td></tr>
+<tr><td>APS2-EBS:VolumeUsage.gp3</td><td>15.17</td><td>15.17</td><td>19.85</td><td>29.57</td><td>29.57</td><td>29.57</td><td>29.57</td><td>29.57</td><td>29.57</td><td>29.57</td><td>29.57</td><td>29.57</td><td>22.75</td><td>339.05</td></tr>
+<tr><td>APS2-Fargate-GB-Hours</td><td>15.32</td><td>15.83</td><td>15.83</td><td>24.60</td><td>31.67</td><td>30.64</td><td>31.67</td><td>30.64</td><td>31.67</td><td>31.66</td><td>25.55</td><td>15.85</td><td>13.30</td><td>314.24</td></tr>
+<tr><td>APS2-PublicIPv4:InUseAddress</td><td>18.01</td><td>18.60</td><td>18.61</td><td>20.01</td><td>22.42</td><td>21.37</td><td>22.33</td><td>21.62</td><td>22.35</td><td>22.33</td><td>20.44</td><td>19.04</td><td>16.12</td><td>263.27</td></tr>
+<tr><td>APS2-BoxUsage:m5.large</td><td>86.40</td><td>89.28</td><td>60.31</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.00</td><td>235.99</td></tr>
+<tr><td>APS2-LoadBalancerUsage</td><td>18.14</td><td>18.75</td><td>18.75</td><td>16.93</td><td>18.75</td><td>17.93</td><td>18.75</td><td>18.14</td><td>18.75</td><td>18.75</td><td>18.14</td><td>18.75</td><td>14.01</td><td>234.55</td></tr>
+<tr><td>APS2-BoxUsage:t3.micro</td><td>9.50</td><td>9.82</td><td>9.82</td><td>8.86</td><td>9.82</td><td>9.50</td><td>9.82</td><td>9.50</td><td>9.81</td><td>9.82</td><td>9.50</td><td>9.82</td><td>7.32</td><td>122.93</td></tr>
+<tr><td>APS2-CW:MetricMonitorUsage</td><td>7.51</td><td>7.51</td><td>8.30</td><td>9.91</td><td>9.91</td><td>9.91</td><td>9.91</td><td>9.91</td><td>9.91</td><td>9.92</td><td>9.91</td><td>9.91</td><td>7.63</td><td>120.17</td></tr>
+<tr><td>APS2-CW:MetricsUsage</td><td>0.00</td><td>0.00</td><td>0.00</td><td>8.44</td><td>11.84</td><td>11.56</td><td>11.86</td><td>11.86</td><td>11.85</td><td>11.86</td><td>10.80</td><td>8.70</td><td>10.76</td><td>109.52</td></tr>
+<tr><td>APS2-AWSSecretsManager-Secrets</td><td>3.93</td><td>4.00</td><td>4.00</td><td>4.77</td><td>4.80</td><td>4.74</td><td>4.80</td><td>5.14</td><td>5.60</td><td>5.60</td><td>5.60</td><td>5.60</td><td>4.32</td><td>62.91</td></tr>
+<tr><td>APS2-EBS:VolumeUsage.gp2</td><td>4.56</td><td>4.56</td><td>4.56</td><td>4.56</td><td>4.56</td><td>4.56</td><td>4.56</td><td>4.56</td><td>4.56</td><td>4.56</td><td>4.56</td><td>4.56</td><td>3.50</td><td>58.22</td></tr>
+<tr><td>APS2-PaidComplianceCheck</td><td>3.37</td><td>3.30</td><td>3.37</td><td>3.47</td><td>3.59</td><td>3.28</td><td>3.28</td><td>3.19</td><td>3.39</td><td>3.33</td><td>3.39</td><td>3.42</td><td>2.77</td><td>43.17</td></tr>
+<tr><td>DashboardsUsageHour-Basic</td><td>2.90</td><td>2.81</td><td>2.81</td><td>2.89</td><td>2.81</td><td>2.90</td><td>2.90</td><td>2.90</td><td>2.90</td><td>2.90</td><td>2.90</td><td>2.90</td><td>2.22</td><td>36.75</td></tr>
+<tr><td>APS2-EC2-Scanning</td><td>2.51</td><td>2.59</td><td>2.59</td><td>2.34</td><td>2.59</td><td>2.48</td><td>2.59</td><td>2.51</td><td>2.59</td><td>2.59</td><td>2.51</td><td>2.59</td><td>1.93</td><td>32.39</td></tr>
+<tr><td>APS2-PaidEventsAnalyzed</td><td>1.55</td><td>1.53</td><td>1.44</td><td>1.10</td><td>1.09</td><td>1.12</td><td>1.23</td><td>1.27</td><td>1.33</td><td>1.33</td><td>1.32</td><td>1.39</td><td>1.16</td><td>16.85</td></tr>
+<tr><td>APS2-CW:AlarmMonitorUsage</td><td>1.06</td><td>1.10</td><td>1.06</td><td>1.06</td><td>1.06</td><td>1.10</td><td>1.06</td><td>1.10</td><td>1.06</td><td>1.07</td><td>1.06</td><td>1.06</td><td>0.81</td><td>13.70</td></tr>
+
+  </tbody>
+</table>
+</div>
+<p class="caption">BoxUsage is on-demand EC2 hours. Fargate-vCPU-Hours at 1,488 ≈ 2 vCPU × 744 h; 2,976 ≈ 4 vCPU × 744 h. PublicIPv4 hours / month-hours ≈ address count (5 or 6).</p>
+
+<h3>Cost Explorer forecast</h3>
+<table>
+  <thead><tr><th>Period</th><th>Mean unblended</th></tr></thead>
+  <tbody>
+<tr><td>2026-11</td><td>$411.89</td></tr>
+<tr><td>2026-12</td><td>$444.64</td></tr>
+<tr><td>2027-01</td><td>$443.18</td></tr>
+<tr><td>2027-02</td><td>$399.93</td></tr>
+<tr><td>Total (26 Nov 2026 – 26 Feb 2027)</td><td>$1,699.65</td></tr>
+
+  </tbody>
+</table>
+
+<h2 id="method">9. Method and caveats</h2>
+<ul class="tight">
+  <li><strong>Source:</strong> AWS Cost Explorer <code>GetCostAndUsage</code> / <code>GetCostForecast</code> / <code>GetRightsizingRecommendation</code> / <code>GetSavingsPlansPurchaseRecommendation</code> / <code>GetAnomalies</code>, called with profile <code>cursor-readonly-prod</code> assumed role <code>CursorReadOnlyInspector</code> on account 405894845938.</li>
+  <li><strong>Metric:</strong> UnblendedCost in USD. On this account Unblended = Amortized = Blended to the cent, because there are no RIs or Savings Plans.</li>
+  <li><strong>Window:</strong> 2025-11-01 inclusive to 2026-12-01 exclusive (CE end date is exclusive). November 2026 is estimated MTD. “12 complete months” in the KPIs is Nov 2025 – Oct 2026.</li>
+  <li><strong>Inventory:</strong> EC2, ECS, ELB, EBS, Backup, CloudWatch Logs in ap-southeast-2 as of 25 Nov 2026, used only to name the dollars. Secret <em>names</em> were not listed.</li>
+  <li><strong>Usage-type pagination:</strong> CE truncated the first page at August 2026; September–November were merged from page 2.</li>
+  <li><strong>Not included:</strong> marketplace, support plan (none visible), other linked accounts, refunds waiting to post, the last 24–48 hours of CE lag.</li>
+  <li><strong>DASS vs account:</strong> This is the whole production account. There is no other application stack of any size. Uptime Kuma is ~$11/month. CDKToolkit is cents.</li>
+</ul>
+<footer>
+  Read-only Cost Explorer extract for DASS production. Not a bill. Not a recommendation to change production without a CouchDB performance check.
+</footer>
+</div>
+<script>
+const months = ["Nov 25", "Dec 25", "Jan 26", "Feb 26", "Mar 26", "Apr 26", "May 26", "Jun 26", "Jul 26", "Aug 26", "Sep 26", "Oct 26", "Nov 26*"];
+const totals = [284.07, 291.77, 332.03, 454.15, 522.54, 503.69, 521.53, 507.3, 523.45, 523.17, 478.13, 422.21, 331.56];
+const forecastNov = 411.89;
+const stacked = {
+  labels: months,
+  datasets: [
+    {label:'EC2 compute', data:[95.94, 99.14, 128.18, 170.17, 188.41, 182.35, 188.4, 182.33, 187.97, 188.4, 182.11, 188.35, 140.45], backgroundColor:'#1f4e79', stack:'s'},
+    {label:'ECS Fargate', data:[85.41, 88.33, 88.92, 137.92, 177.05, 171.9, 177.15, 171.12, 177.26, 176.94, 143.5, 88.62, 73.79], backgroundColor:'#0b6b5a', stack:'s'},
+    {label:'EC2 other (EBS)', data:[20.05, 20.05, 24.83, 34.9, 34.89, 34.92, 34.95, 34.94, 35.0, 34.99, 35.01, 35.13, 27.04], backgroundColor:'#3f6f8a', stack:'s'},
+    {label:'CloudWatch', data:[12.09, 12.02, 12.76, 22.94, 26.13, 26.28, 26.3, 26.39, 26.38, 27.22, 25.29, 23.15, 21.97], backgroundColor:'#b45309', stack:'s'},
+    {label:'VPC / IPv4', data:[18.01, 18.6, 18.61, 20.02, 22.43, 21.61, 22.33, 21.62, 22.35, 22.33, 20.44, 19.05, 16.12], backgroundColor:'#6b7280', stack:'s'},
+    {label:'ELB', data:[18.46, 19.21, 20.45, 22.77, 20.76, 20.29, 20.25, 19.56, 21.17, 20.11, 21.7, 19.93, 14.69], backgroundColor:'#7c3aed', stack:'s'},
+    {label:'Tax', data:[20.06, 20.64, 23.46, 32.0, 36.89, 35.48, 36.38, 35.41, 36.51, 36.48, 33.33, 29.44, 23.13], backgroundColor:'#9a3412', stack:'s'},
+    {label:'Other', data:[14.05, 13.78, 14.83, 13.43, 15.98, 10.86, 15.78, 15.92, 16.8, 16.71, 16.75, 18.55, 14.37], backgroundColor:'#c5ccd6', stack:'s'},
+  ]
+};
+const fargateVcpu = [2.0, 2.0, 2.0, 3.44, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 3.34, 2.0, 2.23];
+const stackSeries = {
+  labels: months,
+  datasets: [
+    {label:'Untagged (mostly DASS ECS/ALB/CW/VPC/tax)', data:[170.39, 174.8, 181.33, 251.98, 301.87, 289.16, 300.86, 292.78, 303.2, 300.58, 260.92, 198.72, 163.62], backgroundColor:'#5c6778', stack:'t'},
+    {label:'DASS-prod (tagged)', data:[102.88, 105.8, 139.46, 192.1, 209.51, 203.71, 209.52, 203.72, 209.1, 211.42, 206.39, 212.18, 159.61], backgroundColor:'#0b6b5a', stack:'t'},
+    {label:'Uptime Kuma', data:[10.8, 11.17, 11.23, 10.07, 11.16, 10.82, 11.14, 10.8, 11.13, 11.16, 10.81, 11.3, 8.31], backgroundColor:'#b45309', stack:'t'},
+  ]
+};
+const dailyLabels = ["2026-08-27", "2026-08-28", "2026-08-29", "2026-08-30", "2026-08-31", "2026-09-01", "2026-09-02", "2026-09-03", "2026-09-04", "2026-09-05", "2026-09-06", "2026-09-07", "2026-09-08", "2026-09-09", "2026-09-10", "2026-09-11", "2026-09-12", "2026-09-13", "2026-09-14", "2026-09-15", "2026-09-16", "2026-09-17", "2026-09-18", "2026-09-19", "2026-09-20", "2026-09-21", "2026-09-22", "2026-09-23", "2026-09-24", "2026-09-25", "2026-09-26", "2026-09-27", "2026-09-28", "2026-09-29", "2026-09-30", "2026-10-01", "2026-10-02", "2026-10-03", "2026-10-04", "2026-10-05", "2026-10-06", "2026-10-07", "2026-10-08", "2026-10-09", "2026-10-10", "2026-10-11", "2026-10-12", "2026-10-13", "2026-10-14", "2026-10-15", "2026-10-16", "2026-10-17", "2026-10-18", "2026-10-19", "2026-10-20", "2026-10-21", "2026-10-22", "2026-10-23", "2026-10-24", "2026-10-25", "2026-10-26", "2026-10-27", "2026-10-28", "2026-10-29", "2026-10-30", "2026-10-31", "2026-11-01", "2026-11-02", "2026-11-03", "2026-11-04", "2026-11-05", "2026-11-06", "2026-11-07", "2026-11-08", "2026-11-09", "2026-11-10", "2026-11-11", "2026-11-12", "2026-11-13", "2026-11-14", "2026-11-15", "2026-11-16", "2026-11-17", "2026-11-18", "2026-11-19", "2026-11-20", "2026-11-21", "2026-11-22", "2026-11-23", "2026-11-24", "2026-11-25"];
+const dailyVals = [15.56, 15.58, 15.63, 15.57, 15.68, 49.23, 15.97, 15.74, 15.69, 15.7, 15.66, 15.73, 15.78, 15.81, 15.92, 16.17, 15.68, 15.49, 15.71, 15.72, 15.8, 15.7, 15.74, 15.69, 15.63, 13.41, 13.04, 13.08, 12.96, 12.72, 12.66, 12.63, 12.81, 12.73, 13.52, 41.97, 12.85, 12.52, 12.54, 12.63, 12.72, 12.68, 12.53, 12.86, 12.69, 12.7, 12.7, 12.69, 12.72, 12.7, 12.67, 12.54, 12.48, 12.57, 13.17, 12.83, 12.85, 12.7, 12.75, 12.58, 12.75, 12.61, 12.51, 12.52, 12.6, 12.58, 35.7, 12.67, 12.79, 12.65, 13.48, 14.44, 13.32, 13.36, 13.54, 13.49, 13.68, 13.39, 13.38, 13.3, 13.36, 13.4, 13.33, 13.73, 13.39, 13.32, 13.35, 13.3, 13.45, 1.75, 0.0];
+
+const common = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { labels: { boxWidth: 12, font: { family: 'ui-sans-serif, system-ui, sans-serif', size: 11 } } },
+    tooltip: { callbacks: { label: (c) => `${c.dataset.label}: $${Number(c.raw).toFixed(2)}` } }
+  },
+  scales: {
+    x: { ticks: { font: { family: 'ui-sans-serif, system-ui, sans-serif', size: 11 } }, grid: { display: false } },
+    y: { ticks: { callback: (v) => '$'+v, font: { family: 'ui-sans-serif, system-ui, sans-serif', size: 11 } } }
+  }
+};
+
+new Chart(document.getElementById('chartMonthly'), {
+  type: 'line',
+  data: {
+    labels: months,
+    datasets: [
+      { label: 'Unblended cost (USD)', data: totals, borderColor: '#0b6b5a', backgroundColor: 'rgba(11,107,90,0.12)', fill: true, tension: 0.2, pointRadius: 3 },
+      { label: 'Nov forecast (full month)', data: months.map((_,i)=> i===12 ? forecastNov : null), borderColor: '#b45309', pointRadius: 5, pointStyle: 'rectRot', showLine: false }
+    ]
+  },
+  options: { ...common, plugins: { ...common.plugins, legend: { display: true } } }
+});
+
+new Chart(document.getElementById('chartStacked'), {
+  type: 'bar',
+  data: stacked,
+  options: { ...common, scales: { x: { stacked: true, ...common.scales.x }, y: { stacked: true, ...common.scales.y } } }
+});
+
+new Chart(document.getElementById('chartFargate'), {
+  type: 'line',
+  data: { labels: months, datasets: [{ label: 'Sustained Fargate vCPU', data: fargateVcpu, borderColor: '#1f4e79', tension: 0.15, pointRadius: 3 }] },
+  options: { ...common, plugins: { ...common.plugins, tooltip: { callbacks: { label: (c) => `${Number(c.raw).toFixed(2)} vCPU` } } },
+    scales: { x: common.scales.x, y: { title: { display: true, text: 'vCPU (24/7 equivalent)' }, suggestedMin: 0, suggestedMax: 4.5, ticks: { font: { family: 'ui-sans-serif, system-ui, sans-serif', size: 11 } } } } }
+});
+
+new Chart(document.getElementById('chartStack'), {
+  type: 'bar',
+  data: stackSeries,
+  options: { ...common, scales: { x: { stacked: true, ...common.scales.x }, y: { stacked: true, ...common.scales.y } } }
+});
+
+new Chart(document.getElementById('chartDaily'), {
+  type: 'bar',
+  data: { labels: dailyLabels, datasets: [{ label: 'Daily unblended USD', data: dailyVals, backgroundColor: dailyLabels.map(d => d.slice(8)==='01' ? '#9a3412' : '#1f4e79'), barPercentage: 0.9, categoryPercentage: 1 }] },
+  options: { ...common, plugins: { ...common.plugins, legend: { display: false } } }
+});
+</script>
+</body>
+</html>

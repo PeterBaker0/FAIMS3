@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DASS operating cost model</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="kicker">DASS / FAIMS3</div>
+        <h1>Operating cost model</h1>
+        <p class="muted small">Live projection of hosting, people and other costs, in AUD. All inputs are editable and saved in this browser.</p>
+      </div>
+
+      <section class="side-section">
+        <h2>Adoption scenario</h2>
+        <div id="scenarioButtons" class="scenario-buttons"></div>
+        <p id="scenarioNote" class="muted small"></p>
+      </section>
+
+      <section class="side-section">
+        <h2>Period and currency</h2>
+        <div id="globalFields"></div>
+      </section>
+
+      <section class="side-section">
+        <h2>Model file</h2>
+        <div class="button-row">
+          <button data-action="export-json">Save JSON</button>
+          <label class="button">Load JSON<input type="file" id="importFile" accept="application/json" hidden /></label>
+        </div>
+        <div class="button-row">
+          <button data-action="export-csv">Monthly CSV</button>
+          <button data-action="print">Print</button>
+        </div>
+        <div class="button-row">
+          <button data-action="reset" class="danger">Reset to defaults</button>
+        </div>
+      </section>
+    </aside>
+
+    <main class="main">
+      <header class="summary-bar" id="summaryBar"></header>
+      <nav class="tabs" id="tabs">
+        <button data-tab="overview" class="active">Overview</button>
+        <button data-tab="adoption">Adoption and usage</button>
+        <button data-tab="hosting">Hosting and levers</button>
+        <button data-tab="people">People and work</button>
+        <button data-tab="other">Other costs</button>
+        <button data-tab="recovery">Cost recovery</button>
+        <button data-tab="method">Method</button>
+      </nav>
+
+      <section class="panel active" data-panel="overview">
+        <div class="kpis" id="kpis"></div>
+        <div class="card">
+          <h3>Monthly operating cost (AUD)</h3>
+          <div id="chartTotal" class="chart-host"></div>
+          <p class="caption">Stacked by cost type. Hover for values. "Unmet work" is demand in the People tab that nobody is allocated to, priced at the backfill day rate.</p>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <h3>Cumulative cost (AUD)</h3>
+            <div id="chartCumulative" class="chart-host"></div>
+          </div>
+          <div class="card">
+            <h3>Same settings under each scenario</h3>
+            <div id="scenarioCompare" class="scroll"></div>
+            <p class="caption">People, other costs, prices and funding stay as you set them. Only adoption, usage and the scenario's availability settings change.</p>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Annual summary</h3>
+          <div id="annualTable" class="scroll"></div>
+        </div>
+        <div class="card">
+          <h3>What moves the total</h3>
+          <div id="sensitivity"></div>
+          <p class="caption">Change in total cost over the whole period when one input moves and everything else is held fixed.</p>
+        </div>
+      </section>
+
+      <section class="panel" data-panel="adoption">
+        <div id="scenarioCards" class="scenario-cards"></div>
+        <div class="grid-2">
+          <div class="card">
+            <h3>Adoption</h3>
+            <div id="adoptionFields"></div>
+          </div>
+          <div class="card">
+            <h3>Usage intensity (per active user)</h3>
+            <div id="usageFields"></div>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <h3>Agencies and users</h3>
+            <div id="chartAdoption" class="chart-host"></div>
+          </div>
+          <div class="card">
+            <h3>Stored data growth</h3>
+            <div id="chartStorage" class="chart-host"></div>
+            <p class="caption">CouchDB data includes record JSON with its overhead multiplier, plus photo attachments unless they are moved to S3. EBS is the provisioned volume per node. It only grows, because EBS volumes cannot shrink.</p>
+          </div>
+        </div>
+        <div class="card">
+          <h3>End-of-year footprint</h3>
+          <div id="footprintTable" class="scroll"></div>
+        </div>
+      </section>
+
+      <section class="panel" data-panel="hosting">
+        <div id="calibration" class="callout"></div>
+        <div id="hostingWarnings"></div>
+        <div class="card">
+          <h3>Monthly AWS hosting by component (AUD)</h3>
+          <div id="chartHosting" class="chart-host"></div>
+        </div>
+        <div class="card">
+          <h3>Hosting by component per year (AUD)</h3>
+          <div id="hostingTable" class="scroll"></div>
+        </div>
+        <div class="grid-3">
+          <div class="card">
+            <h3>CouchDB</h3>
+            <div id="couchFields"></div>
+            <h4>Instance tiers (auto-selected by active users)</h4>
+            <div id="tierTable"></div>
+          </div>
+          <div class="card">
+            <h3>Conductor, spatial workers, network</h3>
+            <div id="computeFields"></div>
+          </div>
+          <div class="card">
+            <h3>Observability and commercial</h3>
+            <div id="commercialFields"></div>
+          </div>
+        </div>
+        <details class="card">
+          <summary><h3>AWS unit prices (USD, Sydney, ex-GST)</h3></summary>
+          <div id="priceFields" class="price-grid"></div>
+        </details>
+      </section>
+
+      <section class="panel" data-panel="people">
+        <div class="toolbar">
+          <label>Compare allocations with demand in
+            <select id="demandYear"></select>
+          </label>
+          <button data-action="add-person">+ Add person</button>
+          <button data-action="match-demand">Fit allocations to this year's demand</button>
+        </div>
+        <div id="peopleCards" class="people-cards"></div>
+        <div class="card">
+          <h3>Allocation matrix (days per year)</h3>
+          <p class="muted small">Each cell is the number of days a year that person spends on that job. Demand comes from the job drivers below and the adoption scenario. A gap is demand nobody is allocated to.</p>
+          <div id="allocMatrix" class="scroll"></div>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <h3>Work demand vs staffed days (per month)</h3>
+            <div id="chartWork" class="chart-host"></div>
+          </div>
+          <div class="card">
+            <h3>Demand vs allocation by job</h3>
+            <div id="jobBars"></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Jobs and what drives them</h3>
+          <p class="muted small">Annual days = base + per agency × agencies + per 1,000 users × users / 1,000. "Per new agency" is one-off onboarding effort in the month an agency joins.</p>
+          <details class="type-help">
+            <summary>What does "Type" mean?</summary>
+            <p class="muted small">Type groups jobs by the kind of work, so you can see how much effort goes to running the service versus improving it. It is a label only: it does not change any cost or demand calculation.</p>
+            <dl id="jobTypes" class="type-list"></dl>
+          </details>
+          <div id="jobsTable" class="scroll"></div>
+          <div class="button-row"><button data-action="add-job">+ Add job</button></div>
+        </div>
+      </section>
+
+      <section class="panel" data-panel="other">
+        <div class="card">
+          <h3>Other operating costs</h3>
+          <p class="muted small">Annual amounts. Scaling multiplies the amount by agencies or by thousands of users. USD items are converted at the sidebar exchange rate.</p>
+          <div id="otherTable" class="scroll"></div>
+          <div class="button-row"><button data-action="add-other">+ Add cost</button></div>
+        </div>
+      </section>
+
+      <section class="panel" data-panel="recovery">
+        <div class="grid-2">
+          <div class="card">
+            <h3>Funding mix</h3>
+            <div id="recoveryFields"></div>
+            <h4>Agency tiers</h4>
+            <div id="tiersTable"></div>
+            <div class="button-row"><button data-action="add-tier">+ Add tier</button></div>
+          </div>
+          <div class="card">
+            <h3>Who pays, per year (AUD)</h3>
+            <div id="chartRecovery" class="chart-host"></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Price per agency</h3>
+          <div id="recoveryTable" class="scroll"></div>
+        </div>
+        <div class="card">
+          <h3>Year-1 price per agency vs number of agencies</h3>
+          <div id="chartPriceCurve" class="chart-host"></div>
+          <p class="caption">Re-runs the model for a full year at each agency count, so variable costs (support, hosting) grow with agencies while fixed costs are shared across more of them. Uses the current funding mix. Users per agency are held at the scenario's end value.</p>
+        </div>
+      </section>
+
+      <section class="panel" data-panel="method">
+        <div class="card prose" id="methodText"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="js/model.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
